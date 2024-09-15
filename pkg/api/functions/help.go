@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/core"
 	"assistant/pkg/api/text"
 	"fmt"
+	"slices"
 )
 
 const helpFunctionName = "help"
@@ -39,12 +40,18 @@ func (f *helpFunction) Execute(e *core.Event) error {
 		reply := make([]string, 0)
 		reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(f.Name)), f.Description))
 
-		fns := ""
+		commands := make([]string, 0)
 		for k, _ := range f.cfg.Functions.Enabled {
+			commands = append(commands, k)
+		}
+		slices.Sort(commands)
+
+		fns := ""
+		for _, cmd := range commands {
 			if len(fns) > 0 {
 				fns += ", "
 			}
-			fns += k
+			fns += cmd
 		}
 		reply = append(reply, fmt.Sprintf("Available commands: %s", fns))
 
