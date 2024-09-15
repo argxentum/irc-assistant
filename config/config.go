@@ -6,11 +6,11 @@ import (
 )
 
 type Config struct {
-	Connection Connection
-	Functions  Functions
+	Connection ConnectionConfig
+	Functions  FunctionsConfig
 }
 
-type Connection struct {
+type ConnectionConfig struct {
 	Owner       string
 	Admins      []string
 	Server      string
@@ -20,32 +20,33 @@ type Connection struct {
 	Username    string `yaml:"user_name"`
 	RealName    string `yaml:"real_name"`
 	Password    string
-	NickServ    NickServ
-	PostConnect PostConnect `yaml:"post_connect"`
+	NickServ    NickServConfig
+	PostConnect PostConnectConfig `yaml:"post_connect"`
 }
 
-type NickServ struct {
+type NickServConfig struct {
 	Recipient       string
 	IdentifyPattern string `yaml:"identify_pattern"`
 	IdentifyCommand string `yaml:"identify_command"`
 	Password        string
 }
 
-type PostConnect struct {
+type PostConnectConfig struct {
 	Code     string
 	Commands []string
 	AutoJoin []string `yaml:"auto_join"`
 }
 
-type Functions struct {
-	Enabled map[string]Function
+type FunctionsConfig struct {
+	Prefix           string
+	EnabledFunctions map[string]FunctionConfig `yaml:"enabled"`
 }
 
-type Function struct {
+type FunctionConfig struct {
 	Authorization string
-	Prefix        string
+	Triggers      []string
 	Description   string
-	Usage         []string
+	Usages        []string
 }
 
 func ReadConfig(filename string) (*Config, error) {

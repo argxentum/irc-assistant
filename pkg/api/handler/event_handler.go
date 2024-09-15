@@ -37,7 +37,7 @@ func NewEventHandler(ctx context.Context, cfg *config.Config, irc core.IRC) Even
 
 func (eh *eventHandler) ReloadFunctions() {
 	eh.fn = make([]functions.Function, 0)
-	for name := range eh.cfg.Functions.Enabled {
+	for name := range eh.cfg.Functions.EnabledFunctions {
 		f, err := functions.NewFunction(eh.ctx, eh.cfg, eh.irc, name)
 		if err != nil {
 			fmt.Printf("error loading function: %s\n", name)
@@ -53,7 +53,7 @@ func (eh *eventHandler) AddFunction(f functions.Function) {
 
 func (eh *eventHandler) FindMatchingFunction(e *core.Event) functions.Function {
 	for _, f := range eh.fn {
-		if f.Matches(e) {
+		if f.ShouldExecute(e) {
 			return f
 		}
 	}

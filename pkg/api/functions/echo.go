@@ -24,26 +24,13 @@ func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}, nil
 }
 
-func (f *echoFunction) Matches(e *core.Event) bool {
-	if !f.isAuthorized(e) {
-		return false
-	}
-
-	tokens := sanitizedTokens(e.Message(), 200)
-	if len(tokens) < 2 {
-		return false
-	}
-
-	for _, p := range f.Prefixes {
-		if tokens[0] == p {
-			return true
-		}
-	}
-	return false
+func (f *echoFunction) ShouldExecute(e *core.Event) bool {
+	ok, _ := f.verifyInput(e, 1)
+	return ok
 }
 
 func (f *echoFunction) Execute(e *core.Event) error {
-	tokens := sanitizedTokens(e.Message(), 200)
+	tokens := parseTokens(e.Message())
 	f.irc.SendMessage(e.ReplyTarget(), strings.Join(tokens[1:], " "))
 	return nil
 }

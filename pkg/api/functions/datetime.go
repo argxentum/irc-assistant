@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"fmt"
 	"github.com/anaskhan96/soup"
+	"math/rand"
 	"strings"
 )
 
@@ -27,29 +28,21 @@ func NewDateTimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) 
 	}, nil
 }
 
-func (f *dateTimeFunction) Matches(e *core.Event) bool {
-	if !f.isAuthorized(e) {
-		return false
-	}
+func (f *dateTimeFunction) ShouldExecute(e *core.Event) bool {
+	ok, _ := f.verifyInput(e, 1)
+	return ok
+}
 
-	tokens := sanitizedTokens(e.Message(), 200)
-	if len(tokens) < 2 {
-		return false
-	}
-
-	for _, p := range f.Prefixes {
-		if tokens[0] == p {
-			return true
-		}
-	}
-	return false
+var userAgents = []string{
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
 }
 
 func (f *dateTimeFunction) Execute(e *core.Event) error {
-	tokens := sanitizedTokens(e.Message(), 200)
+	tokens := parseTokens(e.Message())
 	location := strings.Join(tokens[1:], " ")
 
-	soup.Header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
+	soup.Header("User-Agent", userAgents[rand.Intn(len(userAgents))])
 	query := strings.Replace(fmt.Sprintf("current date and time in %s", location), " ", "%20", -1)
 	resp, err := soup.Get(fmt.Sprintf("https://www.bing.com/search?q=%s", query))
 	if err != nil {

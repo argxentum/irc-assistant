@@ -24,26 +24,13 @@ func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 	}, nil
 }
 
-func (f *sayFunction) Matches(e *core.Event) bool {
-	if !f.isAuthorized(e) {
-		return false
-	}
-
-	tokens := sanitizedTokens(e.Message(), 200)
-	if len(tokens) < 3 {
-		return false
-	}
-
-	for _, p := range f.Prefixes {
-		if tokens[0] == p {
-			return true
-		}
-	}
-	return false
+func (f *sayFunction) ShouldExecute(e *core.Event) bool {
+	ok, tokens := f.verifyInput(e, 3)
+	return ok && (strings.HasPrefix(tokens[2], "#") || strings.HasPrefix(tokens[2], "&"))
 }
 
 func (f *sayFunction) Execute(e *core.Event) error {
-	tokens := sanitizedTokens(e.Message(), 200)
+	tokens := parseTokens(e.Message())
 	f.irc.SendMessage(tokens[1], strings.Join(tokens[2:], " "))
 	return nil
 }

@@ -14,7 +14,7 @@ const (
 )
 
 type Function interface {
-	Matches(e *core.Event) bool
+	ShouldExecute(e *core.Event) bool
 	Execute(e *core.Event) error
 }
 
@@ -42,14 +42,14 @@ type stub struct {
 	cfg           *config.Config
 	irc           core.IRC
 	Name          string
-	Prefixes      []string
+	Triggers      []string
 	Description   string
-	Usage         []string
+	Usages        []string
 	Authorization string
 }
 
 func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (stub, error) {
-	entry, ok := cfg.Functions.Enabled[name]
+	entry, ok := cfg.Functions.EnabledFunctions[name]
 	if !ok {
 		return stub{}, fmt.Errorf("no function named %s", name)
 	}
@@ -59,42 +59,80 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name
 		cfg:           cfg,
 		irc:           irc,
 		Name:          name,
-		Prefixes:      strings.Split(entry.Prefix, ", "),
+		Triggers:      entry.Triggers,
 		Description:   entry.Description,
-		Usage:         entry.Usage,
+		Usages:        entry.Usages,
 		Authorization: entry.Authorization,
 	}, nil
 }
 
-func sanitized(input string, n int) string {
-	sanitized := strings.Trim(input, " \t")
-	if n > 0 && len(sanitized) > n {
-		return sanitized[:n]
+const inputMaxLength = 512
+
+func sanitize(input string) string {
+	sanitized := strings.TrimSpace(input)
+	if len(sanitized) > inputMaxLength {
+		return sanitized[:inputMaxLength]
 	}
 	return sanitized
 }
 
-func sanitizedTokens(input string, n int) []string {
-	return strings.Split(sanitized(input, n), " ")
+func parseTokens(input string) []string {
+	return strings.Split(sanitize(input), " ")
 }
 
-func (f *stub) isAuthorized(e *core.Event) bool {
-	sender, _ := e.Sender()
-
-	switch f.Authorization {
+// isSenderAuthorized checks if the given sender has the given authorization level
+func (f *stub) isSenderAuthorized(sender string, authorization string) bool {
+	switch authorization {
 	case owner:
 		return sender == f.cfg.Connection.Owner
 	case admin:
 		if sender == f.cfg.Connection.Owner {
 			return true
 		}
-		for _, admin := range f.cfg.Connection.Admins {
-			if sender == admin {
+		for _, a := range f.cfg.Connection.Admins {
+			if sender == a {
 				return true
 			}
 		}
 		return false
 	}
-
 	return true
+}
+
+// verifyInput parses the event tokens and checks that the user has necessary authorization, the trigger corresponds to an enabled function, and the message has at least minBodyTokens (0 if not required)
+func (f *stub) verifyInput(e *core.Event, minBodyTokens int) (bool, []string) {
+	sender, _ := e.Sender()
+	if !f.isSenderAuthorized(sender, f.Authorization) {
+		return false, []string{}
+	}
+
+	tokens := parseTokens(e.Message())
+	if minBodyTokens > 0 && len(tokens) < minBodyTokens+1 {
+		return false, tokens
+	}
+
+	for _, t := range f.Triggers {
+		if strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix) == t {
+			return true, tokens
+		}
+	}
+	return false, tokens
+}
+
+func splitMessageIfNecessary(input string) []string {
+	if len(input) < inputMaxLength {
+		return []string{input}
+	}
+
+	messages := make([]string, 0)
+	for len(input) > 0 {
+		if len(input) > inputMaxLength {
+			messages = append(messages, strings.TrimSpace(input[:inputMaxLength]))
+			input = input[inputMaxLength:]
+		} else {
+			messages = append(messages, strings.TrimSpace(input))
+			input = ""
+		}
+	}
+	return messages
 }

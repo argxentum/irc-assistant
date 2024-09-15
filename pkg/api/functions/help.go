@@ -27,33 +27,31 @@ func NewHelpFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}, nil
 }
 
-func (f *helpFunction) Matches(e *core.Event) bool {
-	if !f.isAuthorized(e) {
-		return false
-	}
-
-	tokens := sanitizedTokens(e.Message(), 200)
-	if len(tokens) == 0 {
-		return false
-	}
-
-	for _, p := range f.Prefixes {
-		if tokens[0] == p {
-			return true
-		}
-	}
-	return false
+func (f *helpFunction) ShouldExecute(e *core.Event) bool {
+	ok, _ := f.verifyInput(e, 0)
+	return ok
 }
 
 func (f *helpFunction) Execute(e *core.Event) error {
-	tokens := sanitizedTokens(e.Message(), 200)
+	sender, _ := e.Sender()
+	tokens := parseTokens(e.Message())
+
 	if len(tokens) == 1 {
 		reply := make([]string, 0)
 		reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(f.Name)), f.Description))
 
+		all := make(map[string]string)
+		for fn, fs := range f.cfg.Functions.EnabledFunctions {
+			for _, t := range f.cfg.Functions.EnabledFunctions[fn].Triggers {
+				all[strings.TrimPrefix(t, "!")] = fs.Authorization
+			}
+		}
+
 		commands := make([]string, 0)
-		for k, _ := range f.cfg.Functions.Enabled {
-			commands = append(commands, k)
+		for cmd, auth := range all {
+			if f.isSenderAuthorized(sender, auth) {
+				commands = append(commands, cmd)
+			}
 		}
 		slices.Sort(commands)
 
@@ -64,23 +62,31 @@ func (f *helpFunction) Execute(e *core.Event) error {
 			}
 			fns += cmd
 		}
-		reply = append(reply, fmt.Sprintf("Available commands: %s", fns))
+		reply = append(reply, splitMessageIfNecessary(fmt.Sprintf("Your available commands: %s", fns))...)
 
-		for _, u := range f.Usage {
-			for _, p := range f.Prefixes {
-				reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, p))))
+		for _, u := range f.Usages {
+			for _, t := range f.Triggers {
+				reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, t))))
 			}
 		}
 		f.irc.SendMessages(e.ReplyTarget(), reply)
 		return nil
 	}
 
-	fn, _ := f.cfg.Functions.Enabled[tokens[1]]
+	var fn config.FunctionConfig
+	for _, s := range f.cfg.Functions.EnabledFunctions {
+		for _, t := range s.Triggers {
+			if tokens[1] == t {
+				fn = s
+			}
+		}
+	}
+
 	reply := make([]string, 0)
 	reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(tokens[1])), fn.Description))
-	for _, u := range fn.Usage {
-		for _, p := range strings.Split(fn.Prefix, ", ") {
-			reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, p))))
+	for _, u := range fn.Usages {
+		for _, t := range fn.Triggers {
+			reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, t))))
 		}
 	}
 	if len(fn.Authorization) > 0 {

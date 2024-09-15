@@ -25,19 +25,9 @@ func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}, nil
 }
 
-func (f *uptimeFunction) Matches(e *core.Event) bool {
-	if !f.isAuthorized(e) {
-		return false
-	}
-
-	tokens := sanitizedTokens(e.Message(), 200)
-
-	for _, p := range f.Prefixes {
-		if tokens[0] == p {
-			return true
-		}
-	}
-	return false
+func (f *uptimeFunction) ShouldExecute(e *core.Event) bool {
+	ok, _ := f.verifyInput(e, 0)
+	return ok
 }
 
 func (f *uptimeFunction) Execute(e *core.Event) error {
