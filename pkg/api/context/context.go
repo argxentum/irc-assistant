@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	startedAtKey = "startedAt"
+	StartedAtKey = "startedAt"
 )
 
 type Context interface {
@@ -19,7 +19,7 @@ type Context interface {
 func NewContext() Context {
 	return &assistantContext{
 		ctx:        context.Background(),
-		properties: map[string]any{startedAtKey: time.Now()},
+		properties: map[string]any{StartedAtKey: time.Now()},
 	}
 }
 

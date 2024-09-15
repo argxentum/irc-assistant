@@ -26,6 +26,8 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewHelpFunction(ctx, cfg, irc)
 	case joinFunctionName:
 		return NewJoinFunction(ctx, cfg, irc)
+	case uptimeFunctionName:
+		return NewUptimeFunction(ctx, cfg, irc)
 	}
 
 	return nil, fmt.Errorf("unknown function: %s", name)
