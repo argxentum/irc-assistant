@@ -11,17 +11,18 @@ type Config struct {
 }
 
 type ConnectionConfig struct {
-	Owner       string
-	Admins      []string
-	Server      string
-	Port        int
-	TLS         bool
-	Nick        string
-	Username    string `yaml:"user_name"`
-	RealName    string `yaml:"real_name"`
-	Password    string
-	NickServ    NickServConfig
-	PostConnect PostConnectConfig `yaml:"post_connect"`
+	Owner             string
+	Admins            []string
+	Server            string
+	Port              int
+	TLS               bool
+	Nick              string
+	Username          string `yaml:"user_name"`
+	RealName          string `yaml:"real_name"`
+	Password          string
+	NickServ          NickServConfig
+	PostConnect       PostConnectConfig `yaml:"post_connect"`
+	NamesResponseCode string            `yaml:"names_response_code"`
 }
 
 type NickServConfig struct {
@@ -43,10 +44,11 @@ type FunctionsConfig struct {
 }
 
 type FunctionConfig struct {
-	Authorization string
-	Triggers      []string
-	Description   string
-	Usages        []string
+	Authorization     string
+	AllowedUserStatus string `yaml:"allowed_user_status"`
+	Triggers          []string
+	Description       string
+	Usages            []string
 }
 
 func ReadConfig(filename string) (*Config, error) {

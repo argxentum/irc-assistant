@@ -11,6 +11,39 @@ import (
 )
 
 const (
+	Operator     = "@"
+	HalfOperator = "%"
+	Voice        = "+"
+	Normal       = ""
+)
+
+func OperatorStatusName(status string) string {
+	switch status {
+	case Operator:
+		return "operator"
+	case HalfOperator:
+		return "half-operator"
+	case Voice:
+		return "voice"
+	}
+	return "normal"
+}
+
+func IsUserStatusAtLeast(status, required string) bool {
+	switch required {
+	case Operator:
+		return status == Operator
+	case HalfOperator:
+		return status == Operator || status == HalfOperator
+	case Voice:
+		return status == Operator || status == HalfOperator || status == Voice
+	case Normal:
+		return true
+	}
+	return false
+}
+
+const (
 	CodeNotice         = "NOTICE"
 	CodeJoin           = "JOIN"
 	CodeInvite         = "INVITE"
@@ -24,6 +57,10 @@ type IRC interface {
 	Part(channel string)
 	SendMessage(target, message string)
 	SendMessages(target string, messages []string)
+	GetUserStatus(channel, user string, callback func(status string))
+	Kick(channel, user, reason string)
+	Ban(channel, user, reason string)
+	TemporaryBan(channel, user, reason string, duration time.Duration)
 	Disconnect()
 }
 
@@ -128,6 +165,57 @@ func (s *service) SendMessages(target string, messages []string) {
 			s.SendMessage(target, message)
 			time.Sleep(250 * time.Millisecond)
 		}
+	}()
+}
+
+func (s *service) GetUserStatus(channel, user string, callback func(status string)) {
+	s.conn.SendRawf("NAMES %s", channel)
+
+	s.respondOnce(s.cfg.Connection.NamesResponseCode, func(e *irce.Event) bool {
+		users := strings.Split(e.Message(), " ")
+		for _, u := range users {
+			if u == fmt.Sprintf("@%s", user) {
+				callback(Operator)
+				return true
+			}
+			if u == fmt.Sprintf("%%%s", user) {
+				callback(HalfOperator)
+				return true
+			}
+			if u == fmt.Sprintf("+%s", user) {
+				callback(Voice)
+				return true
+			}
+			if u == user {
+				callback(Normal)
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func (s *service) Kick(channel, user, reason string) {
+	s.GetUserStatus(channel, s.cfg.Connection.Nick, func(status string) {
+		if status == Operator || status == HalfOperator {
+			s.conn.Kick(user, channel, reason)
+		}
+	})
+}
+
+func (s *service) Ban(channel, user, reason string) {
+	go func() {
+		s.Kick(channel, user, reason)
+		time.Sleep(250 * time.Millisecond)
+		s.conn.Mode(channel, "+b", user)
+	}()
+}
+
+func (s *service) TemporaryBan(channel, user, reason string, duration time.Duration) {
+	go func() {
+		s.Kick(channel, user, reason)
+		time.Sleep(250 * time.Millisecond)
+		s.conn.Mode(channel, "+b", user)
 	}()
 }
 

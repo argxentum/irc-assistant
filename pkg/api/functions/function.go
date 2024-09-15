@@ -34,20 +34,27 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewUptimeFunction(ctx, cfg, irc)
 	case dateTimeFunctionName:
 		return NewDateTimeFunction(ctx, cfg, irc)
+	case kickFunctionName:
+		return NewKickFunction(ctx, cfg, irc)
+	case banFunctionName:
+		return NewBanFunction(ctx, cfg, irc)
+	case tempBanFunctionName:
+		return NewTempBanFunction(ctx, cfg, irc)
 	}
 
 	return nil, fmt.Errorf("unknown function: %s", name)
 }
 
 type stub struct {
-	ctx           context.Context
-	cfg           *config.Config
-	irc           core.IRC
-	Name          string
-	Triggers      []string
-	Description   string
-	Usages        []string
-	Authorization string
+	ctx               context.Context
+	cfg               *config.Config
+	irc               core.IRC
+	Name              string
+	Triggers          []string
+	Description       string
+	Usages            []string
+	Authorization     string
+	AllowedUserStatus string
 }
 
 func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (stub, error) {
@@ -57,14 +64,15 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name
 	}
 
 	return stub{
-		ctx:           ctx,
-		cfg:           cfg,
-		irc:           irc,
-		Name:          name,
-		Triggers:      entry.Triggers,
-		Description:   entry.Description,
-		Usages:        entry.Usages,
-		Authorization: entry.Authorization,
+		ctx:               ctx,
+		cfg:               cfg,
+		irc:               irc,
+		Name:              name,
+		Triggers:          entry.Triggers,
+		Description:       entry.Description,
+		Usages:            entry.Usages,
+		Authorization:     entry.Authorization,
+		AllowedUserStatus: entry.AllowedUserStatus,
 	}, nil
 }
 

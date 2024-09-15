@@ -49,10 +49,15 @@ func (f *dateTimeFunction) Execute(e *core.Event) error {
 		return err
 	}
 
-	label := soup.HTMLParse(resp).Find("div", "class", "b_focusLabel").Text()
-	time := soup.HTMLParse(resp).Find("div", "class", "b_focusTextLarge").Text()
-	date := soup.HTMLParse(resp).Find("div", "class", "b_secondaryFocus").Text()
+	label := soup.HTMLParse(resp).Find("div", "class", "b_focusLabel")
+	time := soup.HTMLParse(resp).Find("div", "class", "b_focusTextLarge")
+	date := soup.HTMLParse(resp).Find("div", "class", "b_secondaryFocus")
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label, text.Bold(time), text.Bold(date)))
+	if label.Error != nil || time.Error != nil || date.Error != nil {
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Could not find the current date and time of %s", text.Bold(location)))
+		return nil
+	}
+
+	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label.Text(), text.Bold(time.Text()), text.Bold(date.Text())))
 	return nil
 }
