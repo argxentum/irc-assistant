@@ -37,7 +37,17 @@ func (f *helpFunction) Execute(e *core.Event) error {
 	tokens := sanitizedTokens(e.Message(), 200)
 	if len(tokens) == 1 {
 		reply := make([]string, 0)
-		reply = append(reply, fmt.Sprintf("%s %s", text.Bold(text.Underline(f.Name)), f.Description))
+		reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(f.Name)), f.Description))
+
+		fns := ""
+		for k, _ := range f.cfg.Functions.Enabled {
+			if len(fns) > 0 {
+				fns += ", "
+			}
+			fns += k
+		}
+		reply = append(reply, fmt.Sprintf("Available commands: %s", fns))
+
 		for _, u := range f.Usage {
 			reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, f.Prefix))))
 		}
