@@ -22,6 +22,8 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 	switch name {
 	case echoFunctionName:
 		return NewEchoFunction(ctx, cfg, irc)
+	case sayFunctionName:
+		return NewSayFunction(ctx, cfg, irc)
 	case helpFunctionName:
 		return NewHelpFunction(ctx, cfg, irc)
 	case joinFunctionName:
