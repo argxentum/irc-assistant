@@ -31,7 +31,13 @@ func (f *uptimeFunction) Matches(e *core.Event) bool {
 	}
 
 	tokens := sanitizedTokens(e.Message(), 200)
-	return tokens[0] == f.Prefix
+
+	for _, p := range f.Prefixes {
+		if tokens[0] == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *uptimeFunction) Execute(e *core.Event) error {

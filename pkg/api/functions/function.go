@@ -38,7 +38,7 @@ type stub struct {
 	cfg           *config.Config
 	irc           core.IRC
 	Name          string
-	Prefix        string
+	Prefixes      []string
 	Description   string
 	Usage         []string
 	Authorization string
@@ -55,7 +55,7 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name
 		cfg:           cfg,
 		irc:           irc,
 		Name:          name,
-		Prefix:        entry.Prefix,
+		Prefixes:      strings.Split(entry.Prefix, ", "),
 		Description:   entry.Description,
 		Usage:         entry.Usage,
 		Authorization: entry.Authorization,

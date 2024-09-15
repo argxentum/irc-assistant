@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 const helpFunctionName = "help"
@@ -30,8 +31,18 @@ func (f *helpFunction) Matches(e *core.Event) bool {
 	if !f.isAuthorized(e) {
 		return false
 	}
+
 	tokens := sanitizedTokens(e.Message(), 200)
-	return len(tokens) > 0 && tokens[0] == f.Prefix
+	if len(tokens) == 0 {
+		return false
+	}
+
+	for _, p := range f.Prefixes {
+		if tokens[0] == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *helpFunction) Execute(e *core.Event) error {
@@ -56,7 +67,9 @@ func (f *helpFunction) Execute(e *core.Event) error {
 		reply = append(reply, fmt.Sprintf("Available commands: %s", fns))
 
 		for _, u := range f.Usage {
-			reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, f.Prefix))))
+			for _, p := range f.Prefixes {
+				reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, p))))
+			}
 		}
 		f.irc.SendMessages(e.ReplyTarget(), reply)
 		return nil
@@ -66,7 +79,9 @@ func (f *helpFunction) Execute(e *core.Event) error {
 	reply := make([]string, 0)
 	reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(tokens[1])), fn.Description))
 	for _, u := range fn.Usage {
-		reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, fn.Prefix))))
+		for _, p := range strings.Split(fn.Prefix, ", ") {
+			reply = append(reply, fmt.Sprintf("Usage: %s", text.Italics(fmt.Sprintf(u, p))))
+		}
 	}
 	if len(fn.Authorization) > 0 {
 		reply = append(reply, fmt.Sprintf("Required role: %s", fn.Authorization))

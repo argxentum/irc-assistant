@@ -34,7 +34,17 @@ func (f *joinFunction) Matches(e *core.Event) bool {
 	if len(tokens) < 2 {
 		return false
 	}
-	return tokens[0] == f.Prefix && (strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&"))
+
+	if !strings.HasPrefix(tokens[1], "#") && !strings.HasPrefix(tokens[1], "&") {
+		return false
+	}
+
+	for _, p := range f.Prefixes {
+		if tokens[0] == p {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *joinFunction) Execute(e *core.Event) error {
