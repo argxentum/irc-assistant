@@ -41,7 +41,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 		// create map of function name to slice of current user authorization and allowed user status
 		commands := make([]string, 0)
 		for fn := range f.cfg.Functions.EnabledFunctions {
-			for _, t := range f.cfg.Functions.EnabledFunctions[fn].Triggers {
+			for _, t := range f.functionConfig(fn).Triggers {
 				key := strings.TrimPrefix(t, f.cfg.Functions.Prefix)
 				commands = append(commands, key)
 			}
@@ -79,7 +79,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	if !found {
-		f.Reply(e, "Command %s not found. See %s for a list of available commands.", text.Bold(tokens[1]), text.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.cfg.Functions.EnabledFunctions[helpFunctionName].Triggers[0])))
+		f.Reply(e, "Command %s not found. See %s for a list of available commands.", text.Bold(tokens[1]), text.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
 		return
 	}
 

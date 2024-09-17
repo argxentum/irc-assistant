@@ -189,7 +189,7 @@ func (f *Stub) isValid(e *core.Event, minBodyTokens int) bool {
 
 	// if sleeping, ignore all triggers except wake
 	if !f.isAwake() {
-		isWakeTrigger := f.Name == wakeFunctionName && slices.Contains(f.cfg.Functions.EnabledFunctions[wakeFunctionName].Triggers, strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))
+		isWakeTrigger := f.Name == wakeFunctionName && slices.Contains(f.functionConfig(wakeFunctionName).Triggers, strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))
 		if isWakeTrigger {
 			if !f.isUserAuthorizedByRole(user, f.Role) {
 				f.UnauthorizedReply(e)
@@ -203,7 +203,7 @@ func (f *Stub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function is not allowed in private messages and the message is a private message, ignore
 	if f.DenyPrivateMessages && e.IsPrivateMessage() {
 		if attempted {
-			f.Reply(e, "The %s command is not allowed in private messages. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.cfg.Functions.EnabledFunctions[helpFunctionName].Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Reply(e, "The %s command is not allowed in private messages. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -219,7 +219,7 @@ func (f *Stub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function requires a minimum number of body Tokens, check that
 	if minBodyTokens > 0 && len(tokens) < minBodyTokens+1 {
 		if attempted {
-			f.Reply(e, "Invalid number of arguments for %s. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.cfg.Functions.EnabledFunctions[helpFunctionName].Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Reply(e, "Invalid number of arguments for %s. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -262,6 +262,10 @@ func (f *Stub) Reply(e *core.Event, message string, args ...any) {
 func (f *Stub) UnauthorizedReply(e *core.Event) {
 	tokens := Tokens(e.Message())
 	f.Reply(e, "You are not authorized to use %s.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
+}
+
+func (f *Stub) functionConfig(name string) config.FunctionConfig {
+	return f.cfg.Functions.EnabledFunctions[name]
 }
 
 // sanitize cleans the input string
