@@ -4,7 +4,6 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
 	"strings"
 )
 
@@ -30,15 +29,14 @@ func (f *kickFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *kickFunction) Execute(e *core.Event) {
-	f.IsAuthorized(e, func(authorized bool) {
-		tokens := Tokens(e.Message())
-
+	tokens := Tokens(e.Message())
+	channel := e.ReplyTarget()
+	f.isBotAuthorizedByChannelStatus(channel, core.HalfOperator, func(authorized bool) {
 		if !authorized {
-			f.Reply(e, "%s: you are not authorized to use %s.", e.From, text.Italics(tokens[0]))
+			f.Reply(e, "Missing required permissions to kick users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.Connection.Nick)
 			return
 		}
 
-		channel := e.ReplyTarget()
 		user := tokens[1]
 		reason := ""
 		if len(tokens) > 2 {

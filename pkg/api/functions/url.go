@@ -4,17 +4,11 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
 	"fmt"
 	"github.com/anaskhan96/soup"
 	"math/rand"
 	"strings"
 )
-
-var userAgents = []string{
-	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
-}
 
 const urlFunctionName = "url"
 
@@ -49,14 +43,14 @@ func (f *urlFunction) Execute(e *core.Event) {
 	soup.Header("User-Agent", userAgents[rand.Intn(len(userAgents))])
 	resp, err := soup.Get(fmt.Sprintf("%s/%s", "https://nug.zip/", url))
 	if err != nil {
-		f.Reply(e, "Unable to summarize the URL", e.From)
+		f.Reply(e, "Unable to summarize the URL")
 		return
 	}
 
 	doc := soup.HTMLParse(resp)
 	title := doc.Find("span", "class", "title")
 	if title.Error != nil {
-		f.Reply(e, "Unable to summarize the URL", e.From, text.Bold(url))
+		f.Reply(e, "Unable to summarize the URL")
 		return
 	}
 

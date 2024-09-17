@@ -43,6 +43,9 @@ func (f *helpFunction) Execute(e *core.Event) {
 		for fn := range f.cfg.Functions.EnabledFunctions {
 			for _, t := range f.functionConfig(fn).Triggers {
 				key := strings.TrimPrefix(t, f.cfg.Functions.Prefix)
+				if len(f.cfg.Functions.EnabledFunctions[fn].Role) > 0 || len(f.cfg.Functions.EnabledFunctions[fn].ChannelStatus) > 0 {
+					key = fmt.Sprintf("%s*", key)
+				}
 				commands = append(commands, key)
 			}
 		}
@@ -57,6 +60,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 		}
 		reply = append(reply, splitMessageIfNecessary(fmt.Sprintf("Commands: %s", fns))...)
 
+		reply = append(reply, "Usage:")
 		for _, u := range f.Usages {
 			for _, t := range f.Triggers {
 				reply = append(reply, fmt.Sprintf("   %s", text.Italics(fmt.Sprintf(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, u), t))))
@@ -67,11 +71,13 @@ func (f *helpFunction) Execute(e *core.Event) {
 		return
 	}
 
+	trigger := strings.TrimPrefix(tokens[1], f.cfg.Functions.Prefix)
+
 	found := false
 	var fn config.FunctionConfig
 	for _, s := range f.cfg.Functions.EnabledFunctions {
 		for _, t := range s.Triggers {
-			if tokens[1] == t {
+			if trigger == t {
 				found = true
 				fn = s
 			}
@@ -79,7 +85,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	if !found {
-		f.Reply(e, "Command %s not found. See %s for a list of available commands.", text.Bold(tokens[1]), text.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
+		f.Reply(e, "Command %s not found. See %s for a list of available commands.", text.Bold(trigger), text.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
 		return
 	}
 
@@ -88,10 +94,14 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	reply := make([]string, 0)
-	reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(tokens[1])), fn.Description))
-	for _, u := range fn.Usages {
-		for _, t := range fn.Triggers {
-			reply = append(reply, fmt.Sprintf("   %s", text.Italics(fmt.Sprintf(f.cfg.Functions.Prefix+u, t))))
+	reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(trigger)), fn.Description))
+
+	if len(fn.Usages) > 0 {
+		reply = append(reply, "Usage:")
+		for _, u := range fn.Usages {
+			for _, t := range fn.Triggers {
+				reply = append(reply, fmt.Sprintf("   %s", text.Italics(fmt.Sprintf(f.cfg.Functions.Prefix+u, t))))
+			}
 		}
 	}
 

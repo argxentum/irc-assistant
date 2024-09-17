@@ -31,10 +31,17 @@ func (f *tempBanFunction) MayExecute(e *core.Event) bool {
 func (f *tempBanFunction) Execute(e *core.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
-	user := tokens[1]
-	reason := ""
-	if len(tokens) > 3 {
-		reason = strings.Join(tokens[3:], " ")
-	}
-	f.irc.TemporaryBan(channel, user, reason, 0)
+	f.isBotAuthorizedByChannelStatus(channel, core.HalfOperator, func(authorized bool) {
+		if !authorized {
+			f.Reply(e, "Missing required permissions to temporarily ban users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.Connection.Nick)
+			return
+		}
+
+		user := tokens[1]
+		reason := ""
+		if len(tokens) > 3 {
+			reason = strings.Join(tokens[3:], " ")
+		}
+		f.irc.TemporaryBan(channel, user, reason, 0)
+	})
 }

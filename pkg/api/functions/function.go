@@ -46,6 +46,10 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewSleepFunction(ctx, cfg, irc)
 	case wakeFunctionName:
 		return NewWakeFunction(ctx, cfg, irc)
+	case "reddit/politics":
+		return NewRedditFunction("politics", ctx, cfg, irc)
+	case "reddit/news":
+		return NewRedditFunction("news", ctx, cfg, irc)
 	case tempBanFunctionName:
 		//return NewTempBanFunction(ctx, cfg, irc)
 	case urlFunctionName:

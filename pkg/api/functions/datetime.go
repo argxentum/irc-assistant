@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/anaskhan96/soup"
 	"math/rand"
+	"net/url"
 	"strings"
 )
 
@@ -37,7 +38,7 @@ func (f *dateTimeFunction) Execute(e *core.Event) {
 	location := strings.Join(tokens[1:], " ")
 
 	soup.Header("User-Agent", userAgents[rand.Intn(len(userAgents))])
-	query := strings.Replace(fmt.Sprintf("current date and time in %s", location), " ", "%20", -1)
+	query := url.QueryEscape(fmt.Sprintf("current date and time in %s", location))
 	resp, err := soup.Get(fmt.Sprintf("https://www.bing.com/search?q=%s", query))
 	if err != nil {
 		f.Reply(e, "Unable to find the current date and time of %s", e.From, text.Bold(location))
