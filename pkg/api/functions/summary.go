@@ -49,7 +49,6 @@ func (f *summaryFunction) Execute(e *core.Event) {
 	}
 
 	doc := soup.HTMLParse(resp)
-	println(doc.HTML())
 	title := doc.Find("span", "class", "title")
 	if title.Error != nil {
 		f.Reply(e, "Unable to provide a summary")
