@@ -30,7 +30,7 @@ func (f *sayFunction) MayExecute(e *core.Event) bool {
 	}
 
 	tokens := Tokens(e.Message())
-	return strings.HasPrefix(tokens[2], "#") || strings.HasPrefix(tokens[2], "&")
+	return core.IsChannel(tokens[1])
 }
 
 func (f *sayFunction) Execute(e *core.Event) {

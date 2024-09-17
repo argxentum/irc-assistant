@@ -4,7 +4,6 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"strings"
 	"time"
 )
 
@@ -31,14 +30,14 @@ func (f *joinFunction) MayExecute(e *core.Event) bool {
 	}
 
 	tokens := Tokens(e.Message())
-	return strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&")
+	return core.IsChannel(tokens[1])
 }
 
 func (f *joinFunction) Execute(e *core.Event) {
 	tokens := Tokens(e.Message())
 
 	for _, token := range tokens[1:] {
-		if !strings.HasPrefix(token, "#") && !strings.HasPrefix(token, "&") {
+		if !core.IsChannel(token) {
 			continue
 		}
 

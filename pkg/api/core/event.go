@@ -34,14 +34,14 @@ func (e *Event) IsPrivateMessage() bool {
 }
 
 func (e *Event) Sender() (string, EntityType) {
-	if strings.HasPrefix(e.From, "#") || strings.HasPrefix(e.From, "&") {
+	if IsChannel(e.From) {
 		return e.From, EntityTypeChannel
 	}
 	return e.From, EntityTypeUser
 }
 
 func (e *Event) Recipient() (string, EntityType) {
-	if len(e.Arguments) > 0 && (strings.HasPrefix(e.Arguments[0], "#") || strings.HasPrefix(e.Arguments[0], "&")) {
+	if len(e.Arguments) > 0 && IsChannel(e.Arguments[0]) {
 		return e.Arguments[0], EntityTypeChannel
 	}
 	return e.Arguments[0], EntityTypeUser
@@ -67,6 +67,10 @@ func mapEvent(e *irce.Event) *Event {
 		Source:    e.Source,
 		Arguments: e.Arguments,
 	}
+}
+
+func IsChannel(target string) bool {
+	return strings.HasPrefix(target, "#") || strings.HasPrefix(target, "&")
 }
 
 func LogEvent(e *Event) {
