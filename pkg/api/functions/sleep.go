@@ -30,6 +30,7 @@ func (f *sleepFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *sleepFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: sleep\n")
 	wakeTrigger := ""
 	for k, v := range f.cfg.Functions.EnabledFunctions {
 		if k == wakeFunctionName {

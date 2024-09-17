@@ -4,6 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"fmt"
 	"strings"
 )
 
@@ -25,6 +26,7 @@ func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 }
 
 func (f *sayFunction) MayExecute(e *core.Event) bool {
+	fmt.Printf("Executing function: say\n")
 	if !f.isValid(e, 3) {
 		return false
 	}

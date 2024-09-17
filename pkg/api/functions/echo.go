@@ -4,6 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"fmt"
 	"strings"
 )
 
@@ -29,6 +30,7 @@ func (f *echoFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *echoFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: echo\n")
 	tokens := Tokens(e.Message())
 	f.irc.SendMessage(e.ReplyTarget(), strings.Join(tokens[1:], " "))
 }

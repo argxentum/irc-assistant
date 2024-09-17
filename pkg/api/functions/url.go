@@ -37,6 +37,7 @@ func (f *urlFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *urlFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: url\n")
 	tokens := Tokens(e.Message())
 	url := tokens[0]
 

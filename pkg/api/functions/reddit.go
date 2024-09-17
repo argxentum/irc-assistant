@@ -38,6 +38,7 @@ func (f *redditFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *redditFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: reddit/%s\n", f.subreddit)
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
 	posts, err := SearchNewPosts(f.subreddit, query)

@@ -34,6 +34,7 @@ func (f *dateTimeFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *dateTimeFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: datetime\n")
 	tokens := Tokens(e.Message())
 	location := strings.Join(tokens[1:], " ")
 

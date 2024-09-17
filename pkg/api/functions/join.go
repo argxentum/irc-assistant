@@ -4,6 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"fmt"
 	"time"
 )
 
@@ -34,6 +35,7 @@ func (f *joinFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *joinFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: join\n")
 	tokens := Tokens(e.Message())
 
 	for _, token := range tokens[1:] {
