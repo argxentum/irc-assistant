@@ -26,7 +26,6 @@ func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 }
 
 func (f *sayFunction) MayExecute(e *core.Event) bool {
-	fmt.Printf("Executing function: say\n")
 	if !f.isValid(e, 3) {
 		return false
 	}
@@ -36,6 +35,7 @@ func (f *sayFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *sayFunction) Execute(e *core.Event) {
+	fmt.Printf("Executing function: say\n")
 	tokens := Tokens(e.Message())
 	f.irc.SendMessage(tokens[1], strings.Join(tokens[2:], " "))
 }
