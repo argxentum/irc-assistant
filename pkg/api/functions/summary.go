@@ -10,24 +10,24 @@ import (
 	"strings"
 )
 
-const urlFunctionName = "url"
+const summaryFunctionName = "summary"
 
-type urlFunction struct {
+type summaryFunction struct {
 	Stub
 }
 
-func NewURLFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, urlFunctionName)
+func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+	stub, err := newFunctionStub(ctx, cfg, irc, summaryFunctionName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &urlFunction{
+	return &summaryFunction{
 		Stub: stub,
 	}, nil
 }
 
-func (f *urlFunction) MayExecute(e *core.Event) bool {
+func (f *summaryFunction) MayExecute(e *core.Event) bool {
 	if !f.isValid(e, 0) {
 		return false
 	}
@@ -36,22 +36,23 @@ func (f *urlFunction) MayExecute(e *core.Event) bool {
 	return strings.HasPrefix(tokens[0], "https://") || strings.HasPrefix(tokens[0], "http://")
 }
 
-func (f *urlFunction) Execute(e *core.Event) {
+func (f *summaryFunction) Execute(e *core.Event) {
 	fmt.Printf("Executing function: url\n")
 	tokens := Tokens(e.Message())
 	url := tokens[0]
 
 	soup.Header("User-Agent", userAgents[rand.Intn(len(userAgents))])
-	resp, err := soup.Get(fmt.Sprintf("%s/%s", "https://nug.zip/", url))
+	resp, err := soup.Get(fmt.Sprintf("https://nuggetize.com/link/%s", url))
 	if err != nil {
-		f.Reply(e, "Unable to summarize the URL")
+		f.Reply(e, "Unable to provide a summary")
 		return
 	}
 
 	doc := soup.HTMLParse(resp)
+	println(doc.HTML())
 	title := doc.Find("span", "class", "title")
 	if title.Error != nil {
-		f.Reply(e, "Unable to summarize the URL")
+		f.Reply(e, "Unable to provide a summary")
 		return
 	}
 
