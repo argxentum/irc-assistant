@@ -160,10 +160,12 @@ func (s *service) SendMessage(target, message string) {
 }
 
 func (s *service) SendMessages(target string, messages []string) {
+	isChannel := strings.HasPrefix(target, "#") || strings.HasPrefix(target, "&")
+
 	go func() {
 		for i, message := range messages {
-			// rate limit every third message
-			if (i%3) == 0 && i > 0 {
+			// rate limit every third message to channels
+			if isChannel && (i%3) == 0 && i > 0 {
 				time.Sleep(1 * time.Second)
 			}
 
