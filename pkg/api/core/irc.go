@@ -164,11 +164,11 @@ func (s *service) SendMessages(target string, messages []string) {
 		for i, message := range messages {
 			// rate limit every third message to channels
 			if IsChannel(target) && (i%3) == 0 && i > 0 {
-				time.Sleep(1250 * time.Millisecond)
+				time.Sleep(500 * time.Millisecond)
 			}
 
 			s.SendMessage(target, message)
-			time.Sleep(350 * time.Millisecond)
+			time.Sleep(250 * time.Millisecond)
 		}
 	}()
 }
