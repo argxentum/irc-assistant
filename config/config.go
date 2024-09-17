@@ -44,11 +44,12 @@ type FunctionsConfig struct {
 }
 
 type FunctionConfig struct {
-	Authorization     string
-	AllowedUserStatus string `yaml:"allowed_user_status"`
-	Triggers          []string
-	Description       string
-	Usages            []string
+	Role                string
+	ChannelStatus       string `yaml:"channel_status"`
+	DenyPrivateMessages bool   `yaml:"deny_private_messages"`
+	Triggers            []string
+	Description         string
+	Usages              []string
 }
 
 func ReadConfig(filename string) (*Config, error) {

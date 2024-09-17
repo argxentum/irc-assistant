@@ -11,7 +11,7 @@ import (
 const joinFunctionName = "join"
 
 type joinFunction struct {
-	stub
+	Stub
 }
 
 func NewJoinFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,17 +21,21 @@ func NewJoinFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &joinFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *joinFunction) ShouldExecute(e *core.Event) bool {
-	ok, tokens := f.verifyInput(e, 1)
-	return ok && (strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&"))
+func (f *joinFunction) MayExecute(e *core.Event) bool {
+	if !e.IsPrivateMessage() || !f.isValid(e, 1) {
+		return false
+	}
+
+	tokens := Tokens(e.Message())
+	return strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&")
 }
 
-func (f *joinFunction) Execute(e *core.Event) error {
-	tokens := parseTokens(e.Message())
+func (f *joinFunction) Execute(e *core.Event) {
+	tokens := Tokens(e.Message())
 
 	for _, token := range tokens[1:] {
 		if !strings.HasPrefix(token, "#") && !strings.HasPrefix(token, "&") {
@@ -43,6 +47,4 @@ func (f *joinFunction) Execute(e *core.Event) error {
 			time.Sleep(250 * time.Millisecond)
 		}()
 	}
-
-	return nil
 }

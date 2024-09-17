@@ -5,8 +5,10 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
 	"assistant/pkg/api/functions"
+	"assistant/pkg/api/text"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 type EventHandler interface {
@@ -53,7 +55,7 @@ func (eh *eventHandler) AddFunction(f functions.Function) {
 
 func (eh *eventHandler) FindMatchingFunction(e *core.Event) functions.Function {
 	for _, f := range eh.fn {
-		if f.ShouldExecute(e) {
+		if f.MayExecute(e) {
 			return f
 		}
 	}
@@ -73,11 +75,20 @@ func (eh *eventHandler) Handle(e *core.Event) {
 		}
 	case core.CodePrivateMessage:
 		if f := eh.FindMatchingFunction(e); f != nil {
-			err := f.Execute(e)
-			if err != nil {
-				recipient, _ := e.Recipient()
-				eh.irc.SendMessage(recipient, err.Error())
-			}
+			f.IsAuthorized(e, func(authorized bool) {
+				tokens := functions.Tokens(e.Message())
+
+				if !authorized {
+					if strings.HasPrefix(tokens[0], eh.cfg.Functions.Prefix) {
+						f.Reply(e, "You are not authorized to use %s.", text.Bold(strings.TrimPrefix(tokens[0], eh.cfg.Functions.Prefix)))
+					} else {
+						f.Reply(e, "You are not authorized to perform that command.")
+					}
+					return
+				}
+
+				f.Execute(e)
+			})
 		}
 	}
 }

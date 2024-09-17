@@ -4,13 +4,14 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"assistant/pkg/api/text"
 	"strings"
 )
 
 const kickFunctionName = "kick"
 
 type kickFunction struct {
-	stub
+	Stub
 }
 
 func NewKickFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,36 +21,23 @@ func NewKickFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &kickFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *kickFunction) ShouldExecute(e *core.Event) bool {
-	if e.IsPrivateMessage() {
-		return false
-	}
-
-	tokens := parseTokens(e.Message())
-	if len(tokens) < 2 {
-		return false
-	}
-
-	for _, t := range f.Triggers {
-		if strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix) == t {
-			return true
-		}
-	}
-	return false
+func (f *kickFunction) MayExecute(e *core.Event) bool {
+	return f.isValid(e, 1)
 }
 
-func (f *kickFunction) Execute(e *core.Event) error {
-	sender, _ := e.Sender()
-	f.irc.GetUserStatus(e.ReplyTarget(), sender, func(status string) {
-		if !f.isSenderAuthorized(sender, f.Authorization) && status != core.Operator && status != core.HalfOperator {
+func (f *kickFunction) Execute(e *core.Event) {
+	f.IsAuthorized(e, func(authorized bool) {
+		tokens := Tokens(e.Message())
+
+		if !authorized {
+			f.Reply(e, "%s: you are not authorized to use %s.", e.From, text.Italics(tokens[0]))
 			return
 		}
 
-		tokens := parseTokens(e.Message())
 		channel := e.ReplyTarget()
 		user := tokens[1]
 		reason := ""
@@ -58,6 +46,4 @@ func (f *kickFunction) Execute(e *core.Event) error {
 		}
 		f.irc.Kick(channel, user, reason)
 	})
-
-	return nil
 }

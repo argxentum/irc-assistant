@@ -17,7 +17,7 @@ const (
 	Normal       = ""
 )
 
-func OperatorStatusName(status string) string {
+func ChannelStatusName(status string) string {
 	switch status {
 	case Operator:
 		return "operator"
@@ -29,7 +29,7 @@ func OperatorStatusName(status string) string {
 	return "normal"
 }
 
-func IsUserStatusAtLeast(status, required string) bool {
+func IsChannelStatusAtLeast(status, required string) bool {
 	switch required {
 	case Operator:
 		return status == Operator
@@ -161,7 +161,12 @@ func (s *service) SendMessage(target, message string) {
 
 func (s *service) SendMessages(target string, messages []string) {
 	go func() {
-		for _, message := range messages {
+		for i, message := range messages {
+			// rate limit every third message
+			if (i%3) == 0 && i > 0 {
+				time.Sleep(1 * time.Second)
+			}
+
 			s.SendMessage(target, message)
 			time.Sleep(250 * time.Millisecond)
 		}

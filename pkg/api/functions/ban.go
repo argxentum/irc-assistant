@@ -10,7 +10,7 @@ import (
 const banFunctionName = "ban"
 
 type banFunction struct {
-	stub
+	Stub
 }
 
 func NewBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,44 +20,21 @@ func NewBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 	}
 
 	return &banFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *banFunction) ShouldExecute(e *core.Event) bool {
-	if e.IsPrivateMessage() {
-		return false
-	}
-
-	tokens := parseTokens(e.Message())
-	if len(tokens) < 2 {
-		return false
-	}
-
-	for _, t := range f.Triggers {
-		if strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix) == t {
-			return true
-		}
-	}
-	return false
+func (f *banFunction) MayExecute(e *core.Event) bool {
+	return f.isValid(e, 1)
 }
 
-func (f *banFunction) Execute(e *core.Event) error {
-	sender, _ := e.Sender()
-	f.irc.GetUserStatus(e.ReplyTarget(), sender, func(status string) {
-		if !core.IsUserStatusAtLeast(status, f.AllowedUserStatus) && !f.isSenderAuthorized(sender, f.Authorization) {
-			return
-		}
-
-		tokens := parseTokens(e.Message())
-		channel := e.ReplyTarget()
-		user := tokens[1]
-		reason := ""
-		if len(tokens) > 2 {
-			reason = strings.Join(tokens[2:], " ")
-		}
-		f.irc.Ban(channel, user, reason)
-	})
-
-	return nil
+func (f *banFunction) Execute(e *core.Event) {
+	tokens := Tokens(e.Message())
+	channel := e.ReplyTarget()
+	user := tokens[1]
+	reason := ""
+	if len(tokens) > 2 {
+		reason = strings.Join(tokens[2:], " ")
+	}
+	f.irc.Ban(channel, user, reason)
 }

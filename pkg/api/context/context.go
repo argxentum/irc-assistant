@@ -9,6 +9,7 @@ import (
 
 const (
 	StartedAtKey = "startedAt"
+	IsAwakeKey   = "isAwake"
 )
 
 type Context interface {
@@ -18,8 +19,11 @@ type Context interface {
 
 func NewContext() Context {
 	return &assistantContext{
-		ctx:        context.Background(),
-		properties: map[string]any{StartedAtKey: time.Now()},
+		ctx: context.Background(),
+		properties: map[string]any{
+			StartedAtKey: time.Now(),
+			IsAwakeKey:   true,
+		},
 	}
 }
 

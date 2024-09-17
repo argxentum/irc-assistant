@@ -11,7 +11,7 @@ import (
 const uptimeFunctionName = "uptime"
 
 type uptimeFunction struct {
-	stub
+	Stub
 }
 
 func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,16 +21,15 @@ func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}
 
 	return &uptimeFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *uptimeFunction) ShouldExecute(e *core.Event) bool {
-	ok, _ := f.verifyInput(e, 0)
-	return ok
+func (f *uptimeFunction) MayExecute(e *core.Event) bool {
+	return f.isValid(e, 0)
 }
 
-func (f *uptimeFunction) Execute(e *core.Event) error {
+func (f *uptimeFunction) Execute(e *core.Event) {
 	startedAt := f.ctx.Value(context.StartedAtKey).(time.Time)
 	elapsed := time.Since(startedAt)
 	years := int(elapsed.Hours() / 24 / 365)
@@ -45,7 +44,7 @@ func (f *uptimeFunction) Execute(e *core.Event) error {
 	elapsed -= time.Duration(minutes) * time.Minute
 	seconds := int(elapsed.Seconds())
 
-	response := "My uptime: "
+	response := "Uptime: "
 	if years > 0 {
 		plural := ""
 		if years > 1 {
@@ -90,5 +89,4 @@ func (f *uptimeFunction) Execute(e *core.Event) error {
 	}
 
 	f.irc.SendMessage(e.ReplyTarget(), response)
-	return nil
 }

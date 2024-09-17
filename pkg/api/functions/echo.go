@@ -10,7 +10,7 @@ import (
 const echoFunctionName = "echo"
 
 type echoFunction struct {
-	stub
+	Stub
 }
 
 func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,17 +20,15 @@ func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &echoFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *echoFunction) ShouldExecute(e *core.Event) bool {
-	ok, _ := f.verifyInput(e, 1)
-	return ok
+func (f *echoFunction) MayExecute(e *core.Event) bool {
+	return f.isValid(e, 1)
 }
 
-func (f *echoFunction) Execute(e *core.Event) error {
-	tokens := parseTokens(e.Message())
+func (f *echoFunction) Execute(e *core.Event) {
+	tokens := Tokens(e.Message())
 	f.irc.SendMessage(e.ReplyTarget(), strings.Join(tokens[1:], " "))
-	return nil
 }

@@ -11,7 +11,7 @@ import (
 const leaveFunctionName = "leave"
 
 type leaveFunction struct {
-	stub
+	Stub
 }
 
 func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,25 +21,25 @@ func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}
 
 	return &leaveFunction{
-		stub: stub,
+		Stub: stub,
 	}, nil
 }
 
-func (f *leaveFunction) ShouldExecute(e *core.Event) bool {
-	ok, tokens := f.verifyInput(e, 0)
-	if len(tokens) == 1 && !e.IsPrivateMessage() {
-		return ok
+func (f *leaveFunction) MayExecute(e *core.Event) bool {
+	tokens := Tokens(e.Message())
+	if e.IsPrivateMessage() {
+		return f.isValid(e, 1) && (strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&"))
 	}
 
-	return ok && (strings.HasPrefix(tokens[1], "#") || strings.HasPrefix(tokens[1], "&"))
+	return f.isValid(e, 0)
 }
 
-func (f *leaveFunction) Execute(e *core.Event) error {
-	tokens := parseTokens(e.Message())
+func (f *leaveFunction) Execute(e *core.Event) {
+	tokens := Tokens(e.Message())
 
 	if len(tokens) == 1 && !e.IsPrivateMessage() {
 		f.irc.Part(e.ReplyTarget())
-		return nil
+		return
 	}
 
 	for _, token := range tokens[1:] {
@@ -52,6 +52,4 @@ func (f *leaveFunction) Execute(e *core.Event) error {
 			time.Sleep(250 * time.Millisecond)
 		}()
 	}
-
-	return nil
 }
