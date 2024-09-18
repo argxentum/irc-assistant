@@ -14,15 +14,13 @@ import (
 	"time"
 )
 
-const redditFunctionPrefix = "reddit"
-
 type redditFunction struct {
 	Stub
 	subreddit string
 }
 
 func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("%s/%s", redditFunctionPrefix, subreddit))
+	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("r/%s", subreddit))
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +36,7 @@ func (f *redditFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *redditFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ reddit/%s\n", f.subreddit)
+	fmt.Printf("⚡ r/%s\n", f.subreddit)
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
 	posts, err := SearchNewPosts(f.subreddit, query)
