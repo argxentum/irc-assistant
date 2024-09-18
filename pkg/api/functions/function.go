@@ -48,6 +48,8 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewWakeFunction(ctx, cfg, irc)
 	case aboutFunctionName:
 		return NewAboutFunction(ctx, cfg, irc)
+	case searchFunctionName:
+		return NewSearchFunction(ctx, cfg, irc)
 	case "reddit/politics":
 		return NewRedditFunction("politics", ctx, cfg, irc)
 	case "reddit/news":

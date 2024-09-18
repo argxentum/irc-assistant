@@ -139,7 +139,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 
 	c := colly.NewCollector()
 	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.DOM.Find("ol.b_results").Find("h2").Text())
+		title := strings.TrimSpace(node.DOM.Find("ol#b_results").Find("h2").Text())
 		if len(title) > 0 {
 			f.irc.SendMessage(e.ReplyTarget(), title)
 			return
@@ -185,9 +185,6 @@ func (f *summaryFunction) handleX(e *core.Event, url string) {
 	})
 
 	c.OnHTML("html", func(node *colly.HTMLElement) {
-		h, _ := node.DOM.Html()
-		println(h)
-
 		title := strings.TrimSpace(node.ChildAttr("meta[property='og:title']", "content"))
 		description := strings.TrimSpace(node.ChildAttr("meta[property='og:description']", "content"))
 		if len(title) > 0 && len(description) > 0 {
