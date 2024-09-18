@@ -65,7 +65,7 @@ func (f *redditFunction) showResults(e *core.Event, posts []RedditPost) {
 			title = "No title"
 		}
 		content = append(content, text.Bold(title))
-		content = append(content, time.Unix(int64(post.Created), 0).Format("January 2, 2006"))
+		content = append(content, fmt.Sprintf("Posted to r/%s on %s", f.subreddit, time.Unix(int64(post.Created), 0).Format("January 2, 2006")))
 		content = append(content, post.URL)
 		if i < len(posts)-1 {
 			content = append(content, " ")
