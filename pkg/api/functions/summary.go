@@ -7,28 +7,25 @@ import (
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"net/http"
-	"slices"
 	"strings"
 )
 
 const summaryFunctionName = "summary"
 
-var allowedContentTypes = []string{
+var allowedContentTypePrefixes = []string{
 	"text/html",
 	"text/plain",
 	"text/xml",
 	"application/xml",
-	"application/xhtml+xml",
-	"application/rss+xml",
-	"application/atom+xml",
-	"application/rdf+xml",
+	"application/xhtml",
+	"application/rss",
+	"application/atom",
+	"application/rdf",
 	"application/json",
 	"application/ld+json",
-	"application/vnd.api+json",
+	"application/vnd.api",
 	"application/hal+json",
-	"application/vnd.collection+json",
-	"application/vnd.collection.hal+json",
-	"application/vnd.collection.doc+json",
+	"application/vnd.collection",
 }
 
 type summaryFunction struct {
@@ -80,7 +77,7 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		contentType := node.Response.Headers.Get("Content-Type")
-		if !slices.Contains(allowedContentTypes, contentType) {
+		if !isContentTypeAllowed(contentType) {
 			fmt.Printf("⚠️ ignoring invalid content (%s) type for %s\n", contentType, url)
 			return
 		}
@@ -128,6 +125,14 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 	if err != nil {
 		f.tryBing(e, url)
 	}
+}
+func isContentTypeAllowed(contentType string) bool {
+	for _, p := range allowedContentTypePrefixes {
+		if strings.HasPrefix(contentType, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
