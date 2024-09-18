@@ -38,7 +38,7 @@ func (f *redditFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *redditFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: reddit/%s\n", f.subreddit)
+	fmt.Printf("⚡ reddit/%s\n", f.subreddit)
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
 	posts, err := SearchNewPosts(f.subreddit, query)
@@ -53,12 +53,14 @@ func (f *redditFunction) Execute(e *core.Event) {
 	f.showResults(e, posts)
 }
 
+const postsTitleMaxLength = 256
+
 func (f *redditFunction) showResults(e *core.Event, posts []RedditPost) {
 	content := make([]string, 0)
 	for i, post := range posts {
 		title := post.Title
-		if len(title) > 100 {
-			title = title[:100] + "..."
+		if len(title) > postsTitleMaxLength {
+			title = title[:postsTitleMaxLength] + "..."
 		} else if len(title) == 0 {
 			title = "No title"
 		}

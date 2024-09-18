@@ -29,6 +29,6 @@ func (f *aboutFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *aboutFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: about\n")
+	fmt.Printf("⚡ about\n")
 	f.irc.SendMessage(e.ReplyTarget(), "Version 0.1. Source: https://github.com/argxentum/irc-assistant.")
 }

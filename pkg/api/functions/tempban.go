@@ -30,7 +30,7 @@ func (f *tempBanFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *tempBanFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: tempban\n")
+	fmt.Printf("⚡ tempban\n")
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 	f.isBotAuthorizedByChannelStatus(channel, core.HalfOperator, func(authorized bool) {

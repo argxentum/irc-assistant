@@ -30,7 +30,7 @@ func (f *kickFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *kickFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: kick\n")
+	fmt.Printf("⚡ kick\n")
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 	f.isBotAuthorizedByChannelStatus(channel, core.HalfOperator, func(authorized bool) {

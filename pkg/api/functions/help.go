@@ -32,7 +32,7 @@ func (f *helpFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *helpFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: help\n")
+	fmt.Printf("⚡ help\n")
 
 	// if no command is specified, list all available commands for the user (based on their status)
 	tokens := Tokens(e.Message())

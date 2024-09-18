@@ -30,7 +30,7 @@ func (f *banFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *banFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: ban\n")
+	fmt.Printf("⚡ ban\n")
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 	f.isBotAuthorizedByChannelStatus(channel, core.HalfOperator, func(authorized bool) {

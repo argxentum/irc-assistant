@@ -29,7 +29,7 @@ func (f *wakeFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *wakeFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: wake\n")
+	fmt.Printf("⚡ wake\n")
 
 	if f.isAwake() {
 		f.Reply(e, "Already awake.")

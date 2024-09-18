@@ -35,7 +35,7 @@ func (f *leaveFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *leaveFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: leave\n")
+	fmt.Printf("⚡ leave\n")
 	tokens := Tokens(e.Message())
 
 	if len(tokens) == 1 && !e.IsPrivateMessage() {

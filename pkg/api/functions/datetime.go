@@ -6,7 +6,7 @@ import (
 	"assistant/pkg/api/core"
 	"assistant/pkg/api/text"
 	"fmt"
-	"github.com/anaskhan96/soup"
+	"github.com/gocolly/colly/v2"
 	"math/rand"
 	"net/url"
 	"strings"
@@ -34,27 +34,23 @@ func (f *dateTimeFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *dateTimeFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: datetime\n")
+	fmt.Printf("⚡ datetime\n")
 	tokens := Tokens(e.Message())
 	location := strings.Join(tokens[1:], " ")
 
-	soup.Header("User-Agent", userAgents[rand.Intn(len(userAgents))])
+	c := colly.NewCollector()
+	c.UserAgent = userAgents[rand.Intn(len(userAgents))]
+	c.OnHTML("div.baselClock", func(node *colly.HTMLElement) {
+		label := node.ChildText("div.b_focusLabel")
+		time := node.ChildText("div.b_focusTextLarge")
+		date := node.ChildText("div.b_secondaryFocus")
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label, text.Bold(time), text.Bold(date)))
+	})
+
 	query := url.QueryEscape(fmt.Sprintf("current date and time in %s", location))
-	resp, err := soup.Get(fmt.Sprintf("https://www.bing.com/search?q=%s", query))
+	err := c.Visit(fmt.Sprintf("https://www.bing.com/search?q=%s", query))
 	if err != nil {
 		f.Reply(e, "Unable to find the current date and time of %s", e.From, text.Bold(location))
 		return
 	}
-
-	doc := soup.HTMLParse(resp)
-	label := doc.Find("div", "class", "b_focusLabel")
-	time := doc.Find("div", "class", "b_focusTextLarge")
-	date := doc.Find("div", "class", "b_secondaryFocus")
-
-	if label.Error != nil || time.Error != nil || date.Error != nil {
-		f.Reply(e, "Unable to find the current date and time of %s", e.From, text.Bold(location))
-		return
-	}
-
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label.Text(), text.Bold(time.Text()), text.Bold(date.Text())))
 }

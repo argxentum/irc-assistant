@@ -35,7 +35,7 @@ func (f *sayFunction) MayExecute(e *core.Event) bool {
 }
 
 func (f *sayFunction) Execute(e *core.Event) {
-	fmt.Printf("Executing function: say\n")
+	fmt.Printf("⚡ say\n")
 	tokens := Tokens(e.Message())
 	f.irc.SendMessage(tokens[1], strings.Join(tokens[2:], " "))
 }
