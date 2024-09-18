@@ -27,6 +27,6 @@ func main() {
 	h := handler.NewEventHandler(ctx, cfg, irc)
 	for {
 		e := <-ech
-		h.Handle(e)
+		go h.Handle(e)
 	}
 }
