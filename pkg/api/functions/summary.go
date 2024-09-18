@@ -69,10 +69,9 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 	c := colly.NewCollector()
 
 	c.OnRequest(func(r *colly.Request) {
-		r.Headers.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
-		r.Headers.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
-		r.Headers.Set("Accept-Language", "en-US,en;q=0.9")
-		r.Headers.Set("Accept-Encoding", "gzip, deflate, br, zstd")
+		for k, v := range summaryHeaders {
+			r.Headers.Set(k, v)
+		}
 	})
 
 	c.OnHTML("html", func(node *colly.HTMLElement) {
@@ -136,6 +135,8 @@ func isContentTypeAllowed(contentType string) bool {
 }
 
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
+	fmt.Printf("ℹ trying bing for %s\n", url)
+
 	c := colly.NewCollector()
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		title := strings.TrimSpace(node.DOM.Find("ol.b_results").Find("h2").Text())
@@ -154,6 +155,8 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 }
 
 func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
+	fmt.Printf("ℹ trying nuggetize for %s\n", url)
+
 	c := colly.NewCollector()
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		title := strings.TrimSpace(node.ChildText("span.title"))
@@ -172,8 +175,9 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 }
 
 func (f *summaryFunction) handleX(e *core.Event, url string) {
-	c := colly.NewCollector()
+	fmt.Printf("ℹ handling x for %s\n", url)
 
+	c := colly.NewCollector()
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == http.StatusFound {
 			println("here")
