@@ -123,12 +123,12 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 			return
 		}
 
-		f.Reply(e, "Unable to provide a summary")
+		//f.Reply(e, "Unable to provide a summary")
 	})
 
 	err := c.Visit(fmt.Sprintf("https://nug.zip/%s", url))
 	if err != nil {
-		f.Reply(e, "Unable to provide a summary")
+		//f.Reply(e, "Unable to provide a summary")
 	}
 }
 
