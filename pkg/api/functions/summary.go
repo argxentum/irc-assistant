@@ -83,15 +83,15 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 
 		title := strings.TrimSpace(node.ChildAttr("meta[property='og:title']", "content"))
 		description := strings.TrimSpace(node.ChildAttr("meta[property='og:description']", "content"))
+
 		if len(title) > 0 && len(description) > 0 {
 			if strings.Contains(description, title) || strings.Contains(title, description) {
 				if len(description) > len(title) {
 					f.irc.SendMessage(e.ReplyTarget(), description)
 					return
-				} else {
-					f.irc.SendMessage(e.ReplyTarget(), title)
-					return
 				}
+				f.irc.SendMessage(e.ReplyTarget(), title)
+				return
 			}
 			f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
 			return
@@ -139,7 +139,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 
 	c := colly.NewCollector()
 	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.DOM.Find("ol#b_results").Find("h2").Text())
+		title := strings.TrimSpace(node.DOM.Find("ol#b_results").First().Find("h2").First().Text())
 		if len(title) > 0 {
 			f.irc.SendMessage(e.ReplyTarget(), title)
 			return

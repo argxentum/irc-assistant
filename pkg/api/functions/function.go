@@ -50,11 +50,11 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewAboutFunction(ctx, cfg, irc)
 	case searchFunctionName:
 		return NewSearchFunction(ctx, cfg, irc)
-	case "reddit/politics":
+	case "r/politics":
 		return NewRedditFunction("politics", ctx, cfg, irc)
-	case "reddit/news":
+	case "r/news":
 		return NewRedditFunction("news", ctx, cfg, irc)
-	case "reddit/worldnews":
+	case "r/worldnews":
 		return NewRedditFunction("worldnews", ctx, cfg, irc)
 	case summaryFunctionName:
 		return NewSummaryFunction(ctx, cfg, irc)

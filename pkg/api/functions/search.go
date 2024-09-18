@@ -38,13 +38,48 @@ func (f *searchFunction) Execute(e *core.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 
+	succeeded := false
 	c := colly.NewCollector()
 	c.UserAgent = userAgents[rand.Intn(len(userAgents))]
 	c.OnHTML("ol#b_results li.b_algo", func(node *colly.HTMLElement) {
-		title := node.DOM.Find("h2").First().Text()
-		link := node.DOM.Find("a").AttrOr("href", "")
-		source := node.DOM.Parent().Find("div.b_tptt").Text()
-		f.irc.SendMessages(e.ReplyTarget(), []string{fmt.Sprintf("%s: %s", source, title), link})
+		if succeeded {
+			return
+		}
+
+		title := strings.TrimSpace(node.DOM.Find("h2").First().Text())
+		link := strings.TrimSpace(node.DOM.Find("h2 a").First().AttrOr("href", ""))
+		site := strings.TrimSpace(node.DOM.Find("div.tptt").First().Text())
+
+		messages := make([]string, 0)
+
+		if len(link) == 0 {
+			return
+		}
+
+		if len(title) > 0 && len(site) > 0 {
+			if strings.Contains(title, site) || strings.Contains(site, title) {
+				if len(title) > len(site) {
+					messages = append(messages, text.Bold(title))
+				} else {
+					messages = append(messages, text.Bold(site))
+				}
+			} else {
+				messages = append(messages, fmt.Sprintf("%s: %s", site, text.Bold(title)))
+			}
+		} else if len(site) > 0 {
+			messages = append(messages, site)
+		} else if len(title) > 0 {
+			messages = append(messages, title)
+		}
+
+		if len(link) > 0 {
+			messages = append(messages, link)
+		}
+
+		if len(messages) > 0 {
+			f.irc.SendMessages(e.ReplyTarget(), messages)
+			succeeded = true
+		}
 	})
 
 	query := url.QueryEscape(input)
