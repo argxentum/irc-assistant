@@ -116,8 +116,8 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 
 func (f *summaryFunction) bing(e *core.Event, url string) {
 	c := colly.NewCollector()
-	c.OnHTML("ol.b_results", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.ChildText("h2"))
+	c.OnHTML("html", func(node *colly.HTMLElement) {
+		title := strings.TrimSpace(node.DOM.Find("ol.b_results").Find("h2").Text())
 		if len(title) > 0 {
 			f.irc.SendMessage(e.ReplyTarget(), title)
 			return
