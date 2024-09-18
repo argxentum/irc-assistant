@@ -7,10 +7,29 @@ import (
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"net/http"
+	"slices"
 	"strings"
 )
 
 const summaryFunctionName = "summary"
+
+var allowedContentTypes = []string{
+	"text/html",
+	"text/plain",
+	"text/xml",
+	"application/xml",
+	"application/xhtml+xml",
+	"application/rss+xml",
+	"application/atom+xml",
+	"application/rdf+xml",
+	"application/json",
+	"application/ld+json",
+	"application/vnd.api+json",
+	"application/hal+json",
+	"application/vnd.collection+json",
+	"application/vnd.collection.hal+json",
+	"application/vnd.collection.doc+json",
+}
 
 type summaryFunction struct {
 	Stub
@@ -41,8 +60,8 @@ func (f *summaryFunction) MayExecute(e *core.Event) bool {
 func (f *summaryFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ summary\n")
 	tokens := Tokens(e.Message())
-	url, translated := f.xTranslator.TranslateURL(tokens[0])
-	if translated {
+	url, isX := f.xTranslator.TranslateURL(tokens[0])
+	if isX {
 		f.handleX(e, url)
 	} else {
 		f.tryDirect(e, url)
@@ -60,9 +79,24 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 	})
 
 	c.OnHTML("html", func(node *colly.HTMLElement) {
+		contentType := node.Response.Headers.Get("Content-Type")
+		if !slices.Contains(allowedContentTypes, contentType) {
+			fmt.Printf("⚠️ ignoring invalid content (%s) type for %s\n", contentType, url)
+			return
+		}
+
 		title := strings.TrimSpace(node.ChildAttr("meta[property='og:title']", "content"))
 		description := strings.TrimSpace(node.ChildAttr("meta[property='og:description']", "content"))
 		if len(title) > 0 && len(description) > 0 {
+			if strings.Contains(description, title) {
+				if len(description) > len(title) {
+					f.irc.SendMessage(e.ReplyTarget(), description)
+					return
+				} else {
+					f.irc.SendMessage(e.ReplyTarget(), title)
+					return
+				}
+			}
 			f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
 			return
 		}
@@ -123,12 +157,12 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 			return
 		}
 
-		//f.Reply(e, "Unable to provide a summary")
+		fmt.Printf("⚠️ unable to summarize %s\n", url)
 	})
 
 	err := c.Visit(fmt.Sprintf("https://nug.zip/%s", url))
 	if err != nil {
-		//f.Reply(e, "Unable to provide a summary")
+		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
 	}
 }
 
@@ -160,11 +194,11 @@ func (f *summaryFunction) handleX(e *core.Event, url string) {
 			return
 		}
 
-		f.Reply(e, "Unable to provide a summary")
+		fmt.Printf("⚠️ unable to summarize %s\n", url)
 	})
 
 	err := c.Visit(url)
 	if err != nil {
-		f.Reply(e, "Unable to provide a summary")
+		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
 	}
 }
