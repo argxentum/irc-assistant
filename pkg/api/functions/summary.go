@@ -87,10 +87,28 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 			return
 		}
 
-		f.tryNuggetize(e, url)
+		f.tryBing(e, url)
 	})
 
 	err := c.Visit(url)
+	if err != nil {
+		f.tryBing(e, url)
+	}
+}
+
+func (f *summaryFunction) tryBing(e *core.Event, url string) {
+	c := colly.NewCollector()
+	c.OnHTML("html", func(node *colly.HTMLElement) {
+		title := strings.TrimSpace(node.DOM.Find("ol.b_results").Find("h2").Text())
+		if len(title) > 0 {
+			f.irc.SendMessage(e.ReplyTarget(), title)
+			return
+		}
+
+		f.tryNuggetize(e, url)
+	})
+
+	err := c.Visit(fmt.Sprintf("https://www.bing.com/search?q=%s", url))
 	if err != nil {
 		f.tryNuggetize(e, url)
 	}
@@ -100,24 +118,6 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 	c := colly.NewCollector()
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		title := strings.TrimSpace(node.ChildText("span.title"))
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-
-		f.bing(e, url)
-	})
-
-	err := c.Visit(fmt.Sprintf("https://nug.zip/%s", url))
-	if err != nil {
-		f.bing(e, url)
-	}
-}
-
-func (f *summaryFunction) bing(e *core.Event, url string) {
-	c := colly.NewCollector()
-	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.DOM.Find("ol.b_results").Find("h2").Text())
 		if len(title) > 0 {
 			f.irc.SendMessage(e.ReplyTarget(), title)
 			return
