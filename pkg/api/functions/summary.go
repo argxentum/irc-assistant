@@ -69,10 +69,12 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string) {
 	c := colly.NewCollector()
 
 	c.OnRequest(func(r *colly.Request) {
-		for k, v := range summaryHeaders {
+		for k, v := range requestHeaders {
 			r.Headers.Set(k, v)
 		}
 	})
+
+	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
 
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		contentType := node.Response.Headers.Get("Content-Type")
@@ -135,9 +137,18 @@ func isContentTypeAllowed(contentType string) bool {
 }
 
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
-	fmt.Printf("ℹ trying bing for %s\n", url)
+	fmt.Printf("🗒 trying bing for %s\n", url)
 
 	c := colly.NewCollector()
+
+	c.OnRequest(func(r *colly.Request) {
+		for k, v := range requestHeaders {
+			r.Headers.Set(k, v)
+		}
+	})
+
+	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
+
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		title := strings.TrimSpace(node.DOM.Find("ol#b_results").First().Find("h2").First().Text())
 		if len(title) > 0 {
@@ -155,9 +166,18 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 }
 
 func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
-	fmt.Printf("ℹ trying nuggetize for %s\n", url)
+	fmt.Printf("🗒 trying nuggetize for %s\n", url)
 
 	c := colly.NewCollector()
+
+	c.OnRequest(func(r *colly.Request) {
+		for k, v := range requestHeaders {
+			r.Headers.Set(k, v)
+		}
+	})
+
+	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
+
 	c.OnHTML("html", func(node *colly.HTMLElement) {
 		title := strings.TrimSpace(node.ChildText("span.title"))
 		if len(title) > 0 {
@@ -175,9 +195,18 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 }
 
 func (f *summaryFunction) handleX(e *core.Event, url string) {
-	fmt.Printf("ℹ handling x for %s\n", url)
+	fmt.Printf("🗒 handling x for %s\n", url)
 
 	c := colly.NewCollector()
+
+	c.OnRequest(func(r *colly.Request) {
+		for k, v := range requestHeaders {
+			r.Headers.Set(k, v)
+		}
+	})
+
+	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
+
 	c.OnError(func(r *colly.Response, err error) {
 		if r.StatusCode == http.StatusFound {
 			println("here")

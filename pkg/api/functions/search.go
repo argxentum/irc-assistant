@@ -7,7 +7,6 @@ import (
 	"assistant/pkg/api/text"
 	"fmt"
 	"github.com/gocolly/colly/v2"
-	"math/rand"
 	"net/url"
 	"strings"
 )
@@ -40,7 +39,15 @@ func (f *searchFunction) Execute(e *core.Event) {
 
 	succeeded := false
 	c := colly.NewCollector()
-	c.UserAgent = userAgents[rand.Intn(len(userAgents))]
+
+	c.OnRequest(func(r *colly.Request) {
+		for k, v := range requestHeaders {
+			r.Headers.Set(k, v)
+		}
+	})
+
+	fmt.Printf("User-agent: %s\n", c.UserAgent)
+
 	c.OnHTML("ol#b_results li.b_algo", func(node *colly.HTMLElement) {
 		if succeeded {
 			return
