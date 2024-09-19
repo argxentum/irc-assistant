@@ -5,7 +5,6 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
 	"fmt"
-	"time"
 )
 
 const joinFunctionName = "join"
@@ -43,9 +42,6 @@ func (f *joinFunction) Execute(e *core.Event) {
 			continue
 		}
 
-		go func() {
-			f.irc.Join(tokens[1])
-			time.Sleep(250 * time.Millisecond)
-		}()
+		f.irc.Join(tokens[1])
 	}
 }

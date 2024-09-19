@@ -163,7 +163,7 @@ func (s *service) SendMessages(target string, messages []string) {
 	go func() {
 		for _, message := range messages {
 			s.SendMessage(target, message)
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	}()
 }
@@ -206,7 +206,7 @@ func (s *service) Kick(channel, user, reason string) {
 func (s *service) Ban(channel, user, reason string) {
 	go func() {
 		s.Kick(channel, user, reason)
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		s.conn.Mode(channel, "+b", user)
 	}()
 }
@@ -214,7 +214,7 @@ func (s *service) Ban(channel, user, reason string) {
 func (s *service) TemporaryBan(channel, user, reason string, duration time.Duration) {
 	go func() {
 		s.Kick(channel, user, reason)
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		s.conn.Mode(channel, "+b", user)
 	}()
 }

@@ -37,9 +37,10 @@ func (f *dateTimeFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ datetime\n")
 	tokens := Tokens(e.Message())
 	location := strings.Join(tokens[1:], " ")
+	headers := headerSets[rand.Intn(len(headerSets))]
 
 	c := colly.NewCollector()
-	c.UserAgent = userAgents[rand.Intn(len(userAgents))]
+	c.UserAgent = headers["User-Agent"]
 	c.OnHTML("div.baselClock", func(node *colly.HTMLElement) {
 		label := node.ChildText("div.b_focusLabel")
 		time := node.ChildText("div.b_focusTextLarge")

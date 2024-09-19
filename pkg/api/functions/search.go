@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"fmt"
 	"github.com/gocolly/colly/v2"
+	"math/rand"
 	"net/url"
 	"strings"
 )
@@ -36,30 +37,31 @@ func (f *searchFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ search\n")
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
+	headers := headerSets[rand.Intn(len(headerSets))]
 
-	succeeded := false
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.UserAgent(headers["User-Agent"]),
+	)
+
+	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
 
 	c.OnRequest(func(r *colly.Request) {
-		for k, v := range requestHeaders {
+		for k, v := range headers {
 			r.Headers.Set(k, v)
 		}
 	})
 
-	fmt.Printf("User-agent: %s\n", c.UserAgent)
-
-	c.OnHTML("ol#b_results li.b_algo", func(node *colly.HTMLElement) {
-		if succeeded {
-			return
-		}
-
-		title := strings.TrimSpace(node.DOM.Find("h2").First().Text())
-		link := strings.TrimSpace(node.DOM.Find("h2 a").First().AttrOr("href", ""))
-		site := strings.TrimSpace(node.DOM.Find("div.tptt").First().Text())
+	c.OnHTML("html", func(node *colly.HTMLElement) {
+		container := node.DOM.Find("ol#b_results li.b_algo").First()
+		title := strings.TrimSpace(container.Find("h2").First().Text())
+		link := strings.TrimSpace(container.Find("h2 a").First().AttrOr("href", ""))
+		site := strings.TrimSpace(container.Find("div.tptt").First().Text())
 
 		messages := make([]string, 0)
 
 		if len(link) == 0 {
+			f.Reply(e, "No search results found for %s", text.Bold(input))
+			fmt.Printf("❌ %s\n", c.UserAgent)
 			return
 		}
 
@@ -85,7 +87,8 @@ func (f *searchFunction) Execute(e *core.Event) {
 
 		if len(messages) > 0 {
 			f.irc.SendMessages(e.ReplyTarget(), messages)
-			succeeded = true
+		} else {
+			f.Reply(e, "No search results found for %s", text.Bold(input))
 		}
 	})
 

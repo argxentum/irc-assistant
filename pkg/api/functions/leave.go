@@ -5,7 +5,6 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
 	"fmt"
-	"time"
 )
 
 const leaveFunctionName = "leave"
@@ -48,9 +47,6 @@ func (f *leaveFunction) Execute(e *core.Event) {
 			continue
 		}
 
-		go func() {
-			f.irc.Part(tokens[1])
-			time.Sleep(250 * time.Millisecond)
-		}()
+		f.irc.Part(tokens[1])
 	}
 }

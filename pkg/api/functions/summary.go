@@ -5,8 +5,6 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
 	"fmt"
-	"github.com/gocolly/colly/v2"
-	"net/http"
 	"strings"
 )
 
@@ -30,7 +28,6 @@ var allowedContentTypePrefixes = []string{
 
 type summaryFunction struct {
 	Stub
-	xTranslator XTranslator
 }
 
 func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -40,8 +37,7 @@ func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (
 	}
 
 	return &summaryFunction{
-		Stub:        stub,
-		xTranslator: NewXTranslator(),
+		Stub: stub,
 	}, nil
 }
 
@@ -57,110 +53,69 @@ func (f *summaryFunction) MayExecute(e *core.Event) bool {
 func (f *summaryFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ summary\n")
 	tokens := Tokens(e.Message())
-	url, isX := f.xTranslator.TranslateURL(tokens[0])
-	if isX {
-		f.handleX(e, url)
-	} else {
-		f.tryDirect(e, url)
-	}
+	url := translateURL(tokens[0])
+	f.tryDirect(e, url, false)
 }
 
-func (f *summaryFunction) tryDirect(e *core.Event, url string) {
-	c := colly.NewCollector()
+const minimumTitleLength = 16
+const minimumPreferredTitleLength = 64
+const maximumPreferredTitleLength = 128
 
-	c.OnRequest(func(r *colly.Request) {
-		for k, v := range requestHeaders {
-			r.Headers.Set(k, v)
-		}
-	})
+func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool) {
+	fmt.Printf("🗒 trying direct (impersonated: %v) for %s\n", impersonated, url)
 
-	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
-
-	c.OnHTML("html", func(node *colly.HTMLElement) {
-		contentType := node.Response.Headers.Get("Content-Type")
-		if !isContentTypeAllowed(contentType) {
-			fmt.Printf("⚠️ ignoring invalid content (%s) type for %s\n", contentType, url)
+	doc, err := getDocument(url, impersonated)
+	if err != nil || doc == nil {
+		if !impersonated {
+			f.tryDirect(e, url, true)
 			return
 		}
+		f.tryNuggetize(e, url)
+		return
+	}
 
-		title := strings.TrimSpace(node.ChildAttr("meta[property='og:title']", "content"))
-		description := strings.TrimSpace(node.ChildAttr("meta[property='og:description']", "content"))
+	title := strings.TrimSpace(doc.Find("title").First().Text())
+	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
+	titleMeta := strings.TrimSpace(titleAttr)
+	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
+	description := strings.TrimSpace(descriptionAttr)
+	h1 := strings.TrimSpace(doc.Find("html body h1").First().Text())
 
-		if len(title) > 0 && len(description) > 0 {
-			if strings.Contains(description, title) || strings.Contains(title, description) {
-				if len(description) > len(title) {
-					f.irc.SendMessage(e.ReplyTarget(), description)
-					return
-				}
-				f.irc.SendMessage(e.ReplyTarget(), title)
+	if len(titleAttr) > 0 {
+		title = titleMeta
+	} else if len(h1) > 0 {
+		title = h1
+	}
+
+	if len(title)+len(description) < minimumTitleLength {
+		f.tryNuggetize(e, url)
+		return
+	}
+
+	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumPreferredTitleLength || len(title) < minimumPreferredTitleLength) {
+		if strings.Contains(description, title) || strings.Contains(title, description) {
+			if len(description) > len(title) {
+				f.irc.SendMessage(e.ReplyTarget(), description)
 				return
 			}
-			f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
-			return
-		}
-		if len(title) > 0 {
 			f.irc.SendMessage(e.ReplyTarget(), title)
 			return
 		}
-		if len(description) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), description)
-			return
-		}
-
-		title = strings.TrimSpace(node.DOM.Find("h1").Text())
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-
-		title = strings.TrimSpace(node.DOM.Find("title").Text())
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-
-		f.tryBing(e, url)
-	})
-
-	err := c.Visit(url)
-	if err != nil {
-		f.tryBing(e, url)
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
+		return
 	}
-}
-func isContentTypeAllowed(contentType string) bool {
-	for _, p := range allowedContentTypePrefixes {
-		if strings.HasPrefix(contentType, p) {
-			return true
-		}
+	if len(title) > 0 {
+		f.irc.SendMessage(e.ReplyTarget(), title)
+		return
 	}
-	return false
-}
+	if len(description) > 0 {
+		f.irc.SendMessage(e.ReplyTarget(), description)
+		return
+	}
 
-func (f *summaryFunction) tryBing(e *core.Event, url string) {
-	fmt.Printf("🗒 trying bing for %s\n", url)
-
-	c := colly.NewCollector()
-
-	c.OnRequest(func(r *colly.Request) {
-		for k, v := range requestHeaders {
-			r.Headers.Set(k, v)
-		}
-	})
-
-	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
-
-	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.DOM.Find("ol#b_results").First().Find("h2").First().Text())
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-
-		f.tryNuggetize(e, url)
-	})
-
-	err := c.Visit(fmt.Sprintf("https://www.bing.com/search?q=%s", url))
-	if err != nil {
+	if !impersonated {
+		f.tryDirect(e, url, true)
+	} else {
 		f.tryNuggetize(e, url)
 	}
 }
@@ -168,72 +123,38 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 	fmt.Printf("🗒 trying nuggetize for %s\n", url)
 
-	c := colly.NewCollector()
+	doc, err := getDocument(fmt.Sprintf("https://nug.zip/%s", url), true)
+	if err != nil || doc == nil {
+		f.tryBing(e, url)
+		return
+	}
 
-	c.OnRequest(func(r *colly.Request) {
-		for k, v := range requestHeaders {
-			r.Headers.Set(k, v)
-		}
-	})
+	title := strings.TrimSpace(doc.Find("span.title").First().Text())
 
-	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
-
-	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.ChildText("span.title"))
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-
-		fmt.Printf("⚠️ unable to summarize %s\n", url)
-	})
-
-	err := c.Visit(fmt.Sprintf("https://nug.zip/%s", url))
-	if err != nil {
-		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
+	if len(title) < minimumTitleLength {
+		f.tryBing(e, url)
+		return
+	} else {
+		f.irc.SendMessage(e.ReplyTarget(), title)
+		return
 	}
 }
 
-func (f *summaryFunction) handleX(e *core.Event, url string) {
-	fmt.Printf("🗒 handling x for %s\n", url)
+func (f *summaryFunction) tryBing(e *core.Event, url string) {
+	fmt.Printf("🗒 trying bing for %s\n", url)
 
-	c := colly.NewCollector()
-
-	c.OnRequest(func(r *colly.Request) {
-		for k, v := range requestHeaders {
-			r.Headers.Set(k, v)
-		}
-	})
-
-	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
-
-	c.OnError(func(r *colly.Response, err error) {
-		if r.StatusCode == http.StatusFound {
-			println("here")
-		}
-	})
-
-	c.OnHTML("html", func(node *colly.HTMLElement) {
-		title := strings.TrimSpace(node.ChildAttr("meta[property='og:title']", "content"))
-		description := strings.TrimSpace(node.ChildAttr("meta[property='og:description']", "content"))
-		if len(title) > 0 && len(description) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
-			return
-		}
-		if len(title) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), title)
-			return
-		}
-		if len(description) > 0 {
-			f.irc.SendMessage(e.ReplyTarget(), description)
-			return
-		}
-
-		fmt.Printf("⚠️ unable to summarize %s\n", url)
-	})
-
-	err := c.Visit(url)
-	if err != nil {
+	doc, err := getDocument(fmt.Sprintf("https://www.bing.com/search?q=%s", url), true)
+	if err != nil || doc == nil {
 		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
+		return
 	}
+
+	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
+
+	if len(title) > 0 {
+		f.irc.SendMessage(e.ReplyTarget(), title)
+		return
+	}
+
+	fmt.Printf("⚠️ unable to summarize %s\n", url)
 }

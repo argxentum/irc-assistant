@@ -122,13 +122,16 @@ func SearchNewPosts(subreddit, topic string) ([]RedditPost, error) {
 	t := url.QueryEscape(topic)
 	query := fmt.Sprintf(searchRedditPosts, subreddit, t)
 
-	// create request
-	req, err := http.NewRequest("GET", query, nil)
+	req, err := http.NewRequest(http.MethodGet, query, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", userAgents[rand.Intn(len(userAgents))])
+	headers := headerSets[rand.Intn(len(headerSets))]
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
