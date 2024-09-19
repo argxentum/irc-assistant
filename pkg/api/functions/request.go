@@ -1,6 +1,7 @@
 package functions
 
 import (
+	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"math/rand"
 	"net/http"
@@ -15,6 +16,8 @@ var headerSets = []map[string]string{
 		"Accept-Language": "en-US,en;q=0.9",
 	},
 }
+
+var disallowedContentTypeError = errors.New("disallowed content type")
 
 var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
 
@@ -37,7 +40,7 @@ func getDocument(url string, impersonated bool) (*goquery.Document, error) {
 	}
 
 	if !isContentTypeAllowed(resp.Header.Get("Content-Type")) {
-		return nil, nil
+		return nil, disallowedContentTypeError
 	}
 
 	defer resp.Body.Close()

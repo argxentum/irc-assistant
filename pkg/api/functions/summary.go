@@ -4,6 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -65,6 +66,9 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 	fmt.Printf("🗒 trying direct (impersonated: %v) for %s\n", impersonated, url)
 
 	doc, err := getDocument(url, impersonated)
+	if errors.Is(err, disallowedContentTypeError) {
+		return
+	}
 	if err != nil || doc == nil {
 		if !impersonated {
 			f.tryDirect(e, url, true)
