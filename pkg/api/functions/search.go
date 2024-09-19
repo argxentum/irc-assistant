@@ -15,7 +15,7 @@ import (
 const searchFunctionName = "search"
 
 type searchFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewSearchFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -25,7 +25,7 @@ func NewSearchFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}
 
 	return &searchFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 
@@ -42,8 +42,6 @@ func (f *searchFunction) Execute(e *core.Event) {
 	c := colly.NewCollector(
 		colly.UserAgent(headers["User-Agent"]),
 	)
-
-	fmt.Printf("🗒 user-agent: %s\n", c.UserAgent)
 
 	c.OnRequest(func(r *colly.Request) {
 		for k, v := range headers {

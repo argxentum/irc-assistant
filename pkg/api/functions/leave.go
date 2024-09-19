@@ -10,7 +10,7 @@ import (
 const leaveFunctionName = "leave"
 
 type leaveFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,7 +20,7 @@ func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}
 
 	return &leaveFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

@@ -11,7 +11,7 @@ import (
 const sleepFunctionName = "sleep"
 
 type sleepFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewSleepFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewSleepFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}
 
 	return &sleepFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

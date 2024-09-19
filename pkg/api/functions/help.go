@@ -13,7 +13,7 @@ import (
 const helpFunctionName = "help"
 
 type helpFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewHelpFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -23,7 +23,7 @@ func NewHelpFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &helpFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

@@ -11,7 +11,7 @@ import (
 const sayFunctionName = "say"
 
 type sayFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 	}
 
 	return &sayFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

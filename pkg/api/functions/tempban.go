@@ -11,7 +11,7 @@ import (
 const tempBanFunctionName = "tempban"
 
 type tempBanFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewTempBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewTempBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (
 	}
 
 	return &tempBanFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

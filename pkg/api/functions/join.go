@@ -10,7 +10,7 @@ import (
 const joinFunctionName = "join"
 
 type joinFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewJoinFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,7 +20,7 @@ func NewJoinFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &joinFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

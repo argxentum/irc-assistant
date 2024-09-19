@@ -11,7 +11,7 @@ import (
 const uptimeFunctionName = "uptime"
 
 type uptimeFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}
 
 	return &uptimeFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

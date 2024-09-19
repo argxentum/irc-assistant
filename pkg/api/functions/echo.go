@@ -11,7 +11,7 @@ import (
 const echoFunctionName = "echo"
 
 type echoFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &echoFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

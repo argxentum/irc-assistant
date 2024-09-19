@@ -27,7 +27,7 @@ var allowedContentTypePrefixes = []string{
 }
 
 type summaryFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -37,7 +37,7 @@ func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (
 	}
 
 	return &summaryFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

@@ -11,7 +11,7 @@ import (
 const banFunctionName = "ban"
 
 type banFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewBanFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 	}
 
 	return &banFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

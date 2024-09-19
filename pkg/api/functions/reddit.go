@@ -15,7 +15,7 @@ import (
 )
 
 type redditFunction struct {
-	Stub
+	FunctionStub
 	subreddit string
 }
 
@@ -26,8 +26,8 @@ func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config
 	}
 
 	return &redditFunction{
-		Stub:      stub,
-		subreddit: subreddit,
+		FunctionStub: stub,
+		subreddit:    subreddit,
 	}, nil
 }
 

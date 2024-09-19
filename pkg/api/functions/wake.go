@@ -10,7 +10,7 @@ import (
 const wakeFunctionName = "wake"
 
 type wakeFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewWakeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,7 +20,7 @@ func NewWakeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &wakeFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

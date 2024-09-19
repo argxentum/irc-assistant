@@ -15,7 +15,7 @@ import (
 const dateTimeFunctionName = "datetime"
 
 type dateTimeFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewDateTimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -25,7 +25,7 @@ func NewDateTimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) 
 	}
 
 	return &dateTimeFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

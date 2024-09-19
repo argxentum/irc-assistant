@@ -10,7 +10,7 @@ import (
 const aboutFunctionName = "about"
 
 type aboutFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewAboutFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -20,7 +20,7 @@ func NewAboutFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}
 
 	return &aboutFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 

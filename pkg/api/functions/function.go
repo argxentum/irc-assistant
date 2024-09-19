@@ -58,6 +58,8 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 		return NewRedditFunction("worldnews", ctx, cfg, irc)
 	case summaryFunctionName:
 		return NewSummaryFunction(ctx, cfg, irc)
+	case biasFunctionName:
+		return NewBiasFunction(ctx, cfg, irc)
 	case tempBanFunctionName:
 		//return NewTempBanFunction(ctx, cfg, irc)
 	}
@@ -65,7 +67,7 @@ func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name str
 	return nil, fmt.Errorf("unknown function: %s", name)
 }
 
-type Stub struct {
+type FunctionStub struct {
 	ctx                 context.Context
 	cfg                 *config.Config
 	irc                 core.IRC
@@ -78,13 +80,13 @@ type Stub struct {
 	DenyPrivateMessages bool
 }
 
-func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (Stub, error) {
+func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (FunctionStub, error) {
 	entry, ok := cfg.Functions.EnabledFunctions[name]
 	if !ok {
-		return Stub{}, fmt.Errorf("no function named %s", name)
+		return FunctionStub{}, fmt.Errorf("no function named %s", name)
 	}
 
-	return Stub{
+	return FunctionStub{
 		ctx:                 ctx,
 		cfg:                 cfg,
 		irc:                 irc,
@@ -101,12 +103,12 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name
 const inputMaxLength = 512
 
 // isAwake checks if the bot is awake
-func (f *Stub) isAwake() bool {
+func (f *FunctionStub) isAwake() bool {
 	return f.ctx.Value(context.IsAwakeKey).(bool)
 }
 
 // isUserAuthorizedByRole checks if the given sender is authorized based on authorization configuration settings
-func (f *Stub) isUserAuthorizedByRole(user string, authorization string) bool {
+func (f *FunctionStub) isUserAuthorizedByRole(user string, authorization string) bool {
 	switch authorization {
 	case owner:
 		return user == f.cfg.Connection.Owner
@@ -125,14 +127,14 @@ func (f *Stub) isUserAuthorizedByRole(user string, authorization string) bool {
 }
 
 // userChannelStatus retrieves the user's status in the channel (e.g., operator, half-operator, etc.)
-func (f *Stub) userChannelStatus(user, channel string, callback func(string)) {
+func (f *FunctionStub) userChannelStatus(user, channel string, callback func(string)) {
 	f.irc.GetUserStatus(channel, user, func(status string) {
 		callback(status)
 	})
 }
 
 // isUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status
-func (f *Stub) isUserAuthorizedByChannelStatus(e *core.Event, required string, callback func(bool)) {
+func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *core.Event, required string, callback func(bool)) {
 	user, _ := e.Sender()
 	channel := e.ReplyTarget()
 
@@ -146,7 +148,7 @@ func (f *Stub) isUserAuthorizedByChannelStatus(e *core.Event, required string, c
 }
 
 // IsAuthorized checks authorization using both channel status-based and role-based authorization
-func (f *Stub) IsAuthorized(e *core.Event, callback func(bool)) {
+func (f *FunctionStub) IsAuthorized(e *core.Event, callback func(bool)) {
 	if len(f.ChannelStatus) > 0 {
 		f.isUserAuthorizedByChannelStatus(e, f.ChannelStatus, func(authorized bool) {
 			if authorized {
@@ -181,7 +183,7 @@ func (f *Stub) IsAuthorized(e *core.Event, callback func(bool)) {
 }
 
 // isTriggerValid checks if the given trigger is valid for the function
-func (f *Stub) isTriggerValid(trigger string) bool {
+func (f *FunctionStub) isTriggerValid(trigger string) bool {
 	for _, t := range f.Triggers {
 		if strings.TrimPrefix(trigger, f.cfg.Functions.Prefix) == t {
 			return true
@@ -192,7 +194,7 @@ func (f *Stub) isTriggerValid(trigger string) bool {
 }
 
 // isValid checks if the input meets minimum validation requirements for the function. If the function requires role-based authorization and not channel status-based authorization, then it is also checked. Otherwise, the union of both authorization methods will be checked during execution.
-func (f *Stub) isValid(e *core.Event, minBodyTokens int) bool {
+func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	user, _ := e.Sender()
 	tokens := Tokens(e.Message())
 	attempted := f.isTriggerValid(tokens[0])
@@ -249,14 +251,14 @@ func (f *Stub) isValid(e *core.Event, minBodyTokens int) bool {
 }
 
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
-func (f *Stub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
+func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
 	f.userChannelStatus(f.cfg.Connection.Nick, channel, func(status string) {
 		callback(core.IsChannelStatusAtLeast(status, required))
 	})
 }
 
 // Reply sends a message to the Reply target
-func (f *Stub) Reply(e *core.Event, message string, args ...any) {
+func (f *FunctionStub) Reply(e *core.Event, message string, args ...any) {
 	if !e.IsPrivateMessage() {
 		message = e.From + ": " + strings.ToLower(message[0:1]) + message[1:]
 	}
@@ -269,12 +271,12 @@ func (f *Stub) Reply(e *core.Event, message string, args ...any) {
 	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf(message, args...))
 }
 
-func (f *Stub) UnauthorizedReply(e *core.Event) {
+func (f *FunctionStub) UnauthorizedReply(e *core.Event) {
 	tokens := Tokens(e.Message())
 	f.Reply(e, "You are not authorized to use %s.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
 }
 
-func (f *Stub) functionConfig(name string) config.FunctionConfig {
+func (f *FunctionStub) functionConfig(name string) config.FunctionConfig {
 	return f.cfg.Functions.EnabledFunctions[name]
 }
 

@@ -11,7 +11,7 @@ import (
 const kickFunctionName = "kick"
 
 type kickFunction struct {
-	Stub
+	FunctionStub
 }
 
 func NewKickFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
@@ -21,7 +21,7 @@ func NewKickFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}
 
 	return &kickFunction{
-		Stub: stub,
+		FunctionStub: stub,
 	}, nil
 }
 
