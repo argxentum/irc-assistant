@@ -4,6 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
+	"assistant/pkg/api/text"
 	"errors"
 	"fmt"
 	"strings"
@@ -99,21 +100,21 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumPreferredTitleLength || len(title) < minimumPreferredTitleLength) {
 		if strings.Contains(description, title) || strings.Contains(title, description) {
 			if len(description) > len(title) {
-				f.irc.SendMessage(e.ReplyTarget(), description)
+				f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
 				return
 			}
-			f.irc.SendMessage(e.ReplyTarget(), title)
+			f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
 			return
 		}
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", title, description))
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", text.Bold(title), description))
 		return
 	}
 	if len(title) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), title)
+		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
 		return
 	}
 	if len(description) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), description)
+		f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
 		return
 	}
 
@@ -139,7 +140,7 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 		f.tryBing(e, url)
 		return
 	} else {
-		f.irc.SendMessage(e.ReplyTarget(), title)
+		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
 		return
 	}
 }
@@ -156,7 +157,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
 
 	if len(title) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), title)
+		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
 		return
 	}
 
