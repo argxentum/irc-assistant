@@ -68,8 +68,9 @@ func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
 	secondary1 := node.Find("div.b_secondaryFocus").First().Text()
 	secondary2 := node.Find("li.b_secondaryFocus").First().Text()
 
-	answer := coalesce(answer1, answer2)
-	secondary := coalesce(secondary1, secondary2)
+	label = strings.TrimSpace(label)
+	answer := strings.TrimSpace(coalesce(answer1, answer2))
+	secondary := strings.TrimSpace(coalesce(secondary1, secondary2))
 
 	if len(label) == 0 || len(answer) == 0 || len(secondary) == 0 {
 		f.Reply(e, "Sorry, something went wrong and I couldn't find an answer.")
