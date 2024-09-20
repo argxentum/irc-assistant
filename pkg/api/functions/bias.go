@@ -76,8 +76,21 @@ func (f *biasFunction) Execute(e *core.Event) {
 
 	dc.OnHTML("html", func(node *colly.HTMLElement) {
 		container := node.DOM.Find("div.entry-content").First()
-		summary := strings.TrimSpace(container.Find("ul li strong").First().Text())
-		detail := strings.TrimSpace(container.Find("h3 ~ p").First().Text())
+		summary := container.Find("ul li strong").First().Text()
+		detail1 := container.Find("h3 ~ p").First().Text()
+		detail2a := container.Find("h3 ~ div.entry-content").First().Text()
+		detail2b := container.Find("h3 ~ div.entry-content ~ div.entry-content").First().Text()
+		detail2 := detail2a + detail2b
+
+		detail := ""
+		summary = strings.TrimSpace(summary)
+		detail1Lower := strings.ToLower(detail1)
+		detail2Lower := strings.ToLower(detail2)
+		if strings.Contains(detail1Lower, "bias rating") && strings.Contains(detail1Lower, "credibility rating") {
+			detail = strings.TrimSpace(detail1)
+		} else if strings.Contains(detail2Lower, "bias rating") && strings.Contains(detail2Lower, "credibility rating") {
+			detail = strings.TrimSpace(detail2)
+		}
 
 		if len(summary) == 0 {
 			f.Reply(e, "No bias details found for %s", text.Bold(input))
