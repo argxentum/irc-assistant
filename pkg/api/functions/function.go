@@ -22,51 +22,6 @@ type Function interface {
 	Reply(e *core.Event, message string, args ...any)
 }
 
-func NewFunction(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (Function, error) {
-	switch name {
-	case echoFunctionName:
-		return NewEchoFunction(ctx, cfg, irc)
-	case sayFunctionName:
-		return NewSayFunction(ctx, cfg, irc)
-	case helpFunctionName:
-		return NewHelpFunction(ctx, cfg, irc)
-	case joinFunctionName:
-		return NewJoinFunction(ctx, cfg, irc)
-	case leaveFunctionName:
-		return NewLeaveFunction(ctx, cfg, irc)
-	case uptimeFunctionName:
-		return NewUptimeFunction(ctx, cfg, irc)
-	case dateTimeFunctionName:
-		return NewDateTimeFunction(ctx, cfg, irc)
-	case kickFunctionName:
-		return NewKickFunction(ctx, cfg, irc)
-	case banFunctionName:
-		return NewBanFunction(ctx, cfg, irc)
-	case sleepFunctionName:
-		return NewSleepFunction(ctx, cfg, irc)
-	case wakeFunctionName:
-		return NewWakeFunction(ctx, cfg, irc)
-	case aboutFunctionName:
-		return NewAboutFunction(ctx, cfg, irc)
-	case searchFunctionName:
-		return NewSearchFunction(ctx, cfg, irc)
-	case "r/politics":
-		return NewRedditFunction("politics", ctx, cfg, irc)
-	case "r/news":
-		return NewRedditFunction("news", ctx, cfg, irc)
-	case "r/worldnews":
-		return NewRedditFunction("worldnews", ctx, cfg, irc)
-	case summaryFunctionName:
-		return NewSummaryFunction(ctx, cfg, irc)
-	case biasFunctionName:
-		return NewBiasFunction(ctx, cfg, irc)
-	case tempBanFunctionName:
-		//return NewTempBanFunction(ctx, cfg, irc)
-	}
-
-	return nil, fmt.Errorf("unknown function: %s", name)
-}
-
 type FunctionStub struct {
 	ctx                 context.Context
 	cfg                 *config.Config
@@ -316,4 +271,13 @@ func splitMessageIfNecessary(input string) []string {
 		}
 	}
 	return messages
+}
+
+func coalesce(strings ...string) string {
+	for _, s := range strings {
+		if len(s) > 0 {
+			return s
+		}
+	}
+	return ""
 }

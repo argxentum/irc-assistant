@@ -40,7 +40,7 @@ func NewEventHandler(ctx context.Context, cfg *config.Config, irc core.IRC) Even
 func (eh *eventHandler) ReloadFunctions() {
 	eh.fn = make([]functions.Function, 0)
 	for name := range eh.cfg.Functions.EnabledFunctions {
-		f, err := functions.NewFunction(eh.ctx, eh.cfg, eh.irc, name)
+		f, err := functions.Route(eh.ctx, eh.cfg, eh.irc, name)
 		if err != nil {
 			fmt.Printf("error loading function: %s\n", name)
 			continue
