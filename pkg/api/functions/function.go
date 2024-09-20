@@ -260,7 +260,12 @@ func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required s
 // Reply sends a message to the Reply target
 func (f *FunctionStub) Reply(e *core.Event, message string, args ...any) {
 	if !e.IsPrivateMessage() {
-		message = e.From + ": " + strings.ToLower(message[0:1]) + message[1:]
+		first := strings.ToLower(message[0:1])
+		remainder := message[1:]
+		if first == "i" || first == "a" && strings.HasPrefix(remainder, " ") {
+			first = strings.ToUpper(first)
+		}
+		message = fmt.Sprintf("%s: %s%s", e.From, first, remainder)
 	}
 
 	if len(args) == 0 {
