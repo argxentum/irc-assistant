@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -145,7 +146,19 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 	}
 }
 
+var bingDomainDenylist = []string{
+	"youtube.com",
+	"youtu.be",
+	"twitter.com",
+	"x.com",
+}
+
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
+	if isDomainBingDenylisted(url) {
+		fmt.Printf("⚠️ summarization failed, domain denylisted %s\n", url)
+		return
+	}
+
 	fmt.Printf("🗒 trying bing for %s\n", url)
 
 	doc, err := getDocument(fmt.Sprintf("https://www.bing.com/search?q=%s", url), true)
@@ -162,4 +175,9 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 	}
 
 	fmt.Printf("⚠️ unable to summarize %s\n", url)
+}
+
+func isDomainBingDenylisted(url string) bool {
+	root := rootDomain(url)
+	return slices.Contains(bingDomainDenylist, root)
 }
