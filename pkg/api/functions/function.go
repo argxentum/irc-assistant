@@ -57,11 +57,6 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name
 
 const inputMaxLength = 512
 
-// isAwake checks if the bot is awake
-func (f *FunctionStub) isAwake() bool {
-	return f.ctx.Value(context.IsAwakeKey).(bool)
-}
-
 // isUserAuthorizedByRole checks if the given sender is authorized based on authorization configuration settings
 func (f *FunctionStub) isUserAuthorizedByRole(user string, authorization string) bool {
 	switch authorization {
@@ -155,7 +150,7 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	attempted := f.isTriggerValid(tokens[0])
 
 	// if sleeping, ignore all triggers except wake
-	if !f.isAwake() {
+	if !f.ctx.IsAwake() {
 		isWakeTrigger := f.Name == wakeFunctionName && slices.Contains(f.functionConfig(wakeFunctionName).Triggers, strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))
 		if isWakeTrigger {
 			if !f.isUserAuthorizedByRole(user, f.Role) {

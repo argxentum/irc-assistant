@@ -31,11 +31,11 @@ func (f *wakeFunction) MayExecute(e *core.Event) bool {
 func (f *wakeFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ wake\n")
 
-	if f.isAwake() {
+	if f.ctx.IsAwake() {
 		f.Reply(e, "Already awake.")
 		return
 	}
 
-	f.ctx.Set(context.IsAwakeKey, true)
+	f.ctx.SetAwake(true)
 	f.irc.SendMessage(e.ReplyTarget(), "Now awake.")
 }

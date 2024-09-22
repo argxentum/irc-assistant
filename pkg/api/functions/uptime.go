@@ -33,7 +33,7 @@ func (f *uptimeFunction) MayExecute(e *core.Event) bool {
 func (f *uptimeFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ uptime\n")
 
-	startedAt := f.ctx.Value(context.StartedAtKey).(time.Time)
+	startedAt := f.ctx.StartedAt()
 	elapsed := time.Since(startedAt)
 	years := int(elapsed.Hours() / 24 / 365)
 	elapsed -= time.Duration(years) * 24 * 365 * time.Hour

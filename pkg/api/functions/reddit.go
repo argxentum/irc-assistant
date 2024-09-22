@@ -7,7 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,7 +39,16 @@ func (f *redditFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ r/%s\n", f.subreddit)
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
-	posts, err := SearchNewPosts(f.subreddit, query)
+
+	if isRedditJWTExpired(f.ctx.RedditJWT()) {
+		err := f.redditLogin()
+		if err != nil {
+			fmt.Printf("error logging into reddit: %s\n", err)
+			return
+		}
+	}
+
+	posts, err := f.searchNewSubredditPosts(query)
 	if err != nil {
 		f.Reply(e, "Unable to retrieve r/%s posts", f.subreddit)
 		return
@@ -48,7 +57,7 @@ func (f *redditFunction) Execute(e *core.Event) {
 		f.Reply(e, "No r/%s posts found for %s", f.subreddit, text.Bold(query))
 		return
 	}
-	f.showResults(e, posts)
+	f.sendPostMessages(e, posts)
 }
 
 const postsTitleMaxLength = 256
@@ -112,14 +121,15 @@ func elapsedTimeDescription(t time.Time) string {
 	}
 }
 
-func (f *redditFunction) showResults(e *core.Event, posts []RedditPost) {
+func (f *redditFunction) sendPostMessages(e *core.Event, posts []RedditPost) {
 	content := make([]string, 0)
 	for i, post := range posts {
 		title := post.Title
+		if len(title) == 0 {
+			continue
+		}
 		if len(title) > postsTitleMaxLength {
 			title = title[:postsTitleMaxLength] + "..."
-		} else if len(title) == 0 {
-			title = "No title"
 		}
 		content = append(content, fmt.Sprintf("%s (r/%s, %s)", text.Bold(title), f.subreddit, elapsedTimeDescription(time.Unix(int64(post.Created), 0))))
 		content = append(content, post.URL)
@@ -150,7 +160,7 @@ const searchRedditPosts = "https://api.reddit.com/r/%s/search.json?sort=new&limi
 const defaultRedditPosts = 3
 const maxRedditPosts = 5
 
-func TopPosts(subreddit string, n int) ([]RedditPost, error) {
+func topSubredditPosts(subreddit string, n int) ([]RedditPost, error) {
 	if n == 0 {
 		n = defaultRedditPosts
 	} else if n > maxRedditPosts {
@@ -176,21 +186,22 @@ func TopPosts(subreddit string, n int) ([]RedditPost, error) {
 	return posts, nil
 }
 
-func SearchNewPosts(subreddit, topic string) ([]RedditPost, error) {
+func (f *redditFunction) searchNewSubredditPosts(topic string) ([]RedditPost, error) {
 	t := url.QueryEscape(topic)
-	query := fmt.Sprintf(searchRedditPosts, subreddit, t)
+	query := fmt.Sprintf(searchRedditPosts, f.subreddit, t)
 
 	req, err := http.NewRequest(http.MethodGet, query, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	headers := headerSets[rand.Intn(len(headerSets))]
-	for k, v := range headers {
-		req.Header.Set(k, v)
+	req.Header.Set("User-Agent", f.cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: f.ctx.RedditCookieJar(),
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -206,4 +217,69 @@ func SearchNewPosts(subreddit, topic string) ([]RedditPost, error) {
 	}
 
 	return posts, nil
+}
+
+func (f *redditFunction) redditLogin() error {
+	data := url.Values{}
+	data.Set("user", f.cfg.Reddit.Username)
+	data.Set("passwd", f.cfg.Reddit.Password)
+	data.Set("api_type", "json")
+
+	req, err := http.NewRequest(http.MethodPost, "https://ssl.reddit.com/api/login", strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("User-Agent", f.cfg.Reddit.UserAgent)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	var body struct {
+		JSON struct {
+			Errors []string
+			Data   struct {
+				Modhash string
+				Cookie  string
+			}
+		}
+	}
+
+	if err = json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return err
+	}
+
+	f.ctx.SetRedditModhash(body.JSON.Data.Modhash)
+	f.ctx.SetRedditJWT(body.JSON.Data.Cookie)
+	u, err := url.Parse("https://reddit.com")
+	if err != nil {
+		return err
+	}
+
+	f.ctx.RedditCookieJar().SetCookies(u, resp.Cookies())
+	return nil
+}
+
+func isRedditJWTExpired(tok string) bool {
+	if len(tok) == 0 {
+		return true
+	}
+
+	token, _ := jwt.Parse(tok, func(token *jwt.Token) (interface{}, error) {
+		return token, nil
+	})
+
+	if token == nil {
+		return true
+	}
+
+	exp, err := token.Claims.GetExpirationTime()
+	if err != nil || exp == nil {
+		return true
+	}
+
+	return time.Now().Unix() > exp.Unix()
 }

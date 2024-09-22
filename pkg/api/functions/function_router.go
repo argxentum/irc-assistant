@@ -7,63 +7,119 @@ import (
 	"fmt"
 )
 
+var loadedFunctions = make(map[string]Function)
+
 func Route(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (Function, error) {
 	switch name {
 	case echoFunctionName:
-		return NewEchoFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewEchoFunction(ctx, cfg, irc)
+		})
 	case sayFunctionName:
-		return NewSayFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewSayFunction(ctx, cfg, irc)
+		})
 	case helpFunctionName:
-		return NewHelpFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewHelpFunction(ctx, cfg, irc)
+		})
 	case joinFunctionName:
-		return NewJoinFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewJoinFunction(ctx, cfg, irc)
+		})
 	case leaveFunctionName:
-		return NewLeaveFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewLeaveFunction(ctx, cfg, irc)
+		})
 	case uptimeFunctionName:
-		return NewUptimeFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewUptimeFunction(ctx, cfg, irc)
+		})
+	case upFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewUpFunction(ctx, cfg, irc)
+		})
+	case downFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewDownFunction(ctx, cfg, irc)
+		})
 	case kickFunctionName:
-		return NewKickFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewKickFunction(ctx, cfg, irc)
+		})
 	case banFunctionName:
-		return NewBanFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewBanFunction(ctx, cfg, irc)
+		})
 	case sleepFunctionName:
-		return NewSleepFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewSleepFunction(ctx, cfg, irc)
+		})
 	case wakeFunctionName:
-		return NewWakeFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewWakeFunction(ctx, cfg, irc)
+		})
 	case aboutFunctionName:
-		return NewAboutFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewAboutFunction(ctx, cfg, irc)
+		})
 	case searchFunctionName:
-		return NewSearchFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewSearchFunction(ctx, cfg, irc)
+		})
 	case "r/politics":
-		return NewRedditFunction("politics", ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewRedditFunction("politics", ctx, cfg, irc)
+		})
 	case "r/news":
-		return NewRedditFunction("news", ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewRedditFunction("news", ctx, cfg, irc)
+		})
 	case "r/worldnews":
-		return NewRedditFunction("worldnews", ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewRedditFunction("worldnews", ctx, cfg, irc)
+		})
 	case summaryFunctionName:
-		return NewSummaryFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewSummaryFunction(ctx, cfg, irc)
+		})
 	case biasFunctionName:
-		return NewBiasFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewBiasFunction(ctx, cfg, irc)
+		})
 	case "bing/simple/time":
-		return NewBingSimpleAnswerFunction(
-			"time",
-			"current date and time in %s",
-			"%s: %s on %s",
-			"",
-			1,
-			ctx, cfg, irc,
-		)
+		return loadFunction(name, func() (Function, error) {
+			return NewBingSimpleAnswerFunction(
+				"time",
+				"current date and time in %s",
+				"%s: %s on %s",
+				"",
+				1,
+				ctx, cfg, irc,
+			)
+		})
 	case "bing/simple/election":
-		return NewBingSimpleAnswerFunction(
-			"election",
-			"when is the next election day",
-			"%s is %s %s",
-			"Note: early voting and state/local election dates differ by location. More info: https://www.usa.gov/when-to-vote",
-			0,
-			ctx, cfg, irc,
-		)
-	case tempBanFunctionName:
-		//return NewTempBanFunction(ctx, cfg, irc)
+		return loadFunction(name, func() (Function, error) {
+			return NewBingSimpleAnswerFunction(
+				"election",
+				"when is the next election day",
+				"%s is %s %s",
+				"Note: early voting and state/local election dates differ by location. More info: https://www.usa.gov/when-to-vote",
+				0,
+				ctx, cfg, irc,
+			)
+		})
 	}
 
 	return nil, fmt.Errorf("unknown function: %s", name)
+}
+
+func loadFunction(name string, creation func() (Function, error)) (Function, error) {
+	if f, ok := loadedFunctions[name]; ok {
+		return f, nil
+	}
+
+	var err error
+	loadedFunctions[name], err = creation()
+	return loadedFunctions[name], err
 }

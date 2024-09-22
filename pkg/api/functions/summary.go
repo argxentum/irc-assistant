@@ -64,6 +64,12 @@ const minimumTitleLength = 16
 const minimumPreferredTitleLength = 64
 const maximumPreferredTitleLength = 128
 
+var descriptionDomainDenylist = []string{
+	"imgur.com",
+	"youtube.com",
+	"youtu.be",
+}
+
 func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool) {
 	fmt.Printf("🗒 trying direct (impersonated: %v) for %s\n", impersonated, url)
 
@@ -98,7 +104,12 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 		return
 	}
 
-	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumPreferredTitleLength || len(title) < minimumPreferredTitleLength) {
+	includeDescription := true
+	if isDomainDenylisted(url, descriptionDomainDenylist) {
+		includeDescription = false
+	}
+
+	if includeDescription && len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumPreferredTitleLength || len(title) < minimumPreferredTitleLength) {
 		if strings.Contains(description, title) || strings.Contains(title, description) {
 			if len(description) > len(title) {
 				f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
@@ -114,7 +125,7 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
 		return
 	}
-	if len(description) > 0 {
+	if includeDescription && len(description) > 0 {
 		f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
 		return
 	}
@@ -154,7 +165,7 @@ var bingDomainDenylist = []string{
 }
 
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
-	if isDomainBingDenylisted(url) {
+	if isDomainDenylisted(url, bingDomainDenylist) {
 		fmt.Printf("⚠️ summarization failed, domain denylisted %s\n", url)
 		return
 	}
@@ -163,11 +174,49 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 
 	doc, err := getDocument(fmt.Sprintf("https://www.bing.com/search?q=%s", url), true)
 	if err != nil || doc == nil {
-		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
+		f.tryDuckDuckGo(e, url)
 		return
 	}
 
 	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
+
+	if strings.Contains(strings.ToLower(title), fmt.Sprintf("about %s", url[:min(len(url), 24)])) {
+		f.tryDuckDuckGo(e, url)
+		return
+	}
+
+	if len(title) > 0 {
+		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+		return
+	}
+
+	f.tryDuckDuckGo(e, url)
+}
+
+var duckDuckGoDomainDenylist = []string{
+	//
+}
+
+func (f *summaryFunction) tryDuckDuckGo(e *core.Event, url string) {
+	if isDomainDenylisted(url, duckDuckGoDomainDenylist) {
+		fmt.Printf("⚠️ summarization failed, domain denylisted %s\n", url)
+		return
+	}
+
+	fmt.Printf("🗒 trying duckduckgo for %s\n", url)
+
+	doc, err := getDocument(fmt.Sprintf("https://html.duckduckgo.com/html?q=%s", url), true)
+	if err != nil || doc == nil {
+		fmt.Printf("⚠️ summarization failed, error retrieving %s\n", url)
+		return
+	}
+
+	title := strings.TrimSpace(doc.Find("div.result__body").First().Find("h2.result__title").First().Text())
+
+	if strings.Contains(strings.ToLower(title), fmt.Sprintf("about %s", url[:min(len(url), 24)])) {
+		fmt.Printf("⚠️ summarization failed, title is about URL %s\n", url)
+		return
+	}
 
 	if len(title) > 0 {
 		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
@@ -177,7 +226,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 	fmt.Printf("⚠️ unable to summarize %s\n", url)
 }
 
-func isDomainBingDenylisted(url string) bool {
+func isDomainDenylisted(url string, denylist []string) bool {
 	root := rootDomain(url)
-	return slices.Contains(bingDomainDenylist, root)
+	return slices.Contains(denylist, root)
 }

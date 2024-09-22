@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Connection ConnectionConfig
+	Reddit     RedditConfig
 	Functions  FunctionsConfig
 }
 
@@ -17,10 +18,10 @@ type ConnectionConfig struct {
 	Port              int
 	TLS               bool
 	Nick              string
-	Username          string `yaml:"user_name"`
-	RealName          string `yaml:"real_name"`
-	Password          string
-	NickServ          NickServConfig
+	Username          string            `yaml:"user_name"`
+	RealName          string            `yaml:"real_name"`
+	NickServ          NickServConfig    `yaml:"nickserv"`
+	ChanServ          ChanServConfig    `yaml:"chanserv"`
 	PostConnect       PostConnectConfig `yaml:"post_connect"`
 	NamesResponseCode string            `yaml:"names_response_code"`
 }
@@ -32,10 +33,22 @@ type NickServConfig struct {
 	Password        string
 }
 
+type ChanServConfig struct {
+	Recipient   string
+	UpCommand   string `yaml:"up_command"`
+	DownCommand string `yaml:"down_command"`
+}
+
 type PostConnectConfig struct {
 	Code     string
 	Commands []string
 	AutoJoin []string `yaml:"auto_join"`
+}
+
+type RedditConfig struct {
+	UserAgent string `yaml:"user_agent"`
+	Username  string
+	Password  string
 }
 
 type FunctionsConfig struct {

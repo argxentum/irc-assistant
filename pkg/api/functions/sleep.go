@@ -39,6 +39,6 @@ func (f *sleepFunction) Execute(e *core.Event) {
 			}
 		}
 	}
-	f.ctx.Set(context.IsAwakeKey, false)
+	f.ctx.SetAwake(false)
 	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", text.Italics(wakeTrigger)))
 }

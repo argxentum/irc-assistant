@@ -58,6 +58,8 @@ type IRC interface {
 	SendMessage(target, message string)
 	SendMessages(target string, messages []string)
 	GetUserStatus(channel, user string, callback func(status string))
+	Up(channel, user string)
+	Down(channel, user string)
 	Kick(channel, user, reason string)
 	Ban(channel, user, reason string)
 	TemporaryBan(channel, user, reason string, duration time.Duration)
@@ -193,6 +195,14 @@ func (s *service) GetUserStatus(channel, user string, callback func(status strin
 		}
 		return false
 	})
+}
+
+func (s *service) Up(channel, user string) {
+	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.UpCommand, channel, user)
+}
+
+func (s *service) Down(channel, user string) {
+	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.DownCommand, channel, user)
 }
 
 func (s *service) Kick(channel, user, reason string) {
