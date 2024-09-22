@@ -35,14 +35,6 @@ func Route(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (
 		return loadFunction(name, func() (Function, error) {
 			return NewUptimeFunction(ctx, cfg, irc)
 		})
-	case upFunctionName:
-		return loadFunction(name, func() (Function, error) {
-			return NewUpFunction(ctx, cfg, irc)
-		})
-	case downFunctionName:
-		return loadFunction(name, func() (Function, error) {
-			return NewDownFunction(ctx, cfg, irc)
-		})
 	case kickFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewKickFunction(ctx, cfg, irc)
