@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -231,7 +232,9 @@ func (f *redditFunction) redditLogin() error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", f.cfg.Reddit.UserAgent)
+	for k, v := range headerSets[rand.Intn(len(headerSets))] {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
