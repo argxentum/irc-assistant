@@ -30,5 +30,5 @@ func (f *downFunction) MayExecute(e *core.Event) bool {
 
 func (f *downFunction) Execute(e *core.Event) {
 	fmt.Printf("⚡ down\n")
-	f.irc.Down(e.ReplyTarget(), e.Source)
+	f.irc.Down(e.ReplyTarget(), e.From)
 }
