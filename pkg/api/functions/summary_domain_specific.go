@@ -1,25 +1,26 @@
 package functions
 
 import (
-	"assistant/pkg/api/core"
+	"fmt"
 )
 
 var domainSpecificDirectHandling = map[string]func(doc string) string{
-	"youtube.com": parseYoutube,
-	"youtu.be":    parseYoutube,
+	"youtube.com": parseYouTubeMessage,
+	"youtu.be":    parseYouTubeMessage,
 }
 
-func (f *summaryFunction) handleDomainSpecific(e *core.Event, url, doc string) bool {
+func (f *summaryFunction) domainSpecificMessage(url, doc string) string {
 	domain := rootDomain(url)
 	if domainSpecificDirectHandling[domain] == nil {
-		return false
+		return ""
 	}
+
+	fmt.Printf("🗒 %s requires domain-specific handling\n", url)
 
 	message := domainSpecificDirectHandling[domain](doc)
 	if len(message) == 0 {
-		return false
+		return ""
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), message)
-	return true
+	return message
 }

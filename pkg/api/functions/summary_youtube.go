@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func parseYoutube(doc string) string {
+func parseYouTubeMessage(doc string) string {
 	var responseContext struct {
 		Contents struct {
 			TwoColumnWatchNextResults struct {

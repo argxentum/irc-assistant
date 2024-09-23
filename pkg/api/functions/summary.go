@@ -89,7 +89,9 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 		return
 	}
 
-	if f.handleDomainSpecific(e, url, doc.Text()) {
+	domainSpecific := f.domainSpecificMessage(url, doc.Text())
+	if len(domainSpecific) > 0 {
+		f.irc.SendMessage(e.ReplyTarget(), domainSpecific)
 		return
 	}
 
@@ -173,7 +175,8 @@ var bingDomainDenylist = []string{
 
 func (f *summaryFunction) tryBing(e *core.Event, url string) {
 	if isDomainDenylisted(url, bingDomainDenylist) {
-		fmt.Printf("⚠️ summarization failed, domain denylisted %s\n", url)
+		fmt.Printf("⚠️ summarization failed, bing domain denylisted %s\n", url)
+		f.tryDuckDuckGo(e, url)
 		return
 	}
 
@@ -206,7 +209,7 @@ var duckDuckGoDomainDenylist = []string{
 
 func (f *summaryFunction) tryDuckDuckGo(e *core.Event, url string) {
 	if isDomainDenylisted(url, duckDuckGoDomainDenylist) {
-		fmt.Printf("⚠️ summarization failed, domain denylisted %s\n", url)
+		fmt.Printf("⚠️ summarization failed, duckduckgo domain denylisted %s\n", url)
 		return
 	}
 
