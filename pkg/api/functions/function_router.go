@@ -71,6 +71,10 @@ func Route(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (
 		return loadFunction(name, func() (Function, error) {
 			return NewRedditFunction("worldnews", ctx, cfg, irc)
 		})
+	case "r/UkrainianConflict":
+		return loadFunction(name, func() (Function, error) {
+			return NewRedditFunction("UkrainianConflict", ctx, cfg, irc)
+		})
 	case summaryFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewSummaryFunction(ctx, cfg, irc)
