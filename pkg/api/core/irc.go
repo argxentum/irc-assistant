@@ -82,7 +82,8 @@ type service struct {
 func (s *service) Connect(cfg *config.Config, autoJoinCallback func(channel string)) error {
 	s.cfg = cfg
 
-	s.conn = irce.IRC(cfg.Connection.Nick, cfg.Connection.Nick)
+	s.conn = irce.IRC(cfg.Connection.Nick, cfg.Connection.Username)
+	s.conn.RealName = cfg.Connection.RealName
 	s.conn.Debug = false
 	s.conn.VerboseCallbackHandler = false
 

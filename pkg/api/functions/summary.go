@@ -179,7 +179,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 
 	fmt.Printf("🗒 trying bing for %s\n", url)
 
-	doc, err := getDocument(fmt.Sprintf("https://www.bing.com/search?q=%s", url), true)
+	doc, err := getDocument(fmt.Sprintf(bingSearchURL, url), true)
 	if err != nil || doc == nil {
 		f.tryDuckDuckGo(e, url)
 		return

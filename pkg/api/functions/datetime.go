@@ -49,7 +49,7 @@ func (f *dateTimeFunction) Execute(e *core.Event) {
 	})
 
 	query := url.QueryEscape(fmt.Sprintf("current date and time in %s", location))
-	err := c.Visit(fmt.Sprintf("https://www.bing.com/search?q=%s", query))
+	err := c.Visit(fmt.Sprintf(bingSearchURL, query))
 	if err != nil {
 		f.Reply(e, "Unable to find the current date and time of %s", e.From, text.Bold(location))
 		return

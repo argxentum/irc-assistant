@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-const bingSearchUrl = "https://www.bing.com/search?q=%s"
-
 type bingSimpleAnswerFunction struct {
 	FunctionStub
 	subject   string
@@ -55,7 +53,7 @@ func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
 		query = url.QueryEscape(fmt.Sprintf(f.query, input))
 	}
 
-	doc, err := getDocument(fmt.Sprintf(bingSearchUrl, query), true)
+	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
 		f.Reply(e, "Sorry, something went wrong and I couldn't find an answer.")
 		return
