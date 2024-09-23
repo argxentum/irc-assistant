@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -70,6 +71,8 @@ var descriptionDomainDenylist = []string{
 	"youtu.be",
 }
 
+var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);`)
+
 func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool) {
 	fmt.Printf("🗒 trying direct (impersonated: %v) for %s\n", impersonated, url)
 
@@ -83,6 +86,10 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 			return
 		}
 		f.tryNuggetize(e, url)
+		return
+	}
+
+	if f.handleDomainSpecific(e, url, doc.Text()) {
 		return
 	}
 
