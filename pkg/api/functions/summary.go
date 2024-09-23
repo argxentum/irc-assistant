@@ -7,7 +7,6 @@ import (
 	"assistant/pkg/api/text"
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 )
@@ -70,8 +69,6 @@ var descriptionDomainDenylist = []string{
 	"youtube.com",
 	"youtu.be",
 }
-
-var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);`)
 
 func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool) {
 	fmt.Printf("🗒 trying direct (impersonated: %v) for %s\n", impersonated, url)

@@ -4,7 +4,10 @@ import (
 	"assistant/pkg/api/text"
 	"encoding/json"
 	"fmt"
+	"regexp"
 )
+
+var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);`)
 
 func parseYouTubeMessage(doc string) string {
 	var responseContext struct {
