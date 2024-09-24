@@ -7,6 +7,8 @@ import (
 	"assistant/pkg/api/style"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"regexp"
 	"strings"
 )
@@ -130,11 +132,18 @@ func (f *pollsFunction) Execute(e *core.Event) {
 		return
 	}
 
+	t := createDefaultTable()
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, Align: text.AlignLeft},
+		{Number: 2, Align: text.AlignRight},
+	})
+
 	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s: %s", title, style.Bold(subtitle)))
+	messages = append(messages, fmt.Sprintf("%s: %s", style.Bold(title), subtitle))
 	for i, c := range candidates {
-		messages = append(messages, fmt.Sprintf("%s: %s", style.Bold(style.Underline(c)), style.Bold(averages[i])))
+		t.AppendRow([]any{style.Bold(c), averages[i]})
 	}
+	messages = append(messages, strings.Split(t.Render(), "\n")...)
 	messages = append(messages, pollsURL)
 
 	f.irc.SendMessages(e.ReplyTarget(), messages)

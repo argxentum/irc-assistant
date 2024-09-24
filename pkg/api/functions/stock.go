@@ -57,7 +57,7 @@ func (f *stockFunction) Execute(e *core.Event) {
 	}
 
 	if len(subtitle) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", style.Bold(title), subtitle))
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s (%s)", style.Bold(title), subtitle))
 	} else {
 		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 	}
