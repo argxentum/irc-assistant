@@ -87,7 +87,7 @@ func (eh *eventHandler) Handle(e *core.Event) {
 					return
 				}
 
-				f.Execute(e)
+				go f.Execute(e)
 			})
 		}
 	}
