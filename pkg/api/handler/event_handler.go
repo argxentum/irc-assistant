@@ -5,7 +5,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
 	"assistant/pkg/api/functions"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"slices"
 	"strings"
@@ -80,7 +80,7 @@ func (eh *eventHandler) Handle(e *core.Event) {
 
 				if !authorized {
 					if strings.HasPrefix(tokens[0], eh.cfg.Functions.Prefix) {
-						f.Reply(e, "You are not authorized to use %s.", text.Bold(strings.TrimPrefix(tokens[0], eh.cfg.Functions.Prefix)))
+						f.Reply(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], eh.cfg.Functions.Prefix)))
 					} else {
 						f.Reply(e, "You are not authorized to perform that command.")
 					}

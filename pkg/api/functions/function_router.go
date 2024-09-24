@@ -87,6 +87,14 @@ func Route(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (
 		return loadFunction(name, func() (Function, error) {
 			return NewBiasFunction(ctx, cfg, irc)
 		})
+	case marketsFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewMarketsFunction(ctx, cfg, irc)
+		})
+	case stockFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewStockFunction(ctx, cfg, irc)
+		})
 	case "bing/simple/time":
 		return loadFunction(name, func() (Function, error) {
 			return NewBingSimpleAnswerFunction(

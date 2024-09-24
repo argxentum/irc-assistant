@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"math/rand"
@@ -45,13 +45,13 @@ func (f *dateTimeFunction) Execute(e *core.Event) {
 		label := node.ChildText("div.b_focusLabel")
 		time := node.ChildText("div.b_focusTextLarge")
 		date := node.ChildText("div.b_secondaryFocus")
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label, text.Bold(time), text.Bold(date)))
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s on %s", label, style.Bold(time), style.Bold(date)))
 	})
 
 	query := url.QueryEscape(fmt.Sprintf("current date and time in %s", location))
 	err := c.Visit(fmt.Sprintf(bingSearchURL, query))
 	if err != nil {
-		f.Reply(e, "Unable to find the current date and time of %s", e.From, text.Bold(location))
+		f.Reply(e, "Unable to find the current date and time of %s", e.From, style.Bold(location))
 		return
 	}
 }

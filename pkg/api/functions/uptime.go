@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"time"
 )
@@ -91,5 +91,5 @@ func (f *uptimeFunction) Execute(e *core.Event) {
 		response += fmt.Sprintf("%d second%s", seconds, plural)
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Uptime: %s", text.Bold(response)))
+	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Uptime: %s", style.Bold(response)))
 }

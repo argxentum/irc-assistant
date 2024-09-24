@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 )
 
@@ -40,5 +40,5 @@ func (f *sleepFunction) Execute(e *core.Event) {
 		}
 	}
 	f.ctx.SetAwake(false)
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", text.Italics(wakeTrigger)))
+	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", style.Italics(wakeTrigger)))
 }

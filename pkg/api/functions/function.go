@@ -4,8 +4,9 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"slices"
 	"strings"
 )
@@ -165,7 +166,7 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function is not allowed in private messages and the message is a private message, ignore
 	if f.DenyPrivateMessages && e.IsPrivateMessage() {
 		if attempted {
-			f.Reply(e, "The %s command is not allowed in private messages. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Reply(e, "The %s command is not allowed in private messages. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -181,7 +182,7 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function requires a minimum number of body Tokens, check that
 	if minBodyTokens > 0 && len(tokens) < minBodyTokens+1 {
 		if attempted {
-			f.Reply(e, "Invalid number of arguments for %s. See %s for more information.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), text.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Reply(e, "Invalid number of arguments for %s. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -228,7 +229,7 @@ func (f *FunctionStub) Reply(e *core.Event, message string, args ...any) {
 
 func (f *FunctionStub) UnauthorizedReply(e *core.Event) {
 	tokens := Tokens(e.Message())
-	f.Reply(e, "You are not authorized to use %s.", text.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
+	f.Reply(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
 }
 
 func (f *FunctionStub) functionConfig(name string) config.FunctionConfig {
@@ -275,4 +276,12 @@ func coalesce(strings ...string) string {
 		}
 	}
 	return ""
+}
+
+func createDefaultTable() table.Writer {
+	ts := table.StyleDefault
+	ts.Options = table.OptionsNoBordersAndSeparators
+	t := table.NewWriter()
+	t.SetStyle(ts)
+	return t
 }

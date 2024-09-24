@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -106,11 +106,11 @@ func parseYouTubeMessage(doc string) string {
 	}
 
 	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-		return fmt.Sprintf("YouTube: %s - %s (%s)", text.Bold(title), author, viewCount)
+		return fmt.Sprintf("YouTube: %s - %s (%s)", style.Bold(title), author, viewCount)
 	} else if len(title) > 0 && len(viewCount) > 0 {
-		return fmt.Sprintf("YouTube: %s (%s)", text.Bold(title), viewCount)
+		return fmt.Sprintf("YouTube: %s (%s)", style.Bold(title), viewCount)
 	} else if len(title) > 0 {
-		return fmt.Sprintf("YouTube: %s", text.Bold(title))
+		return fmt.Sprintf("YouTube: %s", style.Bold(title))
 	}
 
 	return ""

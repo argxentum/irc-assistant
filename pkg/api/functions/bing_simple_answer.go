@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"net/url"
 	"strings"
@@ -18,8 +18,6 @@ type bingSimpleAnswerFunction struct {
 	footnote  string
 	minTokens int
 }
-
-// when is the next election day
 
 func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minTokens int, ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("bing/simple/%s", subject))
@@ -75,7 +73,7 @@ func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
 		return
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf(f.reply, label, text.Bold(answer), secondary))
+	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf(f.reply, label, style.Bold(answer), secondary))
 
 	if len(f.footnote) > 0 {
 		f.irc.SendMessage(e.ReplyTarget(), f.footnote)

@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"slices"
 	"strings"
@@ -38,7 +38,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 	tokens := Tokens(e.Message())
 	if len(tokens) == 1 {
 		reply := make([]string, 0)
-		reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(f.Name)), f.Description))
+		reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(f.Name)), f.Description))
 
 		// create map of function name to slice of current user authorization and allowed user status
 		commands := make([]string, 0)
@@ -65,7 +65,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 		reply = append(reply, "Usage:")
 		for _, u := range f.Usages {
 			for _, t := range f.Triggers {
-				reply = append(reply, fmt.Sprintf("   %s", text.Italics(fmt.Sprintf(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, u), t))))
+				reply = append(reply, fmt.Sprintf("   %s", style.Italics(fmt.Sprintf(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, u), t))))
 			}
 		}
 
@@ -87,7 +87,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	if !found {
-		f.Reply(e, "Command %s not found. See %s for a list of available commands.", text.Bold(trigger), text.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
+		f.Reply(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
 		return
 	}
 
@@ -96,13 +96,13 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	reply := make([]string, 0)
-	reply = append(reply, fmt.Sprintf("%s: %s", text.Bold(text.Underline(trigger)), fn.Description))
+	reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(trigger)), fn.Description))
 
 	if len(fn.Usages) > 0 {
 		reply = append(reply, "Usage:")
 		for _, u := range fn.Usages {
 			for _, t := range fn.Triggers {
-				reply = append(reply, fmt.Sprintf("   %s", text.Italics(fmt.Sprintf(f.cfg.Functions.Prefix+u, t))))
+				reply = append(reply, fmt.Sprintf("   %s", style.Italics(fmt.Sprintf(f.cfg.Functions.Prefix+u, t))))
 			}
 		}
 	}

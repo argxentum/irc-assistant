@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -55,7 +55,7 @@ func (f *redditFunction) Execute(e *core.Event) {
 		return
 	}
 	if len(posts) == 0 {
-		f.Reply(e, "No r/%s posts found for %s", f.subreddit, text.Bold(query))
+		f.Reply(e, "No r/%s posts found for %s", f.subreddit, style.Bold(query))
 		return
 	}
 	f.sendPostMessages(e, posts)
@@ -132,7 +132,7 @@ func (f *redditFunction) sendPostMessages(e *core.Event, posts []RedditPost) {
 		if len(title) > postsTitleMaxLength {
 			title = title[:postsTitleMaxLength] + "..."
 		}
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", text.Bold(title), f.subreddit, elapsedTimeDescription(time.Unix(int64(post.Created), 0))))
+		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), f.subreddit, elapsedTimeDescription(time.Unix(int64(post.Created), 0))))
 		content = append(content, post.URL)
 		if i < len(posts)-1 {
 			content = append(content, " ")

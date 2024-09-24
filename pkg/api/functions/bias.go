@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"math/rand"
@@ -63,13 +63,13 @@ func (f *biasFunction) Execute(e *core.Event) {
 		detailURL = strings.TrimSpace(article.Find("h3 a").First().AttrOr("href", ""))
 
 		if len(detailURL) == 0 {
-			f.Reply(e, "No bias details found for %s", text.Bold(input))
+			f.Reply(e, "No bias details found for %s", style.Bold(input))
 			return
 		}
 
 		err := dc.Visit(detailURL)
 		if err != nil {
-			f.Reply(e, "Unable to determine bias details for %s", text.Bold(input))
+			f.Reply(e, "Unable to determine bias details for %s", style.Bold(input))
 			return
 		}
 	})
@@ -93,39 +93,46 @@ func (f *biasFunction) Execute(e *core.Event) {
 		}
 
 		if len(summary) == 0 {
-			f.Reply(e, "No bias details found for %s", text.Bold(input))
+			f.Reply(e, "No bias details found for %s", style.Bold(input))
 			return
 		}
 
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("MBFC: %s", summary))
+		messages := make([]string, 0)
+		messages = append(messages, fmt.Sprintf("MBFC: %s", summary))
 
 		if len(detail) > 0 {
+			t := createDefaultTable()
+
 			rating := biasRatingRegexp.FindStringSubmatch(detail)
 			if len(rating) > 1 {
 				content := strings.ToUpper(rating[1][:1]) + strings.ToLower(rating[1][1:])
-				f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Bias rating: %s", text.Bold(content)))
+				t.AppendRow([]any{"Bias rating", style.Bold(content)})
 			}
 
 			factual := factualReportingRegexp.FindStringSubmatch(detail)
 			if len(factual) > 1 {
 				content := strings.ToUpper(factual[1][:1]) + strings.ToLower(factual[1][1:])
-				f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Factual reporting: %s", text.Bold(content)))
+				t.AppendRow([]any{"Factual reporting", style.Bold(content)})
 			}
 
 			credibility := credibilityRegexp.FindStringSubmatch(detail)
 			if len(credibility) > 1 {
 				content := strings.ToUpper(credibility[1][:1]) + strings.ToLower(credibility[1][1:])
-				f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Credibility rating: %s", text.Bold(content)))
+				t.AppendRow([]any{"Credibility rating", style.Bold(content)})
 			}
+
+			messages = append(messages, strings.Split(t.Render(), "\n")...)
 		}
 
-		f.irc.SendMessage(e.ReplyTarget(), detailURL)
+		messages = append(messages, detailURL)
+
+		f.irc.SendMessages(e.ReplyTarget(), messages)
 	})
 
 	searchQuery := url.QueryEscape(input)
 	err := sc.Visit(fmt.Sprintf("https://mediabiasfactcheck.com/?s=%s", searchQuery))
 	if err != nil {
-		f.Reply(e, "Unable to determine bias details for %s", text.Bold(input))
+		f.Reply(e, "Unable to determine bias details for %s", style.Bold(input))
 		return
 	}
 }

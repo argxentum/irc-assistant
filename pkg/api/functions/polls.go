@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"regexp"
@@ -131,9 +131,9 @@ func (f *pollsFunction) Execute(e *core.Event) {
 	}
 
 	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s: %s", title, text.Bold(subtitle)))
+	messages = append(messages, fmt.Sprintf("%s: %s", title, style.Bold(subtitle)))
 	for i, c := range candidates {
-		messages = append(messages, fmt.Sprintf("%s: %s", text.Bold(text.Underline(c)), text.Bold(averages[i])))
+		messages = append(messages, fmt.Sprintf("%s: %s", style.Bold(style.Underline(c)), style.Bold(averages[i])))
 	}
 	messages = append(messages, pollsURL)
 

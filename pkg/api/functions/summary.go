@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"errors"
 	"fmt"
 	"slices"
@@ -118,21 +118,21 @@ func (f *summaryFunction) tryDirect(e *core.Event, url string, impersonated bool
 	if includeDescription && len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumPreferredTitleLength || len(title) < minimumPreferredTitleLength) {
 		if strings.Contains(description, title) || strings.Contains(title, description) {
 			if len(description) > len(title) {
-				f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
+				f.irc.SendMessage(e.ReplyTarget(), style.Bold(description))
 				return
 			}
-			f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+			f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 			return
 		}
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", text.Bold(title), description))
+		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s: %s", style.Bold(title), description))
 		return
 	}
 	if len(title) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 		return
 	}
 	if includeDescription && len(description) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), text.Bold(description))
+		f.irc.SendMessage(e.ReplyTarget(), style.Bold(description))
 		return
 	}
 
@@ -158,7 +158,7 @@ func (f *summaryFunction) tryNuggetize(e *core.Event, url string) {
 		f.tryBing(e, url)
 		return
 	} else {
-		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 		return
 	}
 }
@@ -193,7 +193,7 @@ func (f *summaryFunction) tryBing(e *core.Event, url string) {
 	}
 
 	if len(title) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 		return
 	}
 
@@ -226,7 +226,7 @@ func (f *summaryFunction) tryDuckDuckGo(e *core.Event, url string) {
 	}
 
 	if len(title) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 		return
 	}
 

@@ -4,7 +4,7 @@ import (
 	"assistant/config"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/core"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/style"
 	"fmt"
 	"net/url"
 	"strings"
@@ -67,12 +67,12 @@ func (f *searchFunction) tryBing(e *core.Event, input string) {
 	if len(title) > 0 && len(site) > 0 {
 		if strings.Contains(title, site) || strings.Contains(site, title) {
 			if len(title) > len(site) {
-				messages = append(messages, text.Bold(title))
+				messages = append(messages, style.Bold(title))
 			} else {
-				messages = append(messages, text.Bold(site))
+				messages = append(messages, style.Bold(site))
 			}
 		} else {
-			messages = append(messages, fmt.Sprintf("%s: %s", site, text.Bold(title)))
+			messages = append(messages, fmt.Sprintf("%s: %s", site, style.Bold(title)))
 		}
 	} else if len(site) > 0 {
 		messages = append(messages, site)
@@ -98,7 +98,7 @@ func (f *searchFunction) tryDuckDuckGo(e *core.Event, input string) {
 
 	doc, err := getDocument(fmt.Sprintf(duckDuckGoSearchURL, query), true)
 	if err != nil || doc == nil {
-		f.Reply(e, "No search results found for %s", text.Bold(input))
+		f.Reply(e, "No search results found for %s", style.Bold(input))
 		fmt.Printf("⚠️ failed duckduckgo search for %s\n", input)
 		return
 	}
@@ -108,10 +108,10 @@ func (f *searchFunction) tryDuckDuckGo(e *core.Event, input string) {
 
 	if len(title) == 0 || len(link) == 0 {
 		fmt.Printf("⚠️ found no duckduckgo search results for %s\n", input)
-		f.Reply(e, "No search results found for %s", text.Bold(input))
+		f.Reply(e, "No search results found for %s", style.Bold(input))
 		return
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), text.Bold(title))
+	f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
 	return
 }
