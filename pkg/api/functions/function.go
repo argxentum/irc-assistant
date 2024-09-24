@@ -135,7 +135,7 @@ func (f *FunctionStub) IsAuthorized(e *core.Event, callback func(bool)) {
 // isTriggerValid checks if the given trigger is valid for the function
 func (f *FunctionStub) isTriggerValid(trigger string) bool {
 	for _, t := range f.Triggers {
-		if strings.TrimPrefix(trigger, f.cfg.Functions.Prefix) == t {
+		if strings.TrimPrefix(trigger, f.cfg.Functions.Prefix) == t && strings.HasPrefix(trigger, f.cfg.Functions.Prefix) {
 			return true
 		}
 	}
