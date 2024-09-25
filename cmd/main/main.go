@@ -25,7 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = log.Initialize(ctx, cfg)
+	_, err = log.InitializeGCPLogger(ctx, cfg)
 	if err != nil {
 		panic(fmt.Errorf("error initializing logger, %s", err))
 	}
