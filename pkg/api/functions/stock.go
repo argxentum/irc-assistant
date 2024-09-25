@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"net/url"
 	"strings"
@@ -16,7 +17,7 @@ type stockFunction struct {
 	FunctionStub
 }
 
-func NewStockFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, stockFunctionName)
 	if err != nil {
 		return nil, err
@@ -27,19 +28,22 @@ func NewStockFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}, nil
 }
 
-func (f *stockFunction) MayExecute(e *core.Event) bool {
+func (f *stockFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 1)
 }
 
-func (f *stockFunction) Execute(e *core.Event) {
+func (f *stockFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	symbol := tokens[1]
-	fmt.Printf("⚡ stock %s\n", symbol)
+
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] stock %s", e.From, e.ReplyTarget(), symbol)
 
 	query := url.QueryEscape(fmt.Sprintf("current stock price %s", strings.ToUpper(symbol)))
 	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
-		f.Reply(e, "Unable to retrieve stock price data for %s.", style.Bold(symbol))
+		logger.Warningf(e, "unable to retrieve stock price data for %s: %s", symbol, err)
+		f.Replyf(e, "Unable to retrieve stock price data for %s.", style.Bold(symbol))
 		return
 	}
 
@@ -52,14 +56,15 @@ func (f *stockFunction) Execute(e *core.Event) {
 	change := strings.TrimSpace(priceSection.Find("span.fin_change").First().Text())
 
 	if len(title) == 0 || len(price) == 0 {
-		f.Reply(e, "Unable to retrieve stock market information.")
+		logger.Warningf(e, "unable to parse stock market information, title: %s, price: %s", title, price)
+		f.Replyf(e, "Unable to retrieve stock market information.")
 		return
 	}
 
 	if len(subtitle) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s (%s)", style.Bold(title), subtitle))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s (%s)", style.Bold(title), subtitle))
 	} else {
-		f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
+		f.SendMessage(e, e.ReplyTarget(), style.Bold(title))
 	}
 
 	styledChange := change
@@ -69,5 +74,5 @@ func (f *stockFunction) Execute(e *core.Event) {
 		styledChange = style.ColorForeground(change, style.ColorGreen)
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("%s %s %s", price, currency, styledChange))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s %s %s", price, currency, styledChange))
 }

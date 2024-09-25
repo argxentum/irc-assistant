@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -21,7 +22,7 @@ type pollsFunction struct {
 	FunctionStub
 }
 
-func NewPollsFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, pollsFunctionName)
 	if err != nil {
 		return nil, err
@@ -32,18 +33,20 @@ func NewPollsFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}, nil
 }
 
-func (f *pollsFunction) MayExecute(e *core.Event) bool {
+func (f *pollsFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
 var detailFunctionRegexp = regexp.MustCompile(`get_polls\((\d+)`)
 
-func (f *pollsFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ polls\n")
+func (f *pollsFunction) Execute(e *irc.Event) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] polls", e.From, e.ReplyTarget())
 
 	home, err := getDocument(home270toWinURL, true)
 	if err != nil || home == nil {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to retrieve polling data: %s", err)
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
@@ -58,7 +61,8 @@ func (f *pollsFunction) Execute(e *core.Event) {
 	})
 
 	if len(pollsHomeUrl) == 0 {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to retrieve polling data")
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
@@ -68,20 +72,23 @@ func (f *pollsFunction) Execute(e *core.Event) {
 
 	pollsHome, err := getDocument(pollsHomeUrl, true)
 	if err != nil || pollsHome == nil {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to parse pollsHomeUrl (%s): %s", pollsHomeUrl, err)
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
 	matcher := detailFunctionRegexp.FindStringSubmatch(pollsHome.Text())
 	if len(matcher) != 2 {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to find get_polls(<year>) javascript call")
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 	year := matcher[1]
 
 	pollsDetail, err := getDocument(fmt.Sprintf(pollsDetailURL, year), true)
 	if err != nil || pollsDetail == nil {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to parse pollsDetailURL (%s): %s", fmt.Sprintf(pollsDetailURL, year), err)
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
@@ -100,13 +107,15 @@ func (f *pollsFunction) Execute(e *core.Event) {
 	}
 
 	if len(pollsURL) == 0 {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to determine pollsURL")
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
 	doc, err := getDocument(pollsURL, true)
 	if err != nil || doc == nil {
-		f.Reply(e, "Unable to retrieve polling data")
+		logger.Warningf(e, "unable to parse pollsURL (%s): %s", pollsURL, err)
+		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
@@ -128,7 +137,8 @@ func (f *pollsFunction) Execute(e *core.Event) {
 	}
 
 	if len(candidates) != len(averages) || len(candidates) == 0 {
-		f.Reply(e, "Unable to parse polling data")
+		logger.Warningf(e, "unable to parse polling data, candidates: [%s], averages: [%s]", strings.Join(candidates, ", "), strings.Join(averages, ", "))
+		f.Replyf(e, "Unable to parse polling data")
 		return
 	}
 
@@ -146,5 +156,5 @@ func (f *pollsFunction) Execute(e *core.Event) {
 	messages = append(messages, strings.Split(t.Render(), "\n")...)
 	messages = append(messages, pollsURL)
 
-	f.irc.SendMessages(e.ReplyTarget(), messages)
+	f.SendMessages(e, e.ReplyTarget(), messages)
 }

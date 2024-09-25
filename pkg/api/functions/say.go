@@ -1,10 +1,10 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
-	"fmt"
+	"assistant/pkg/api/irc"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ type sayFunction struct {
 	FunctionStub
 }
 
-func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewSayFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, sayFunctionName)
 	if err != nil {
 		return nil, err
@@ -25,17 +25,22 @@ func NewSayFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Func
 	}, nil
 }
 
-func (f *sayFunction) MayExecute(e *core.Event) bool {
+func (f *sayFunction) MayExecute(e *irc.Event) bool {
 	if !f.isValid(e, 3) {
 		return false
 	}
 
 	tokens := Tokens(e.Message())
-	return core.IsChannel(tokens[1])
+	return irc.IsChannel(tokens[1])
 }
 
-func (f *sayFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ say\n")
+func (f *sayFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	f.irc.SendMessage(tokens[1], strings.Join(tokens[2:], " "))
+	channel := tokens[1]
+	message := strings.Join(tokens[2:], " ")
+
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] say %s %s", e.From, e.ReplyTarget(), channel, message)
+
+	f.SendMessage(e, channel, message)
 }

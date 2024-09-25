@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"slices"
 	"strings"
@@ -16,7 +17,7 @@ type helpFunction struct {
 	FunctionStub
 }
 
-func NewHelpFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewHelpFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, helpFunctionName)
 	if err != nil {
 		return nil, err
@@ -27,15 +28,16 @@ func NewHelpFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}, nil
 }
 
-func (f *helpFunction) MayExecute(e *core.Event) bool {
+func (f *helpFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-func (f *helpFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ help\n")
-
-	// if no command is specified, list all available commands for the user (based on their status)
+func (f *helpFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] help - %s", e.From, e.ReplyTarget(), e.Message())
+
+	// if no command is specified, list all available commands
 	if len(tokens) == 1 {
 		reply := make([]string, 0)
 		reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(f.Name)), f.Description))
@@ -69,7 +71,7 @@ func (f *helpFunction) Execute(e *core.Event) {
 			}
 		}
 
-		f.irc.SendMessages(e.ReplyTarget(), reply)
+		f.SendMessages(e, e.ReplyTarget(), reply)
 		return
 	}
 
@@ -87,7 +89,8 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	if !found {
-		f.Reply(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
+		logger.Warningf(e, "command %s not found", trigger)
+		f.Replyf(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
 		return
 	}
 
@@ -108,16 +111,16 @@ func (f *helpFunction) Execute(e *core.Event) {
 	}
 
 	if len(fn.Role) > 0 && len(fn.ChannelStatus) > 0 {
-		reply = append(reply, fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, core.ChannelStatusName(fn.ChannelStatus)))
+		reply = append(reply, fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.ChannelStatusName(fn.ChannelStatus)))
 	} else if len(fn.Role) > 0 {
 		reply = append(reply, fmt.Sprintf("Requires %s role.", fn.Role))
 	} else if len(fn.ChannelStatus) > 0 {
-		reply = append(reply, fmt.Sprintf("Requires %s status or greater.", core.ChannelStatusName(fn.ChannelStatus)))
+		reply = append(reply, fmt.Sprintf("Requires %s status or greater.", irc.ChannelStatusName(fn.ChannelStatus)))
 	}
 
 	if fn.DenyPrivateMessages {
 		reply = append(reply, "Must be used in a channel.")
 	}
 
-	f.irc.SendMessages(e.ReplyTarget(), reply)
+	f.SendMessages(e, e.ReplyTarget(), reply)
 }

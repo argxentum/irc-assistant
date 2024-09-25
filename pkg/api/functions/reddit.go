@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -20,7 +21,7 @@ type redditFunction struct {
 	subreddit string
 }
 
-func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("r/%s", subreddit))
 	if err != nil {
 		return nil, err
@@ -32,30 +33,35 @@ func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config
 	}, nil
 }
 
-func (f *redditFunction) MayExecute(e *core.Event) bool {
+func (f *redditFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 1)
 }
 
-func (f *redditFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ r/%s\n", f.subreddit)
+func (f *redditFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
 
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] r/%s %s", e.From, e.ReplyTarget(), f.subreddit, query)
+
 	if isRedditJWTExpired(f.ctx.RedditJWT()) {
+		logger.Debug(e, "reddit JWT token expired, logging in")
 		err := f.redditLogin()
 		if err != nil {
-			fmt.Printf("error logging into reddit: %s\n", err)
+			logger.Errorf(e, "error logging into reddit: %s", err)
 			return
 		}
 	}
 
 	posts, err := f.searchNewSubredditPosts(query)
 	if err != nil {
-		f.Reply(e, "Unable to retrieve r/%s posts", f.subreddit)
+		logger.Warningf(e, "unable to retrieve %s posts in r/%s: %s", query, f.subreddit, err)
+		f.Replyf(e, "Unable to retrieve r/%s posts", f.subreddit)
 		return
 	}
 	if len(posts) == 0 {
-		f.Reply(e, "No r/%s posts found for %s", f.subreddit, style.Bold(query))
+		logger.Warningf(e, "no %s posts in r/%s", query, f.subreddit)
+		f.Replyf(e, "No r/%s posts found for %s", f.subreddit, style.Bold(query))
 		return
 	}
 	f.sendPostMessages(e, posts)
@@ -122,7 +128,7 @@ func elapsedTimeDescription(t time.Time) string {
 	}
 }
 
-func (f *redditFunction) sendPostMessages(e *core.Event, posts []RedditPost) {
+func (f *redditFunction) sendPostMessages(e *irc.Event, posts []RedditPost) {
 	content := make([]string, 0)
 	for i, post := range posts {
 		title := post.Title
@@ -139,7 +145,7 @@ func (f *redditFunction) sendPostMessages(e *core.Event, posts []RedditPost) {
 		}
 	}
 
-	f.irc.SendMessages(e.ReplyTarget(), content)
+	f.SendMessages(e, e.ReplyTarget(), content)
 }
 
 type RedditListing struct {

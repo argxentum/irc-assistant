@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"net/url"
 	"strings"
@@ -19,7 +20,7 @@ type bingSimpleAnswerFunction struct {
 	minTokens int
 }
 
-func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minTokens int, ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minTokens int, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("bing/simple/%s", subject))
 	if err != nil {
 		return nil, err
@@ -35,12 +36,14 @@ func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minToke
 	}, nil
 }
 
-func (f *bingSimpleAnswerFunction) MayExecute(e *core.Event) bool {
+func (f *bingSimpleAnswerFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, f.minTokens)
 }
 
-func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ bing/simple/%s\n", f.subject)
+func (f *bingSimpleAnswerFunction) Execute(e *irc.Event) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] bing/simple/%s", e.From, e.ReplyTarget(), f.subject)
+
 	tokens := Tokens(e.Message())
 	input := ""
 	if len(tokens) > 0 {
@@ -53,7 +56,8 @@ func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
 
 	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
-		f.Reply(e, "Sorry, something went wrong and I couldn't find an answer.")
+		logger.Warningf(e, "error fetching bing search results for %s: %s", input, err)
+		f.Replyf(e, "Sorry, something went wrong and I couldn't find an answer.")
 		return
 	}
 
@@ -69,13 +73,14 @@ func (f *bingSimpleAnswerFunction) Execute(e *core.Event) {
 	secondary := strings.TrimSpace(coalesce(secondary1, secondary2))
 
 	if len(label) == 0 || len(answer) == 0 || len(secondary) == 0 {
-		f.Reply(e, "Sorry, something went wrong and I couldn't find an answer.")
+		logger.Warningf(e, "error parsing bing search results for %s", input)
+		f.Replyf(e, "Sorry, something went wrong and I couldn't find an answer.")
 		return
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf(f.reply, label, style.Bold(answer), secondary))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf(f.reply, label, style.Bold(answer), secondary))
 
 	if len(f.footnote) > 0 {
-		f.irc.SendMessage(e.ReplyTarget(), f.footnote)
+		f.SendMessage(e, e.ReplyTarget(), f.footnote)
 	}
 }

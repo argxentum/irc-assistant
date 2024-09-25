@@ -1,10 +1,10 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
-	"fmt"
+	"assistant/pkg/api/irc"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ type echoFunction struct {
 	FunctionStub
 }
 
-func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewEchoFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, echoFunctionName)
 	if err != nil {
 		return nil, err
@@ -25,12 +25,13 @@ func NewEchoFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}, nil
 }
 
-func (f *echoFunction) MayExecute(e *core.Event) bool {
+func (f *echoFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 1)
 }
 
-func (f *echoFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ echo\n")
+func (f *echoFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	f.irc.SendMessage(e.ReplyTarget(), strings.Join(tokens[1:], " "))
+	message := strings.Join(tokens[1:], " ")
+	log.Logger().Infof(e, "⚡ [%s/%s] echo %s", e.From, e.ReplyTarget(), message)
+	f.SendMessage(e, e.ReplyTarget(), message)
 }

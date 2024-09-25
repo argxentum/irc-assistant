@@ -1,15 +1,15 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
+	"assistant/pkg/config"
 	"fmt"
 )
 
 var loadedFunctions = make(map[string]Function)
 
-func Route(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (Function, error) {
+func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (Function, error) {
 	switch name {
 	case echoFunctionName:
 		return loadFunction(name, func() (Function, error) {

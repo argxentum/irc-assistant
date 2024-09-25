@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"net/url"
 	"strings"
@@ -18,7 +19,7 @@ type searchFunction struct {
 	FunctionStub
 }
 
-func NewSearchFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, searchFunctionName)
 	if err != nil {
 		return nil, err
@@ -29,24 +30,28 @@ func NewSearchFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}, nil
 }
 
-func (f *searchFunction) MayExecute(e *core.Event) bool {
+func (f *searchFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 1)
 }
 
-func (f *searchFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ search\n")
+func (f *searchFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
+
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] search %s", e.From, e.ReplyTarget(), input)
+
 	f.tryBing(e, input)
 }
 
-func (f *searchFunction) tryBing(e *core.Event, input string) {
-	fmt.Printf("🗒 trying bing for %s\n", input)
+func (f *searchFunction) tryBing(e *irc.Event, input string) {
+	logger := log.Logger()
+	logger.Debugf(e, "trying bing for %s", input)
 	query := url.QueryEscape(input)
 
 	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil || doc == nil {
-		fmt.Printf("⚠️ failed bing search for %s, trying duckduckgo\n", input)
+		logger.Warningf(e, "unable to retrieve bing search results for %s: %s", input, err)
 		f.tryDuckDuckGo(e, input)
 		return
 	}
@@ -59,7 +64,7 @@ func (f *searchFunction) tryBing(e *core.Event, input string) {
 	messages := make([]string, 0)
 
 	if len(title) == 0 || len(link) == 0 {
-		fmt.Printf("⚠️ found no bing search results for %s, trying duckduckgo\n", input)
+		logger.Warningf(e, "unable to parse bing search results for %s, title: %s, link: %s", input, title, link)
 		f.tryDuckDuckGo(e, input)
 		return
 	}
@@ -85,21 +90,23 @@ func (f *searchFunction) tryBing(e *core.Event, input string) {
 	}
 
 	if len(messages) > 0 {
-		f.irc.SendMessages(e.ReplyTarget(), messages)
+		f.SendMessages(e, e.ReplyTarget(), messages)
 	} else {
-		fmt.Printf("⚠️ found no bing search results for %s, trying duckduckgo\n", input)
+		logger.Warningf(e, "no bing search results for %s", input)
 		f.tryDuckDuckGo(e, input)
 	}
 }
 
-func (f *searchFunction) tryDuckDuckGo(e *core.Event, input string) {
-	fmt.Printf("🗒 trying duckduckgo for %s\n", input)
+func (f *searchFunction) tryDuckDuckGo(e *irc.Event, input string) {
+	logger := log.Logger()
+
+	logger.Infof(e, "trying duckduckgo for %s", input)
 	query := url.QueryEscape(input)
 
 	doc, err := getDocument(fmt.Sprintf(duckDuckGoSearchURL, query), true)
 	if err != nil || doc == nil {
-		f.Reply(e, "No search results found for %s", style.Bold(input))
-		fmt.Printf("⚠️ failed duckduckgo search for %s\n", input)
+		logger.Warningf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)
+		f.Replyf(e, "No search results found for %s", style.Bold(input))
 		return
 	}
 
@@ -107,11 +114,11 @@ func (f *searchFunction) tryDuckDuckGo(e *core.Event, input string) {
 	link := strings.TrimSpace(doc.Find("div.result__body").First().Find("h2.result__title").First().Find("a.result__a").First().AttrOr("href", ""))
 
 	if len(title) == 0 || len(link) == 0 {
-		fmt.Printf("⚠️ found no duckduckgo search results for %s\n", input)
-		f.Reply(e, "No search results found for %s", style.Bold(input))
+		logger.Warningf(e, "unable to parse duckduckgo search results for %s", input)
+		f.Replyf(e, "No search results found for %s", style.Bold(input))
 		return
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), style.Bold(title))
+	f.SendMessage(e, e.ReplyTarget(), style.Bold(title))
 	return
 }

@@ -1,10 +1,10 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
-	"fmt"
+	"assistant/pkg/api/irc"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 )
 
 const aboutFunctionName = "about"
@@ -13,7 +13,7 @@ type aboutFunction struct {
 	FunctionStub
 }
 
-func NewAboutFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewAboutFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, aboutFunctionName)
 	if err != nil {
 		return nil, err
@@ -24,11 +24,13 @@ func NewAboutFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}, nil
 }
 
-func (f *aboutFunction) MayExecute(e *core.Event) bool {
+func (f *aboutFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-func (f *aboutFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ about\n")
-	f.irc.SendMessage(e.ReplyTarget(), "Version 0.1. Source: https://github.com/argxentum/irc-assistant.")
+func (f *aboutFunction) Execute(e *irc.Event) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] about", e.From, e.ReplyTarget())
+	message := "Version 0.1. Source: https://github.com/argxentum/irc-assistant."
+	f.SendMessage(e, e.ReplyTarget(), message)
 }

@@ -1,16 +1,18 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"math/rand"
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 const biasFunctionName = "bias"
@@ -19,7 +21,7 @@ type biasFunction struct {
 	FunctionStub
 }
 
-func NewBiasFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewBiasFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, biasFunctionName)
 	if err != nil {
 		return nil, err
@@ -30,19 +32,21 @@ func NewBiasFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fun
 	}, nil
 }
 
-func (f *biasFunction) MayExecute(e *core.Event) bool {
+func (f *biasFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 1)
 }
 
-var biasRatingRegexp = regexp.MustCompile(`(?m)(?i)bias rating: ([^\n]+)`)
-var factualReportingRegexp = regexp.MustCompile(`(?m)(?i)factual reporting: ([^\n]+)`)
-var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating: ([^\n]+)`)
+var biasRatingRegexp = regexp.MustCompile(`(?m)(?i)bias rating:([^\n]+)`)
+var factualReportingRegexp = regexp.MustCompile(`(?m)(?i)factual reporting:([^\n]+)`)
+var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]+)`)
 
-func (f *biasFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ bias\n")
+func (f *biasFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 	headers := headerSets[rand.Intn(len(headerSets))]
+
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] bias %s", e.From, e.ReplyTarget(), input)
 
 	sc := colly.NewCollector(
 		colly.UserAgent(headers["User-Agent"]),
@@ -63,13 +67,17 @@ func (f *biasFunction) Execute(e *core.Event) {
 		detailURL = strings.TrimSpace(article.Find("h3 a").First().AttrOr("href", ""))
 
 		if len(detailURL) == 0 {
-			f.Reply(e, "No bias details found for %s", style.Bold(input))
+			logger.Debug(e, "no detail URL found")
+			f.Replyf(e, "No bias details found for %s", style.Bold(input))
 			return
 		}
 
+		logger.Debugf(e, "found detail URL: %s", detailURL)
+
 		err := dc.Visit(detailURL)
 		if err != nil {
-			f.Reply(e, "Unable to determine bias details for %s", style.Bold(input))
+			logger.Warningf(e, "error visiting detail URL %s, %s", detailURL, err)
+			f.Replyf(e, "Unable to determine bias details for %s", style.Bold(input))
 			return
 		}
 	})
@@ -92,8 +100,13 @@ func (f *biasFunction) Execute(e *core.Event) {
 			detail = strings.TrimSpace(detail2)
 		}
 
+		detail = strings.TrimFunc(detail, func(r rune) bool {
+			return !unicode.IsGraphic(r)
+		})
+
 		if len(summary) == 0 {
-			f.Reply(e, "No bias details found for %s", style.Bold(input))
+			logger.Warningf(e, "no bias summary found")
+			f.Replyf(e, "No bias details found for %s", style.Bold(input))
 			return
 		}
 
@@ -126,13 +139,14 @@ func (f *biasFunction) Execute(e *core.Event) {
 
 		messages = append(messages, detailURL)
 
-		f.irc.SendMessages(e.ReplyTarget(), messages)
+		f.SendMessages(e, e.ReplyTarget(), messages)
 	})
 
 	searchQuery := url.QueryEscape(input)
 	err := sc.Visit(fmt.Sprintf("https://mediabiasfactcheck.com/?s=%s", searchQuery))
 	if err != nil {
-		f.Reply(e, "Unable to determine bias details for %s", style.Bold(input))
+		logger.Warningf(e, "error visiting search URL: %s", err)
+		f.Replyf(e, "Unable to determine bias details for %s", style.Bold(input))
 		return
 	}
 }

@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 )
 
@@ -14,7 +15,7 @@ type sleepFunction struct {
 	FunctionStub
 }
 
-func NewSleepFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewSleepFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, sleepFunctionName)
 	if err != nil {
 		return nil, err
@@ -25,12 +26,14 @@ func NewSleepFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}, nil
 }
 
-func (f *sleepFunction) MayExecute(e *core.Event) bool {
+func (f *sleepFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-func (f *sleepFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ sleep\n")
+func (f *sleepFunction) Execute(e *irc.Event) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] sleep", e.From, e.ReplyTarget())
+
 	wakeTrigger := ""
 	for k, v := range f.cfg.Functions.EnabledFunctions {
 		if k == wakeFunctionName {
@@ -39,6 +42,8 @@ func (f *sleepFunction) Execute(e *core.Event) {
 			}
 		}
 	}
+
 	f.ctx.SetAwake(false)
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", style.Italics(wakeTrigger)))
+	logger.Debug(e, "sleeping")
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", style.Italics(wakeTrigger)))
 }

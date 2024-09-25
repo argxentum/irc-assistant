@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
-	"fmt"
+	"assistant/pkg/api/irc"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
+	"strings"
 )
 
 const leaveFunctionName = "leave"
@@ -13,7 +14,7 @@ type leaveFunction struct {
 	FunctionStub
 }
 
-func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, leaveFunctionName)
 	if err != nil {
 		return nil, err
@@ -24,29 +25,34 @@ func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Fu
 	}, nil
 }
 
-func (f *leaveFunction) MayExecute(e *core.Event) bool {
+func (f *leaveFunction) MayExecute(e *irc.Event) bool {
 	tokens := Tokens(e.Message())
 	if e.IsPrivateMessage() {
-		return f.isValid(e, 1) && core.IsChannel(tokens[1])
+		return f.isValid(e, 1) && irc.IsChannel(tokens[1])
 	}
 
 	return f.isValid(e, 0)
 }
 
-func (f *leaveFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ leave\n")
+func (f *leaveFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
+	channels := tokens[1:]
+
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] leave %s", e.From, e.ReplyTarget(), strings.Join(channels, ", "))
 
 	if len(tokens) == 1 && !e.IsPrivateMessage() {
 		f.irc.Part(e.ReplyTarget())
+		logger.Infof(e, "left %s", e.ReplyTarget())
 		return
 	}
 
-	for _, token := range tokens[1:] {
-		if !core.IsChannel(token) {
+	for _, channel := range channels {
+		if !irc.IsChannel(channel) {
 			continue
 		}
 
-		f.irc.Part(tokens[1])
+		f.irc.Part(channel)
+		logger.Infof(e, "left %s", channel)
 	}
 }

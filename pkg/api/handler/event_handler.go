@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
 	"assistant/pkg/api/functions"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,18 +15,18 @@ import (
 type EventHandler interface {
 	ReloadFunctions()
 	AddFunction(f functions.Function)
-	FindMatchingFunction(e *core.Event) functions.Function
-	Handle(e *core.Event)
+	FindMatchingFunction(e *irc.Event) functions.Function
+	Handle(e *irc.Event)
 }
 
 type eventHandler struct {
 	ctx context.Context
 	cfg *config.Config
-	irc core.IRC
+	irc irc.IRC
 	fn  []functions.Function
 }
 
-func NewEventHandler(ctx context.Context, cfg *config.Config, irc core.IRC) EventHandler {
+func NewEventHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) EventHandler {
 	eh := &eventHandler{
 		ctx: ctx,
 		cfg: cfg,
@@ -53,7 +54,7 @@ func (eh *eventHandler) AddFunction(f functions.Function) {
 	eh.fn = append(eh.fn, f)
 }
 
-func (eh *eventHandler) FindMatchingFunction(e *core.Event) functions.Function {
+func (eh *eventHandler) FindMatchingFunction(e *irc.Event) functions.Function {
 	for _, f := range eh.fn {
 		if f.MayExecute(e) {
 			return f
@@ -62,27 +63,30 @@ func (eh *eventHandler) FindMatchingFunction(e *core.Event) functions.Function {
 	return nil
 }
 
-func (eh *eventHandler) Handle(e *core.Event) {
-	core.LogEvent(e)
+func (eh *eventHandler) Handle(e *irc.Event) {
+	logger := log.Logger()
+	logger.Default(e, e.Raw)
 
 	switch e.Code {
-	case core.CodeInvite:
+	case irc.CodeInvite:
 		// if the sender of invite is the owner or an admin, join the channel
 		sender, _ := e.Sender()
 		if sender == eh.cfg.Connection.Owner || slices.Contains(eh.cfg.Connection.Admins, sender) {
 			channel := e.Arguments[1]
 			eh.irc.Join(channel)
 		}
-	case core.CodePrivateMessage:
+	case irc.CodePrivateMessage:
 		if f := eh.FindMatchingFunction(e); f != nil {
 			f.IsAuthorized(e, func(authorized bool) {
 				tokens := functions.Tokens(e.Message())
 
 				if !authorized {
+					logger.Warningf(e, "unauthorized attempt by %s to use %s", e.From, tokens[0])
+
 					if strings.HasPrefix(tokens[0], eh.cfg.Functions.Prefix) {
-						f.Reply(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], eh.cfg.Functions.Prefix)))
+						f.Replyf(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], eh.cfg.Functions.Prefix)))
 					} else {
-						f.Reply(e, "You are not authorized to perform that command.")
+						f.Replyf(e, "You are not authorized to perform that command.")
 					}
 					return
 				}

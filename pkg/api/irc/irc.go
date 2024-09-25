@@ -1,8 +1,8 @@
-package core
+package irc
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
+	"assistant/pkg/config"
 	"crypto/tls"
 	"fmt"
 	irce "github.com/thoj/go-ircevent"
@@ -143,7 +143,7 @@ func (s *service) Listen(ech chan *Event) {
 
 	s.conn.AddCallback("*", func(event *irce.Event) {
 		if s.ech != nil {
-			s.ech <- mapEvent(event)
+			s.ech <- createEvent(event)
 		}
 	})
 

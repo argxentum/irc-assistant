@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"time"
 )
@@ -15,7 +16,7 @@ type uptimeFunction struct {
 	FunctionStub
 }
 
-func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, uptimeFunctionName)
 	if err != nil {
 		return nil, err
@@ -26,12 +27,13 @@ func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (F
 	}, nil
 }
 
-func (f *uptimeFunction) MayExecute(e *core.Event) bool {
+func (f *uptimeFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-func (f *uptimeFunction) Execute(e *core.Event) {
-	fmt.Printf("⚡ uptime\n")
+func (f *uptimeFunction) Execute(e *irc.Event) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] uptime", e.From, e.ReplyTarget())
 
 	startedAt := f.ctx.StartedAt()
 	elapsed := time.Since(startedAt)
@@ -91,5 +93,5 @@ func (f *uptimeFunction) Execute(e *core.Event) {
 		response += fmt.Sprintf("%d second%s", seconds, plural)
 	}
 
-	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("Uptime: %s", style.Bold(response)))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Uptime: %s", style.Bold(response)))
 }

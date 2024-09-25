@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -20,7 +21,7 @@ type marketsFunction struct {
 	FunctionStub
 }
 
-func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (Function, error) {
+func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
 	stub, err := newFunctionStub(ctx, cfg, irc, marketsFunctionName)
 	if err != nil {
 		return nil, err
@@ -31,23 +32,25 @@ func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc core.IRC) (
 	}, nil
 }
 
-func (f *marketsFunction) MayExecute(e *core.Event) bool {
+func (f *marketsFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-func (f *marketsFunction) Execute(e *core.Event) {
+func (f *marketsFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	region := "US"
 	if len(tokens) > 1 {
 		region = tokens[1]
 	}
 
-	fmt.Printf("⚡ markets %s\n", region)
+	logger := log.Logger()
+	logger.Infof(e, "⚡ [%s/%s] markets %s", e.From, e.ReplyTarget(), region)
 
 	query := url.QueryEscape(fmt.Sprintf("stock markets %s", region))
 	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
-		f.Reply(e, "Unable to retrieve %s stock market information.", style.Bold(region))
+		logger.Warningf(e, "unable to retrieve %s stock market information: %s", region, err)
+		f.Replyf(e, "Unable to retrieve %s stock market information.", style.Bold(region))
 		return
 	}
 
@@ -69,6 +72,7 @@ func (f *marketsFunction) Execute(e *core.Event) {
 		change := strings.TrimSpace(val.Next().Text())
 
 		if len(ticker) == 0 || len(value) == 0 {
+			logger.Warningf(e, "skipping invalid stock market information: %s %s %s", ticker, value, change)
 			return
 		}
 
@@ -85,11 +89,12 @@ func (f *marketsFunction) Execute(e *core.Event) {
 	messages := strings.Split(t.Render(), "\n")
 
 	if len(messages) == 0 {
-		f.Reply(e, "Unable to retrieve stock market information.")
+		logger.Warningf(e, "no stock market information found")
+		f.Replyf(e, "Unable to retrieve stock market information.")
 		return
 	}
 
 	messages = slices.Insert(messages, 0, style.Bold(title))
 
-	f.irc.SendMessages(e.ReplyTarget(), messages)
+	f.SendMessages(e, e.ReplyTarget(), messages)
 }

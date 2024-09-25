@@ -1,7 +1,7 @@
-package core
+package irc
 
 import (
-	"fmt"
+	"github.com/google/uuid"
 	irce "github.com/thoj/go-ircevent"
 	"strings"
 )
@@ -14,6 +14,7 @@ const (
 )
 
 type Event struct {
+	ID        string
 	Raw       string
 	Code      string
 	From      string
@@ -59,8 +60,9 @@ func (e *Event) ReplyTarget() string {
 	return target
 }
 
-func mapEvent(e *irce.Event) *Event {
+func createEvent(e *irce.Event) *Event {
 	return &Event{
+		ID:        uuid.New().String(),
 		Raw:       e.Raw,
 		Code:      e.Code,
 		From:      e.Nick,
@@ -71,24 +73,4 @@ func mapEvent(e *irce.Event) *Event {
 
 func IsChannel(target string) bool {
 	return strings.HasPrefix(target, "#") || strings.HasPrefix(target, "&")
-}
-
-func LogEvent(e *Event) {
-	entities := ""
-	if len(e.From) > 0 {
-		from, fromType := e.Sender()
-		to, toType := e.Recipient()
-
-		if e.Code == CodePrivateMessage && len(from) > 0 && len(e.Source) > 0 {
-			entities = fmt.Sprintf(" %s::%s(%s) -> %s::%s --", fromType, from, e.Source, toType, to)
-		} else if e.Code == CodePrivateMessage && len(from) > 0 {
-			entities = fmt.Sprintf(" %s::%s -> %s::%s --", fromType, from, toType, to)
-		} else if len(from) > 0 && len(e.Source) > 0 {
-			entities = fmt.Sprintf(" %s::%s(%s) --", fromType, from, e.Source)
-		} else {
-			entities = fmt.Sprintf(" %s --", e.From)
-		}
-	}
-
-	fmt.Printf("[%s]%s %s\n", e.Code, entities, e.Message())
 }

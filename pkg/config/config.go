@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	Connection ConnectionConfig
-	Reddit     RedditConfig
-	Functions  FunctionsConfig
+	Connection  ConnectionConfig
+	Reddit      RedditConfig
+	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
+	Functions   FunctionsConfig
 }
 
 type ConnectionConfig struct {
@@ -49,6 +50,11 @@ type RedditConfig struct {
 	UserAgent string `yaml:"user_agent"`
 	Username  string
 	Password  string
+}
+
+type GoogleCloudConfig struct {
+	ProjectID              string `yaml:"project_id"`
+	ServiceAccountFilename string `yaml:"service_account_filename"`
 }
 
 type FunctionsConfig struct {

@@ -1,10 +1,11 @@
 package functions
 
 import (
-	"assistant/config"
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/core"
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"slices"
@@ -17,16 +18,16 @@ const (
 )
 
 type Function interface {
-	IsAuthorized(e *core.Event, callback func(bool))
-	MayExecute(e *core.Event) bool
-	Execute(e *core.Event)
-	Reply(e *core.Event, message string, args ...any)
+	IsAuthorized(e *irc.Event, callback func(bool))
+	MayExecute(e *irc.Event) bool
+	Execute(e *irc.Event)
+	Replyf(e *irc.Event, message string, args ...any)
 }
 
 type FunctionStub struct {
 	ctx                 context.Context
 	cfg                 *config.Config
-	irc                 core.IRC
+	irc                 irc.IRC
 	Name                string
 	Triggers            []string
 	Description         string
@@ -36,7 +37,7 @@ type FunctionStub struct {
 	DenyPrivateMessages bool
 }
 
-func newFunctionStub(ctx context.Context, cfg *config.Config, irc core.IRC, name string) (FunctionStub, error) {
+func newFunctionStub(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (FunctionStub, error) {
 	entry, ok := cfg.Functions.EnabledFunctions[name]
 	if !ok {
 		return FunctionStub{}, fmt.Errorf("no function named %s", name)
@@ -85,12 +86,12 @@ func (f *FunctionStub) userChannelStatus(user, channel string, callback func(str
 }
 
 // isUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status
-func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *core.Event, required string, callback func(bool)) {
+func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *irc.Event, required string, callback func(bool)) {
 	user, _ := e.Sender()
 	channel := e.ReplyTarget()
 
 	f.userChannelStatus(user, channel, func(status string) {
-		if !core.IsChannelStatusAtLeast(status, required) {
+		if !irc.IsChannelStatusAtLeast(status, required) {
 			callback(false)
 			return
 		}
@@ -99,7 +100,7 @@ func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *core.Event, required s
 }
 
 // IsAuthorized checks authorization using both channel status-based and role-based authorization
-func (f *FunctionStub) IsAuthorized(e *core.Event, callback func(bool)) {
+func (f *FunctionStub) IsAuthorized(e *irc.Event, callback func(bool)) {
 	if len(f.ChannelStatus) > 0 {
 		f.isUserAuthorizedByChannelStatus(e, f.ChannelStatus, func(authorized bool) {
 			if authorized {
@@ -145,7 +146,7 @@ func (f *FunctionStub) isTriggerValid(trigger string) bool {
 }
 
 // isValid checks if the input meets minimum validation requirements for the function. If the function requires role-based authorization and not channel status-based authorization, then it is also checked. Otherwise, the union of both authorization methods will be checked during execution.
-func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
+func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
 	user, _ := e.Sender()
 	tokens := Tokens(e.Message())
 	attempted := f.isTriggerValid(tokens[0])
@@ -166,7 +167,7 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function is not allowed in private messages and the message is a private message, ignore
 	if f.DenyPrivateMessages && e.IsPrivateMessage() {
 		if attempted {
-			f.Reply(e, "The %s command is not allowed in private messages. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Replyf(e, "The %s command is not allowed in private messages. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -182,7 +183,7 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 	// if the function requires a minimum number of body Tokens, check that
 	if minBodyTokens > 0 && len(tokens) < minBodyTokens+1 {
 		if attempted {
-			f.Reply(e, "Invalid number of arguments for %s. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
+			f.Replyf(e, "Invalid number of arguments for %s. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0], strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))))
 		}
 		return false
 	}
@@ -204,12 +205,24 @@ func (f *FunctionStub) isValid(e *core.Event, minBodyTokens int) bool {
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
 func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
 	f.userChannelStatus(f.cfg.Connection.Nick, channel, func(status string) {
-		callback(core.IsChannelStatusAtLeast(status, required))
+		callback(irc.IsChannelStatusAtLeast(status, required))
 	})
 }
 
-// Reply sends a message to the Reply target
-func (f *FunctionStub) Reply(e *core.Event, message string, args ...any) {
+func (f *FunctionStub) SendMessage(e *irc.Event, target, message string) {
+	log.Logger().Infof(e, "Sending message to %s: %s", target, message)
+	f.irc.SendMessage(target, message)
+}
+
+func (f *FunctionStub) SendMessages(e *irc.Event, target string, messages []string) {
+	log.Logger().Infof(e, "Sending messages to %s: [%s]", target, strings.Join(messages, ", "))
+	f.irc.SendMessages(target, messages)
+}
+
+// Replyf sends a message to the Replyf target
+func (f *FunctionStub) Replyf(e *irc.Event, message string, args ...any) {
+	log.Logger().Infof(e, "Replying: %s", fmt.Sprintf(message, args...))
+
 	if !e.IsPrivateMessage() {
 		first := strings.ToLower(message[0:1])
 		remainder := message[1:]
@@ -227,9 +240,9 @@ func (f *FunctionStub) Reply(e *core.Event, message string, args ...any) {
 	f.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf(message, args...))
 }
 
-func (f *FunctionStub) UnauthorizedReply(e *core.Event) {
+func (f *FunctionStub) UnauthorizedReply(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	f.Reply(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
+	f.Replyf(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix)))
 }
 
 func (f *FunctionStub) functionConfig(name string) config.FunctionConfig {
