@@ -5,7 +5,6 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
-	"strings"
 )
 
 const banFunctionName = "ban"
@@ -31,11 +30,11 @@ func (f *banFunction) MayExecute(e *irc.Event) bool {
 
 func (f *banFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	user := tokens[1]
+	mask := tokens[1]
 	channel := e.ReplyTarget()
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] ban %s %s", e.From, e.ReplyTarget(), channel, user)
+	logger.Infof(e, "⚡ [%s/%s] ban %s %s", e.From, e.ReplyTarget(), channel, mask)
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
@@ -44,11 +43,7 @@ func (f *banFunction) Execute(e *irc.Event) {
 			return
 		}
 
-		reason := ""
-		if len(tokens) > 2 {
-			reason = strings.Join(tokens[2:], " ")
-		}
-		f.irc.Ban(channel, user, reason)
-		logger.Infof(e, "banned %s in %s", user, channel)
+		f.irc.Ban(channel, mask)
+		logger.Infof(e, "banned %s in %s", mask, channel)
 	})
 }

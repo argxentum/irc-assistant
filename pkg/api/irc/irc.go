@@ -61,7 +61,7 @@ type IRC interface {
 	Up(channel, user string)
 	Down(channel, user string)
 	Kick(channel, user, reason string)
-	Ban(channel, user, reason string)
+	Ban(channel, mask string)
 	TemporaryBan(channel, user, reason string, duration time.Duration)
 	Disconnect()
 }
@@ -214,12 +214,8 @@ func (s *service) Kick(channel, user, reason string) {
 	})
 }
 
-func (s *service) Ban(channel, user, reason string) {
-	go func() {
-		s.Kick(channel, user, reason)
-		time.Sleep(100 * time.Millisecond)
-		s.conn.Mode(channel, "+b", user)
-	}()
+func (s *service) Ban(channel, mask string) {
+	s.conn.Mode(channel, "+b", mask)
 }
 
 func (s *service) TemporaryBan(channel, user, reason string, duration time.Duration) {
