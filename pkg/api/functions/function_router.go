@@ -39,9 +39,13 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewKickFunction(ctx, cfg, irc)
 		})
-	case kickBanFunctionName:
+	case banFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewBanFunction(ctx, cfg, irc)
+		})
+	case kickBanFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewKickBanFunction(ctx, cfg, irc)
 		})
 	case sleepFunctionName:
 		return loadFunction(name, func() (Function, error) {

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const kickBanFunctionName = "kickBan"
+const kickBanFunctionName = "kickban"
 
 type kickBanFunction struct {
 	FunctionStub
