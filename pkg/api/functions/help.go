@@ -62,14 +62,15 @@ func (f *helpFunction) Execute(e *irc.Event) {
 			}
 			fns += cmd
 		}
-		reply = append(reply, splitMessageIfNecessary(fmt.Sprintf("Commands: %s", fns))...)
-
-		reply = append(reply, "Usage:")
+		reply = append(reply, splitMessageIfNecessary(fmt.Sprintf("%s: %s (* requires authorization)", style.Underline("Commands"), fns))...)
+		usages := ""
 		for _, u := range f.Usages {
-			for _, t := range f.Triggers {
-				reply = append(reply, fmt.Sprintf("   %s", style.Italics(fmt.Sprintf(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, u), t))))
+			if len(usages) > 0 {
+				usages += ", "
 			}
+			usages += fmt.Sprintf(u, fmt.Sprintf("%shelp", f.cfg.Functions.Prefix))
 		}
+		reply = append(reply, fmt.Sprintf("%s: %s", style.Underline("Usage"), style.Italics(usages)))
 
 		f.SendMessages(e, e.ReplyTarget(), reply)
 		return
@@ -101,25 +102,45 @@ func (f *helpFunction) Execute(e *irc.Event) {
 	reply := make([]string, 0)
 	reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(trigger)), fn.Description))
 
+	slices.SortFunc(fn.Triggers, func(a, b string) int {
+		if len(a) != len(b) {
+			return len(a) - len(b)
+		}
+		return strings.Compare(a, b)
+	})
+
 	if len(fn.Usages) > 0 {
-		reply = append(reply, "Usage:")
+		usages := ""
 		for _, u := range fn.Usages {
-			for _, t := range fn.Triggers {
-				reply = append(reply, fmt.Sprintf("   %s", style.Italics(fmt.Sprintf(f.cfg.Functions.Prefix+u, t))))
+			if len(fn.Triggers) > 0 {
+				if len(usages) > 0 {
+					usages += ", "
+				}
+				usages += fmt.Sprintf(u, fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, fn.Triggers[0]))
 			}
 		}
+
+		reply = append(reply, fmt.Sprintf("Usage: %s", style.Italics(usages)))
 	}
 
+	footer := ""
 	if len(fn.Role) > 0 && len(fn.ChannelStatus) > 0 {
-		reply = append(reply, fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.ChannelStatusName(fn.ChannelStatus)))
+		footer = fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.ChannelStatusName(fn.ChannelStatus))
 	} else if len(fn.Role) > 0 {
-		reply = append(reply, fmt.Sprintf("Requires %s role.", fn.Role))
+		footer = fmt.Sprintf("Requires %s role.", fn.Role)
 	} else if len(fn.ChannelStatus) > 0 {
-		reply = append(reply, fmt.Sprintf("Requires %s status or greater.", irc.ChannelStatusName(fn.ChannelStatus)))
+		footer = fmt.Sprintf("Requires %s status or greater.", irc.ChannelStatusName(fn.ChannelStatus))
 	}
 
 	if fn.DenyPrivateMessages {
-		reply = append(reply, "Must be used in a channel.")
+		if len(footer) > 0 {
+			footer += " "
+		}
+		footer += "Must be used in a channel."
+	}
+
+	if len(footer) > 0 {
+		reply = append(reply, footer)
 	}
 
 	f.SendMessages(e, e.ReplyTarget(), reply)
