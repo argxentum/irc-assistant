@@ -61,10 +61,9 @@ func (f *stockFunction) Execute(e *irc.Event) {
 		return
 	}
 
+	message := fmt.Sprintf("%s – ", style.Bold(title))
 	if len(subtitle) > 0 {
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s (%s)", style.Bold(title), subtitle))
-	} else {
-		f.SendMessage(e, e.ReplyTarget(), style.Bold(title))
+		message = fmt.Sprintf("%s (%s) – ", style.Bold(title), subtitle)
 	}
 
 	styledChange := change
@@ -74,5 +73,6 @@ func (f *stockFunction) Execute(e *irc.Event) {
 		styledChange = style.ColorForeground(change, style.ColorGreen)
 	}
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s %s %s", price, currency, styledChange))
+	message += fmt.Sprintf("%s %s %s", price, currency, styledChange)
+	f.SendMessage(e, e.ReplyTarget(), message)
 }

@@ -7,7 +7,6 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
-	"github.com/jedib0t/go-pretty/v6/table"
 	"slices"
 	"strings"
 )
@@ -289,12 +288,4 @@ func coalesce(strings ...string) string {
 		}
 	}
 	return ""
-}
-
-func createDefaultTable() table.Writer {
-	ts := table.StyleDefault
-	ts.Options = table.OptionsNoBordersAndSeparators
-	t := table.NewWriter()
-	t.SetStyle(ts)
-	return t
 }

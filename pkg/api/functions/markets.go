@@ -8,10 +8,7 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
 	"net/url"
-	"slices"
 	"strings"
 )
 
@@ -54,15 +51,10 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	t := createDefaultTable()
-	t.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, Align: text.AlignLeft},
-		{Number: 2, Align: text.AlignRight},
-		{Number: 3, Align: text.AlignLeft},
-	})
-
 	section := doc.Find("div.finmkt").First()
 	title := strings.TrimSpace(section.Find("h2").First().Text())
+
+	message := ""
 
 	markets := section.Find("div.finind_ind").First()
 	markets.Find("div.finind_item").Each(func(i int, s *goquery.Selection) {
@@ -83,18 +75,20 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 			styledChange = style.ColorForeground(change, style.ColorGreen)
 		}
 
-		t.AppendRow([]any{style.Bold(ticker), value, styledChange})
+		if len(message) > 0 {
+			message += " | "
+		}
+
+		message += fmt.Sprintf("%s: %s %s", style.Underline(ticker), value, styledChange)
 	})
 
-	messages := strings.Split(t.Render(), "\n")
-
-	if len(messages) == 0 {
+	if len(message) == 0 {
 		logger.Warningf(e, "no stock market information found")
 		f.Replyf(e, "Unable to retrieve stock market information.")
 		return
 	}
 
-	messages = slices.Insert(messages, 0, style.Bold(title))
+	message = style.Bold(title) + " – " + message
 
-	f.SendMessages(e, e.ReplyTarget(), messages)
+	f.SendMessage(e, e.ReplyTarget(), message)
 }

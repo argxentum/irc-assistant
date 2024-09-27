@@ -8,8 +8,6 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
 	"regexp"
 	"strings"
 )
@@ -119,8 +117,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	title := strings.TrimSpace(doc.Find("h1").First().Text())
-	subtitle := strings.TrimSpace(doc.Find("h3").First().Text())
+	title := strings.TrimSpace(doc.Find("h3").First().Text())
 
 	candidates := make([]string, 0)
 	doc.Find("table#polls").First().Find("th").Each(func(i int, s *goquery.Selection) {
@@ -142,19 +139,14 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	t := createDefaultTable()
-	t.SetColumnConfigs([]table.ColumnConfig{
-		{Number: 1, Align: text.AlignLeft},
-		{Number: 2, Align: text.AlignRight},
-	})
-
-	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s: %s", style.Bold(title), subtitle))
+	message := ""
 	for i, c := range candidates {
-		t.AppendRow([]any{style.Bold(c), averages[i]})
+		if len(message) > 0 {
+			message += ", "
+		}
+		message += fmt.Sprintf("%s: %s", style.Underline(c), averages[i])
 	}
-	messages = append(messages, strings.Split(t.Render(), "\n")...)
-	messages = append(messages, pollsURL)
+	message = fmt.Sprintf("%s – %s", style.Bold(title), message)
 
-	f.SendMessages(e, e.ReplyTarget(), messages)
+	f.SendMessages(e, e.ReplyTarget(), []string{message, pollsURL})
 }
