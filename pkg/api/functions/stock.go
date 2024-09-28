@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const stockFunctionName = "stock"
+const maxStockAttempts = 5
 
 type stockFunction struct {
 	FunctionStub
@@ -39,12 +41,39 @@ func (f *stockFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] stock %s", e.From, e.ReplyTarget(), symbol)
 
+	message := ""
+	attempts := 1
+
+	go func() {
+		for {
+			if attempts > maxStockAttempts {
+				break
+			}
+
+			logger.Debugf(e, "attempt %d to retrieve stock price data for %s", attempts, symbol)
+
+			message = f.retrieveStockPriceMessage(e, symbol)
+			if len(message) > 0 {
+				f.SendMessage(e, e.ReplyTarget(), message)
+				return
+			}
+
+			attempts++
+			time.Sleep(250)
+		}
+
+		f.Replyf(e, "Unable to retrieve stock price data for %s.", style.Bold(symbol))
+	}()
+}
+
+func (f *stockFunction) retrieveStockPriceMessage(e *irc.Event, symbol string) string {
+	logger := log.Logger()
+
 	query := url.QueryEscape(fmt.Sprintf("current stock price %s", strings.ToUpper(symbol)))
-	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
+	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
 		logger.Warningf(e, "unable to retrieve stock price data for %s: %s", symbol, err)
-		f.Replyf(e, "Unable to retrieve stock price data for %s.", style.Bold(symbol))
-		return
+		return ""
 	}
 
 	section := doc.Find("div.finquote").First()
@@ -57,8 +86,7 @@ func (f *stockFunction) Execute(e *irc.Event) {
 
 	if len(title) == 0 || len(price) == 0 {
 		logger.Warningf(e, "unable to parse stock market information, title: %s, price: %s", title, price)
-		f.Replyf(e, "Unable to retrieve stock market information.")
-		return
+		return ""
 	}
 
 	message := fmt.Sprintf("%s – ", style.Bold(title))
@@ -74,5 +102,5 @@ func (f *stockFunction) Execute(e *irc.Event) {
 	}
 
 	message += fmt.Sprintf("%s %s %s", price, currency, styledChange)
-	f.SendMessage(e, e.ReplyTarget(), message)
+	return message
 }

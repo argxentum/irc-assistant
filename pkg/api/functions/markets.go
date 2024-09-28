@@ -8,11 +8,15 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"math/rand/v2"
 	"net/url"
 	"strings"
+	"time"
+	"unicode"
 )
 
 const marketsFunctionName = "markets"
+const maxMarketAttempts = 5
 
 type marketsFunction struct {
 	FunctionStub
@@ -43,16 +47,56 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] markets %s", e.From, e.ReplyTarget(), region)
 
+	message := ""
+	attempts := 1
+
+	go func() {
+		for {
+			if attempts > maxMarketAttempts {
+				break
+			}
+
+			logger.Debugf(e, "attempt %d to retrieve market summary data for %s", attempts, region)
+
+			message = f.retrieveMarketSummaryMessage(e, region)
+			if len(message) > 0 {
+				f.SendMessage(e, e.ReplyTarget(), message)
+				return
+			}
+
+			attempts++
+			time.Sleep(time.Duration(200 + rand.IntN(150)))
+		}
+
+		f.Replyf(e, "unable to retrieve %s market data.", style.Bold(region))
+	}()
+}
+
+func (f *marketsFunction) retrieveMarketSummaryMessage(e *irc.Event, region string) string {
+	logger := log.Logger()
+
 	query := url.QueryEscape(fmt.Sprintf("stock markets %s", region))
-	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
+	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil {
 		logger.Warningf(e, "unable to retrieve %s stock market information: %s", region, err)
-		f.Replyf(e, "Unable to retrieve %s stock market information.", style.Bold(region))
-		return
+		return ""
 	}
 
 	section := doc.Find("div.finmkt").First()
-	title := strings.TrimSpace(section.Find("h2").First().Text())
+	title := strings.ToLower(strings.TrimSpace(section.Find("h2").First().Text()))
+
+	market := strings.TrimSpace(strings.Replace(strings.ToLower(strings.TrimSpace(section.Find("li").First().Text())), "market", "", -1))
+	if len(market) > 0 {
+		market = string(unicode.ToUpper(rune(market[0]))) + strings.ToLower(market[1:])
+		caps := []string{"us", "uk", "eu", "as", "au", "ca", "nz"}
+		for _, c := range caps {
+			if strings.ToLower(market) == c {
+				market = strings.ToUpper(market)
+				break
+			}
+		}
+		title = fmt.Sprintf("%s %s", market, title)
+	}
 
 	message := ""
 
@@ -84,11 +128,9 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 
 	if len(message) == 0 {
 		logger.Warningf(e, "no stock market information found")
-		f.Replyf(e, "Unable to retrieve stock market information.")
-		return
+		return ""
 	}
 
 	message = style.Bold(title) + " – " + message
-
-	f.SendMessage(e, e.ReplyTarget(), message)
+	return message
 }

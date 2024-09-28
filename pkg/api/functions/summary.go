@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/log"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -50,18 +51,31 @@ func (f *summaryFunction) MayExecute(e *irc.Event) bool {
 		return false
 	}
 
-	tokens := Tokens(e.Message())
-	return strings.HasPrefix(tokens[0], "https://") || strings.HasPrefix(tokens[0], "http://")
+	message := e.Message()
+	return strings.Contains(message, "https://") || strings.Contains(message, "http://")
 }
 
 func (f *summaryFunction) Execute(e *irc.Event) {
-	tokens := Tokens(e.Message())
-	url := translateURL(tokens[0])
-
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
 
+	parsedURL := parseURLFromMessage(e.Message())
+	if len(parsedURL) == 0 {
+		logger.Debugf(e, "no URL found in message")
+		return
+	}
+
+	url := translateURL(parsedURL)
+	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
 	f.tryDirect(e, url, false)
+}
+
+func parseURLFromMessage(message string) string {
+	urlRegex := regexp.MustCompile(`(?i)(https?://\S+)\b`)
+	urlMatches := urlRegex.FindStringSubmatch(message)
+	if len(urlMatches) > 0 {
+		return urlMatches[0]
+	}
+	return ""
 }
 
 const minimumTitleLength = 16
@@ -78,12 +92,17 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	logger := log.Logger()
 	logger.Infof(e, "trying direct (impersonated: %t) for %s", impersonated, url)
 
-	doc, err := getDocument(url, impersonated)
+	doc, err := f.getDocument(e, url, impersonated)
 	if errors.Is(err, disallowedContentTypeError) {
+		logger.Debugf(e, "disallowed content type for %s (impersonated: %t)", url, impersonated)
 		return
 	}
 	if err != nil || doc == nil {
-		logger.Debugf(e, "unable to retrieve %s (impersonated: %t): %s", url, impersonated, err)
+		if err != nil {
+			logger.Debugf(e, "unable to retrieve %s (impersonated: %t): %s", url, impersonated, err)
+		} else {
+			logger.Debugf(e, "unable to retrieve %s (impersonated: %t)", url, impersonated)
+		}
 		if !impersonated {
 			f.tryDirect(e, url, true)
 			return
@@ -157,9 +176,13 @@ func (f *summaryFunction) tryNuggetize(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying nuggetize for %s", url)
 
-	doc, err := getDocument(fmt.Sprintf("https://nug.zip/%s", url), true)
+	doc, err := f.getDocument(e, fmt.Sprintf("https://nug.zip/%s", url), true)
 	if err != nil || doc == nil {
-		logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
+		if err != nil {
+			logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
+		} else {
+			logger.Debugf(e, "unable to retrieve nuggetize summary for %s", url)
+		}
 		f.tryBing(e, url)
 		return
 	}
@@ -193,17 +216,21 @@ func (f *summaryFunction) tryBing(e *irc.Event, url string) {
 		return
 	}
 
-	doc, err := getDocument(fmt.Sprintf(bingSearchURL, url), true)
+	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, url), true)
 	if err != nil || doc == nil {
-		logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
+		if err != nil {
+			logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
+		} else {
+			logger.Debugf(e, "unable to retrieve bing search results for %s", url)
+		}
 		f.tryDuckDuckGo(e, url)
 		return
 	}
 
 	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
 
-	if strings.Contains(strings.ToLower(title), fmt.Sprintf("about %s", url[:min(len(url), 24)])) {
-		logger.Debugf(e, "bing title contains 'about <url>': %s", title)
+	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
+		logger.Debugf(e, "bing title contains url': %s", title)
 		f.tryDuckDuckGo(e, url)
 		return
 	}
@@ -229,9 +256,13 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 		return
 	}
 
-	doc, err := getDocument(fmt.Sprintf("https://html.duckduckgo.com/html?q=%s", url), true)
+	doc, err := f.getDocument(e, fmt.Sprintf("https://html.duckduckgo.com/html?q=%s", url), true)
 	if err != nil || doc == nil {
-		logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
+		if err != nil {
+			logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
+		} else {
+			logger.Debugf(e, "unable to retrieve duckduckgo search results for %s", url)
+		}
 		return
 	}
 

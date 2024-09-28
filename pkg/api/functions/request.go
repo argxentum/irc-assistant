@@ -1,12 +1,15 @@
 package functions
 
 import (
+	"assistant/pkg/api/irc"
+	"assistant/pkg/log"
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var headerSets = []map[string]string{
@@ -17,40 +20,70 @@ var headerSets = []map[string]string{
 	},
 }
 
+const requestTimeoutMillis = 1000
+
 var disallowedContentTypeError = errors.New("disallowed content type")
 
 var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
 
-func getDocument(url string, impersonated bool) (*goquery.Document, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
+type docResult struct {
+	doc *goquery.Document
+	err error
+}
 
-	if impersonated {
-		headers := headerSets[rand.Intn(len(headerSets))]
-		for k, v := range headers {
-			req.Header.Set(k, v)
+func (f *FunctionStub) getDocument(e *irc.Event, url string, impersonated bool) (*goquery.Document, error) {
+	logger := log.Logger()
+	logger.Debugf(e, "GET %s", url)
+
+	res := make(chan docResult)
+	go func() {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			logger.Debugf(e, "error getting url, %s", err)
+			res <- docResult{nil, err}
 		}
-	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil, err
-	}
+		if impersonated {
+			headers := headerSets[rand.Intn(len(headerSets))]
+			for k, v := range headers {
+				req.Header.Set(k, v)
+			}
+		}
 
-	if !isContentTypeAllowed(resp.Header.Get("Content-Type")) {
-		return nil, disallowedContentTypeError
-	}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if err != nil {
+				logger.Debugf(e, "error getting url (status %d), %s", resp.StatusCode, err)
+			} else {
+				logger.Debugf(e, "error getting url (status %s)", resp.Status)
+			}
+			res <- docResult{nil, err}
+		}
 
-	defer resp.Body.Close()
+		if !isContentTypeAllowed(resp.Header.Get("Content-Type")) {
+			res <- docResult{nil, disallowedContentTypeError}
+		}
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+		defer resp.Body.Close()
 
-	return doc, nil
+		logger.Debugf(e, "start parsing document")
+		doc, err := goquery.NewDocumentFromReader(resp.Body)
+		logger.Debugf(e, "finished parsing document")
+		if err != nil {
+			logger.Debugf(e, "error parsing document, %s", err)
+			res <- docResult{nil, err}
+		}
+
+		res <- docResult{doc, nil}
+	}()
+
+	go func() {
+		time.Sleep(requestTimeoutMillis * time.Millisecond)
+		res <- docResult{nil, errors.New("request timed out")}
+	}()
+
+	docRes := <-res
+	return docRes.doc, docRes.err
 }
 
 func isContentTypeAllowed(contentType string) bool {

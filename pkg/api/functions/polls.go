@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -41,9 +42,13 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] polls", e.From, e.ReplyTarget())
 
-	home, err := getDocument(home270toWinURL, true)
+	home, err := f.getDocument(e, home270toWinURL, true)
 	if err != nil || home == nil {
-		logger.Warningf(e, "unable to retrieve polling data: %s", err)
+		if err != nil {
+			logger.Warningf(e, "unable to retrieve polling data: %s", err)
+		} else {
+			logger.Warningf(e, "unable to retrieve polling data")
+		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
@@ -68,9 +73,13 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		pollsHomeUrl = home270toWinURL + pollsHomeUrl
 	}
 
-	pollsHome, err := getDocument(pollsHomeUrl, true)
+	pollsHome, err := f.getDocument(e, pollsHomeUrl, true)
 	if err != nil || pollsHome == nil {
-		logger.Warningf(e, "unable to parse pollsHomeUrl (%s): %s", pollsHomeUrl, err)
+		if err != nil {
+			logger.Warningf(e, "unable to parse pollsHomeUrl (%s): %s", pollsHomeUrl, err)
+		} else {
+			logger.Warningf(e, "unable to parse pollsHomeUrl (%s)", pollsHomeUrl)
+		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
@@ -83,9 +92,13 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	}
 	year := matcher[1]
 
-	pollsDetail, err := getDocument(fmt.Sprintf(pollsDetailURL, year), true)
+	pollsDetail, err := f.getDocument(e, fmt.Sprintf(pollsDetailURL, year), true)
 	if err != nil || pollsDetail == nil {
-		logger.Warningf(e, "unable to parse pollsDetailURL (%s): %s", fmt.Sprintf(pollsDetailURL, year), err)
+		if err != nil {
+			logger.Warningf(e, "unable to parse pollsDetailURL (%s): %s", fmt.Sprintf(pollsDetailURL, year), err)
+		} else {
+			logger.Warningf(e, "unable to parse pollsDetailURL (%s)", fmt.Sprintf(pollsDetailURL, year))
+		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
@@ -110,9 +123,13 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	doc, err := getDocument(pollsURL, true)
+	doc, err := f.getDocument(e, pollsURL, true)
 	if err != nil || doc == nil {
-		logger.Warningf(e, "unable to parse pollsURL (%s): %s", pollsURL, err)
+		if err != nil {
+			logger.Warningf(e, "unable to parse pollsURL (%s): %s", pollsURL, err)
+		} else {
+			logger.Warningf(e, "unable to parse pollsURL (%s)", pollsURL)
+		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
@@ -139,12 +156,30 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
+	winningAvg := 0.0
+	winningCandidateIndex := 0
+	for i, a := range averages {
+		avg, err := strconv.ParseFloat(a, 32)
+		if err != nil {
+			logger.Warningf(e, "unable to parse polling average for %s: %s", candidates[i], a)
+			continue
+		}
+		if avg > winningAvg {
+			winningAvg = avg
+			winningCandidateIndex = i
+		}
+	}
+
 	message := ""
 	for i, c := range candidates {
 		if len(message) > 0 {
 			message += ", "
 		}
-		message += fmt.Sprintf("%s: %s", style.Underline(c), averages[i])
+		if i == winningCandidateIndex {
+			message += style.ColorForeground(fmt.Sprintf("%s: %s", style.Underline(c), averages[i]), style.ColorGreen)
+		} else {
+			message += fmt.Sprintf("%s: %s", style.Underline(c), averages[i])
+		}
 	}
 	message = fmt.Sprintf("%s – %s", style.Bold(title), message)
 

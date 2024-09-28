@@ -49,9 +49,13 @@ func (f *searchFunction) tryBing(e *irc.Event, input string) {
 	logger.Debugf(e, "trying bing for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := getDocument(fmt.Sprintf(bingSearchURL, query), true)
+	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
 	if err != nil || doc == nil {
-		logger.Warningf(e, "unable to retrieve bing search results for %s: %s", input, err)
+		if err != nil {
+			logger.Warningf(e, "unable to retrieve bing search results for %s: %s", input, err)
+		} else {
+			logger.Warningf(e, "unable to retrieve bing search results for %s", input)
+		}
 		f.tryDuckDuckGo(e, input)
 		return
 	}
@@ -103,9 +107,13 @@ func (f *searchFunction) tryDuckDuckGo(e *irc.Event, input string) {
 	logger.Infof(e, "trying duckduckgo for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := getDocument(fmt.Sprintf(duckDuckGoSearchURL, query), true)
+	doc, err := f.getDocument(e, fmt.Sprintf(duckDuckGoSearchURL, query), true)
 	if err != nil || doc == nil {
-		logger.Warningf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)
+		if err != nil {
+			logger.Warningf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)
+		} else {
+			logger.Warningf(e, "unable to retrieve duckduckgo search results for %s", input)
+		}
 		f.Replyf(e, "No search results found for %s", style.Bold(input))
 		return
 	}
