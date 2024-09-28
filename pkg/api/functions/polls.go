@@ -159,7 +159,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	winningAvg := 0.0
 	winningCandidateIndex := 0
 	for i, a := range averages {
-		avg, err := strconv.ParseFloat(a, 32)
+		avg, err := strconv.ParseFloat(strings.Replace(a, "%", "", -1), 32)
 		if err != nil {
 			logger.Warningf(e, "unable to parse polling average for %s: %s", candidates[i], a)
 			continue
