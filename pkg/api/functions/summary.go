@@ -3,10 +3,10 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
-	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -15,24 +15,9 @@ import (
 
 const summaryFunctionName = "summary"
 
-var allowedContentTypePrefixes = []string{
-	"text/html",
-	"text/plain",
-	"text/xml",
-	"application/xml",
-	"application/xhtml",
-	"application/rss",
-	"application/atom",
-	"application/rdf",
-	"application/json",
-	"application/ld+json",
-	"application/vnd.api",
-	"application/hal+json",
-	"application/vnd.collection",
-}
-
 type summaryFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -43,6 +28,7 @@ func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (F
 
 	return &summaryFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -58,13 +44,12 @@ func (f *summaryFunction) MayExecute(e *irc.Event) bool {
 func (f *summaryFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 
-	parsedURL := parseURLFromMessage(e.Message())
-	if len(parsedURL) == 0 {
+	url := parseURLFromMessage(e.Message())
+	if len(url) == 0 {
 		logger.Debugf(e, "no URL found in message")
 		return
 	}
 
-	url := translateURL(parsedURL)
 	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
 	f.tryDirect(e, url, false)
 }
@@ -81,9 +66,13 @@ func parseURLFromMessage(message string) string {
 const minimumTitleLength = 16
 const minimumPreferredTitleLength = 64
 const maximumPreferredTitleLength = 128
+const maximumDescriptionLength = 256
+
+var domainDenylist = []string{
+	"imgur.com",
+}
 
 var descriptionDomainDenylist = []string{
-	"imgur.com",
 	"youtube.com",
 	"youtu.be",
 }
@@ -92,21 +81,27 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	logger := log.Logger()
 	logger.Infof(e, "trying direct (impersonated: %t) for %s", impersonated, url)
 
-	doc, err := f.getDocument(e, url, impersonated)
-	if errors.Is(err, disallowedContentTypeError) {
-		logger.Debugf(e, "disallowed content type for %s (impersonated: %t)", url, impersonated)
+	if f.isDomainDenylisted(url, domainDenylist) {
+		logger.Debugf(e, "domain denylisted %s", url)
 		return
 	}
+
+	params := retriever.DefaultParams(url)
+	params.Impersonate = impersonated
+
+	doc, err := f.retriever.RetrieveDocument(e, params)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve %s (impersonated: %t): %s", url, impersonated, err)
 		} else {
 			logger.Debugf(e, "unable to retrieve %s (impersonated: %t)", url, impersonated)
 		}
+
 		if !impersonated {
 			f.tryDirect(e, url, true)
 			return
 		}
+
 		f.tryNuggetize(e, url)
 		return
 	}
@@ -125,6 +120,10 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	description := strings.TrimSpace(descriptionAttr)
 	h1 := strings.TrimSpace(doc.Find("html body h1").First().Text())
 
+	if len(description) > maximumDescriptionLength {
+		description = description[:maximumDescriptionLength] + "..."
+	}
+
 	if len(titleAttr) > 0 {
 		title = titleMeta
 	} else if len(h1) > 0 {
@@ -138,7 +137,7 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	}
 
 	includeDescription := true
-	if isDomainDenylisted(url, descriptionDomainDenylist) {
+	if f.isDomainDenylisted(url, descriptionDomainDenylist) {
 		includeDescription = false
 	}
 
@@ -176,7 +175,7 @@ func (f *summaryFunction) tryNuggetize(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying nuggetize for %s", url)
 
-	doc, err := f.getDocument(e, fmt.Sprintf("https://nug.zip/%s", url), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
@@ -210,13 +209,13 @@ func (f *summaryFunction) tryBing(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying bing for %s", url)
 
-	if isDomainDenylisted(url, bingDomainDenylist) {
+	if f.isDomainDenylisted(url, bingDomainDenylist) {
 		logger.Debugf(e, "bing domain denylisted %s", url)
 		f.tryDuckDuckGo(e, url)
 		return
 	}
 
-	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, url), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
@@ -251,12 +250,12 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying duckduckgo for %s", url)
 
-	if isDomainDenylisted(url, duckDuckGoDomainDenylist) {
+	if f.isDomainDenylisted(url, duckDuckGoDomainDenylist) {
 		logger.Debugf(e, "duckduckgo domain denylisted %s", url)
 		return
 	}
 
-	doc, err := f.getDocument(e, fmt.Sprintf("https://html.duckduckgo.com/html?q=%s", url), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
@@ -281,7 +280,7 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 	logger.Debugf(e, "unable to summarize %s", url)
 }
 
-func isDomainDenylisted(url string, denylist []string) bool {
-	root := rootDomain(url)
+func (f *summaryFunction) isDomainDenylisted(url string, denylist []string) bool {
+	root := retriever.RootDomain(url)
 	return slices.Contains(denylist, root)
 }

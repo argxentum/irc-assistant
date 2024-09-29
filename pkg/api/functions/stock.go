@@ -3,20 +3,20 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const stockFunctionName = "stock"
-const maxStockAttempts = 5
 
 type stockFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -27,6 +27,7 @@ func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fun
 
 	return &stockFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -41,42 +42,26 @@ func (f *stockFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] stock %s", e.From, e.ReplyTarget(), symbol)
 
-	message := ""
-	attempts := 1
+	message := f.retrieveStockPriceMessage(e, symbol)
+	if len(message) == 0 {
+		logger.Warningf(e, "unable to retrieve stock price for %s", symbol)
+		f.Replyf(e, "Unable to retrieve stock price for %s", symbol)
+		return
+	}
 
-	go func() {
-		for {
-			if attempts > maxStockAttempts {
-				break
-			}
-
-			logger.Debugf(e, "attempt %d to retrieve stock price data for %s", attempts, symbol)
-
-			message = f.retrieveStockPriceMessage(e, symbol)
-			if len(message) > 0 {
-				f.SendMessage(e, e.ReplyTarget(), message)
-				return
-			}
-
-			attempts++
-			time.Sleep(250)
-		}
-
-		f.Replyf(e, "Unable to retrieve stock price data for %s.", style.Bold(symbol))
-	}()
+	f.SendMessage(e, e.ReplyTarget(), message)
 }
 
 func (f *stockFunction) retrieveStockPriceMessage(e *irc.Event, symbol string) string {
 	logger := log.Logger()
 
 	query := url.QueryEscape(fmt.Sprintf("current stock price %s", strings.ToUpper(symbol)))
-	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
+	section, err := f.retriever.RetrieveDocumentSelection(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), "div.finquote")
 	if err != nil {
 		logger.Warningf(e, "unable to retrieve stock price data for %s: %s", symbol, err)
 		return ""
 	}
 
-	section := doc.Find("div.finquote").First()
 	title := strings.TrimSpace(section.Find("h2").First().Text())
 	subtitle := strings.TrimSpace(section.Find("div.fin_metadata").First().Text())
 	priceSection := section.Find("div.fin_quotePrice").First()

@@ -3,6 +3,7 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -19,6 +20,7 @@ const pollsDetailURL = "https://www.270towin.com/polls/php/get-polls-list-v2.php
 
 type pollsFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -29,6 +31,7 @@ func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fun
 
 	return &pollsFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -42,7 +45,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] polls", e.From, e.ReplyTarget())
 
-	home, err := f.getDocument(e, home270toWinURL, true)
+	home, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(home270toWinURL))
 	if err != nil || home == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve polling data: %s", err)
@@ -53,32 +56,32 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	pollsHomeUrl := ""
+	pollsHomeURL := ""
 	home.Find("ul.navbar-nav").First().Find("a.dropdown-item").Each(func(i int, s *goquery.Selection) {
-		if len(pollsHomeUrl) > 0 {
+		if len(pollsHomeURL) > 0 {
 			return
 		}
 		if strings.TrimSpace(strings.ToLower(s.Text())) == "most recent general election polls" {
-			pollsHomeUrl = s.AttrOr("href", "")
+			pollsHomeURL = s.AttrOr("href", "")
 		}
 	})
 
-	if len(pollsHomeUrl) == 0 {
+	if len(pollsHomeURL) == 0 {
 		logger.Warningf(e, "unable to retrieve polling data")
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
-	if !strings.HasPrefix(pollsHomeUrl, home270toWinURL) {
-		pollsHomeUrl = home270toWinURL + pollsHomeUrl
+	if !strings.HasPrefix(pollsHomeURL, home270toWinURL) {
+		pollsHomeURL = home270toWinURL + pollsHomeURL
 	}
 
-	pollsHome, err := f.getDocument(e, pollsHomeUrl, true)
+	pollsHome, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(pollsHomeURL))
 	if err != nil || pollsHome == nil {
 		if err != nil {
-			logger.Warningf(e, "unable to parse pollsHomeUrl (%s): %s", pollsHomeUrl, err)
+			logger.Warningf(e, "unable to parse pollsHomeURL (%s): %s", pollsHomeURL, err)
 		} else {
-			logger.Warningf(e, "unable to parse pollsHomeUrl (%s)", pollsHomeUrl)
+			logger.Warningf(e, "unable to parse pollsHomeURL (%s)", pollsHomeURL)
 		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
@@ -92,7 +95,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	}
 	year := matcher[1]
 
-	pollsDetail, err := f.getDocument(e, fmt.Sprintf(pollsDetailURL, year), true)
+	pollsDetail, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(pollsDetailURL, year)))
 	if err != nil || pollsDetail == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to parse pollsDetailURL (%s): %s", fmt.Sprintf(pollsDetailURL, year), err)
@@ -123,7 +126,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	doc, err := f.getDocument(e, pollsURL, true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(pollsURL))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to parse pollsURL (%s): %s", pollsURL, err)

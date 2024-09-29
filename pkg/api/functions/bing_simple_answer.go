@@ -3,6 +3,7 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -18,6 +19,7 @@ type bingSimpleAnswerFunction struct {
 	reply     string
 	footnote  string
 	minTokens int
+	retriever retriever.DocumentRetriever
 }
 
 func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minTokens int, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -33,6 +35,7 @@ func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minToke
 		reply:        reply,
 		footnote:     footnote,
 		minTokens:    minTokens,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -54,7 +57,7 @@ func (f *bingSimpleAnswerFunction) Execute(e *irc.Event) {
 		query = url.QueryEscape(fmt.Sprintf(f.query, input))
 	}
 
-	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)))
 	if err != nil {
 		logger.Warningf(e, "error fetching bing search results for %s: %s", input, err)
 		f.Replyf(e, "Sorry, something went wrong and I couldn't find an answer.")

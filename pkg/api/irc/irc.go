@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	irce "github.com/thoj/go-ircevent"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -65,6 +66,8 @@ type IRC interface {
 	TemporaryBan(channel, user, reason string, duration time.Duration)
 	Disconnect()
 }
+
+const maxMessageLength = 400
 
 func NewIRC(ctx context.Context) IRC {
 	return &service{
@@ -158,8 +161,42 @@ func (s *service) Part(channel string) {
 	s.conn.Part(channel)
 }
 
+var multipleSpacesRegex = regexp.MustCompile(`\s{2,}`)
+
 func (s *service) SendMessage(target, message string) {
-	s.conn.Privmsg(target, message)
+	message = strings.ReplaceAll(message, "\r", "")
+	message = strings.ReplaceAll(message, "\n", " ")
+	message = strings.ReplaceAll(message, "\t", " ")
+	message = strings.TrimSpace(message)
+	message = multipleSpacesRegex.ReplaceAllString(message, " ")
+
+	if len(message) < maxMessageLength {
+		s.conn.Privmsg(target, message)
+		return
+	}
+
+	words := strings.Split(message, " ")
+	messages := make([]string, 0)
+	current := ""
+
+	for _, word := range words {
+		if len(current)+len(word) > maxMessageLength {
+			messages = append(messages, current)
+			current = ""
+		}
+		if len(current) > 0 {
+			current += " "
+		}
+		current += word
+	}
+
+	if len(current) > 0 {
+		messages = append(messages, current)
+	}
+
+	for _, m := range messages {
+		s.conn.Privmsg(target, m)
+	}
 }
 
 func (s *service) SendMessages(target string, messages []string) {

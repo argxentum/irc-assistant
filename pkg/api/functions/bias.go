@@ -3,12 +3,12 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/gocolly/colly/v2"
-	"math/rand"
 	"net/url"
 	"regexp"
 	"strings"
@@ -19,6 +19,7 @@ const biasFunctionName = "bias"
 
 type biasFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewBiasFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -29,6 +30,7 @@ func NewBiasFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Func
 
 	return &biasFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -43,7 +45,7 @@ var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]
 func (f *biasFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
-	headers := headerSets[rand.Intn(len(headerSets))]
+	headers := retriever.RandomHeaderSet()
 
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] bias %s", e.From, e.ReplyTarget(), input)

@@ -3,23 +3,22 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"math/rand/v2"
 	"net/url"
 	"strings"
-	"time"
 	"unicode"
 )
 
 const marketsFunctionName = "markets"
-const maxMarketAttempts = 5
 
 type marketsFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -30,6 +29,7 @@ func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (F
 
 	return &marketsFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -47,45 +47,29 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] markets %s", e.From, e.ReplyTarget(), region)
 
-	message := ""
-	attempts := 1
+	message := f.retrieveMarketSummaryMessage(e, region)
+	if len(message) == 0 {
+		logger.Warningf(e, "unable to retrieve stock market information for %s", region)
+		f.Replyf(e, "Unable to retrieve stock market information for %s", region)
+		return
+	}
 
-	go func() {
-		for {
-			if attempts > maxMarketAttempts {
-				break
-			}
-
-			logger.Debugf(e, "attempt %d to retrieve market summary data for %s", attempts, region)
-
-			message = f.retrieveMarketSummaryMessage(e, region)
-			if len(message) > 0 {
-				f.SendMessage(e, e.ReplyTarget(), message)
-				return
-			}
-
-			attempts++
-			time.Sleep(time.Duration(200 + rand.IntN(150)))
-		}
-
-		f.Replyf(e, "unable to retrieve %s market data.", style.Bold(region))
-	}()
+	f.SendMessage(e, e.ReplyTarget(), message)
 }
 
 func (f *marketsFunction) retrieveMarketSummaryMessage(e *irc.Event, region string) string {
 	logger := log.Logger()
 
 	query := url.QueryEscape(fmt.Sprintf("stock markets %s", region))
-	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
+	node, err := f.retriever.RetrieveDocumentSelection(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), "div.finmkt")
 	if err != nil {
 		logger.Warningf(e, "unable to retrieve %s stock market information: %s", region, err)
 		return ""
 	}
 
-	section := doc.Find("div.finmkt").First()
-	title := strings.ToLower(strings.TrimSpace(section.Find("h2").First().Text()))
+	title := strings.ToLower(strings.TrimSpace(node.Find("h2").First().Text()))
 
-	market := strings.TrimSpace(strings.Replace(strings.ToLower(strings.TrimSpace(section.Find("li").First().Text())), "market", "", -1))
+	market := strings.TrimSpace(strings.Replace(strings.ToLower(strings.TrimSpace(node.Find("li").First().Text())), "market", "", -1))
 	if len(market) > 0 {
 		market = string(unicode.ToUpper(rune(market[0]))) + strings.ToLower(market[1:])
 		caps := []string{"us", "uk", "eu", "as", "au", "ca", "nz"}
@@ -100,7 +84,7 @@ func (f *marketsFunction) retrieveMarketSummaryMessage(e *irc.Event, region stri
 
 	message := ""
 
-	markets := section.Find("div.finind_ind").First()
+	markets := node.Find("div.finind_ind").First()
 	markets.Find("div.finind_item").Each(func(i int, s *goquery.Selection) {
 		ticker := strings.TrimSpace(s.Find("div.finind_ticker").First().Text())
 		val := s.Find("div.finind_val").First()

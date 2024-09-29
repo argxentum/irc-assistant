@@ -3,13 +3,13 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,6 +19,7 @@ import (
 type redditFunction struct {
 	FunctionStub
 	subreddit string
+	retriever retriever.DocumentRetriever
 }
 
 func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -30,6 +31,7 @@ func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config
 	return &redditFunction{
 		FunctionStub: stub,
 		subreddit:    subreddit,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -238,7 +240,7 @@ func (f *redditFunction) redditLogin() error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	for k, v := range headerSets[rand.Intn(len(headerSets))] {
+	for k, v := range retriever.RandomHeaderSet() {
 		req.Header.Set(k, v)
 	}
 

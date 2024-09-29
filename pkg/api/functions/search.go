@@ -3,6 +3,7 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -17,6 +18,7 @@ const duckDuckGoSearchURL = "https://html.duckduckgo.com/html?q=%s"
 
 type searchFunction struct {
 	FunctionStub
+	retriever retriever.DocumentRetriever
 }
 
 func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
@@ -27,6 +29,7 @@ func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fu
 
 	return &searchFunction{
 		FunctionStub: stub,
+		retriever:    retriever.NewDocumentRetriever(),
 	}, nil
 }
 
@@ -49,7 +52,7 @@ func (f *searchFunction) tryBing(e *irc.Event, input string) {
 	logger.Debugf(e, "trying bing for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := f.getDocument(e, fmt.Sprintf(bingSearchURL, query), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve bing search results for %s: %s", input, err)
@@ -107,7 +110,7 @@ func (f *searchFunction) tryDuckDuckGo(e *irc.Event, input string) {
 	logger.Infof(e, "trying duckduckgo for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := f.getDocument(e, fmt.Sprintf(duckDuckGoSearchURL, query), true)
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, query)))
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)
