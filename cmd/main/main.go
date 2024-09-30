@@ -31,7 +31,7 @@ func main() {
 	initializeFirestore(ctx, cfg)
 	defer firestore.Get().Close()
 
-	initializeBannedWords(ctx, cfg)
+	initializeBannedWords(ctx)
 
 	svc := irc.NewIRC(ctx)
 	err = svc.Connect(cfg, nil)

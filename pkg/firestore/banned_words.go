@@ -4,53 +4,39 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
-	"cloud.google.com/go/firestore"
 	"fmt"
 	"github.com/google/uuid"
 	"strings"
 )
 
-const CollectionBannedWords = "banned-words"
+const pathAssistants = "assistants"
+const pathChannels = "channels"
+const pathBannedWords = "banned-words"
 const prefixBannedWord = "banned-word"
 
 func (fs *Firestore) AllBannedWords(ctx context.Context) ([]*models.BannedWord, error) {
-	return query[models.BannedWord](ctx, fs.client, QueryCriteria{Path: CollectionBannedWords})
+	path := fmt.Sprintf("%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathBannedWords)
+	return list[models.BannedWord](ctx, fs.client, path)
 }
 
 func (fs *Firestore) BannedWords(ctx context.Context, channel string) ([]*models.BannedWord, error) {
-	criteria := QueryCriteria{
-		Path: CollectionBannedWords,
-		Filter: firestore.AndFilter{
-			Filters: []firestore.EntityFilter{
-				createPropertyFilter("bot", Equal, fs.cfg.Connection.Nick),
-				createPropertyFilter("server", Equal, fs.cfg.Connection.ServerName),
-				createPropertyFilter("channel", Equal, channel),
-			},
-		},
-	}
-
-	return query[models.BannedWord](ctx, fs.client, criteria)
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathChannels, channel, pathBannedWords)
+	return list[models.BannedWord](ctx, fs.client, path)
 }
 
 func (fs *Firestore) AddBannedWord(ctx context.Context, channel, word string) error {
 	id := fmt.Sprintf("%s-%s", prefixBannedWord, uuid.NewString())
-	path := fmt.Sprintf("%s/%s", CollectionBannedWords, id)
-	return create(ctx, fs.client, path, &models.BannedWord{ID: id, Bot: fs.cfg.Connection.Nick, Server: fs.cfg.Connection.ServerName, Channel: channel, Word: strings.ToLower(word)})
+	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathChannels, channel, pathBannedWords, id)
+	return create(ctx, fs.client, path, &models.BannedWord{ID: id, Channel: strings.ToLower(channel), Word: strings.ToLower(word)})
 }
 
 func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string) error {
 	logger := log.Logger()
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathChannels, channel, pathBannedWords)
 
 	criteria := QueryCriteria{
-		Path: CollectionBannedWords,
-		Filter: firestore.AndFilter{
-			Filters: []firestore.EntityFilter{
-				createPropertyFilter("bot", Equal, fs.cfg.Connection.Nick),
-				createPropertyFilter("server", Equal, fs.cfg.Connection.ServerName),
-				createPropertyFilter("channel", Equal, channel),
-				createPropertyFilter("word", Equal, strings.ToLower(word)),
-			},
-		},
+		Path:   path,
+		Filter: createPropertyFilter("word", Equal, strings.ToLower(word)),
 	}
 
 	bannedWords, err := query[models.BannedWord](ctx, fs.client, criteria)
@@ -66,21 +52,16 @@ func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string)
 
 	logger.Rawf(log.Debug, "removing %s", bannedWords[0].ID)
 
-	path := fmt.Sprintf("%s/%s", CollectionBannedWords, bannedWords[0].ID)
+	path = fmt.Sprintf("%s/%s", path, bannedWords[0].ID)
 	return remove(ctx, fs.client, path)
 }
 
 func (fs *Firestore) IsBannedWord(ctx context.Context, channel, word string) (bool, error) {
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathChannels, channel, pathBannedWords)
+
 	criteria := QueryCriteria{
-		Path: CollectionBannedWords,
-		Filter: firestore.AndFilter{
-			Filters: []firestore.EntityFilter{
-				createPropertyFilter("bot", Equal, fs.cfg.Connection.Nick),
-				createPropertyFilter("server", Equal, fs.cfg.Connection.ServerName),
-				createPropertyFilter("channel", Equal, channel),
-				createPropertyFilter("word", Equal, strings.ToLower(word)),
-			},
-		},
+		Path:   path,
+		Filter: createPropertyFilter("word", Equal, strings.ToLower(word)),
 	}
 
 	ok, err := exists[models.BannedWord](ctx, fs.client, criteria)

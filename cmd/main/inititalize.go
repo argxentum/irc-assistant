@@ -22,7 +22,7 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 	}
 }
 
-func initializeBannedWords(ctx context.Context, cfg *config.Config) {
+func initializeBannedWords(ctx context.Context) {
 	bannedWords, err := firestore.Get().AllBannedWords(ctx)
 	if err != nil {
 		panic(fmt.Errorf("error retrieving banned words, %s", err))
@@ -31,9 +31,6 @@ func initializeBannedWords(ctx context.Context, cfg *config.Config) {
 	byChannel := make(map[string]map[string]bool)
 
 	for _, bw := range bannedWords {
-		if bw.Bot != cfg.Connection.Nick || bw.Server != cfg.Connection.ServerName {
-			continue
-		}
 		if byChannel[bw.Channel] == nil {
 			byChannel[bw.Channel] = make(map[string]bool)
 		}
