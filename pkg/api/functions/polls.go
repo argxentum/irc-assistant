@@ -54,9 +54,9 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	doc, err := f.retriever.RetrieveDocumentSelection(e, retriever.DefaultParams(url), "html")
 	if err != nil || doc == nil {
 		if err != nil {
-			logger.Warningf(e, "unable to parse pollsURL (%s): %s", url, err)
+			logger.Warningf(e, "unable to parse url (%s): %s", url, err)
 		} else {
-			logger.Warningf(e, "unable to parse pollsURL (%s)", url)
+			logger.Warningf(e, "unable to parse url (%s)", url)
 		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
@@ -111,5 +111,5 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	}
 	message = fmt.Sprintf("%s – %s", style.Bold(title), message)
 
-	f.SendMessages(e, e.ReplyTarget(), []string{message, pollsURL})
+	f.SendMessages(e, e.ReplyTarget(), []string{message, url})
 }
