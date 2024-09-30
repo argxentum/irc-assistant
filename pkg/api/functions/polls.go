@@ -9,14 +9,14 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const pollsFunctionName = "polls"
-const home270toWinURL = "https://www.270towin.com"
-const pollsDetailURL = "https://www.270towin.com/polls/php/get-polls-list-v2.php?election_year=%s&election_types[]=P&election_subtypes[]=GE&election_subtypes[]=GR&limit=40&base_location_url=/2024-presidential-election-polls/STATE"
+
+const pollsURL = "https://www.270towin.com/%d-presidential-election-polls/%s"
 
 type pollsFunction struct {
 	FunctionStub
@@ -39,105 +39,30 @@ func (f *pollsFunction) MayExecute(e *irc.Event) bool {
 	return f.isValid(e, 0)
 }
 
-var detailFunctionRegexp = regexp.MustCompile(`get_polls\((\d+)`)
-
 func (f *pollsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] polls", e.From, e.ReplyTarget())
 
-	home, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(home270toWinURL))
-	if err != nil || home == nil {
-		if err != nil {
-			logger.Warningf(e, "unable to retrieve polling data: %s", err)
-		} else {
-			logger.Warningf(e, "unable to retrieve polling data")
-		}
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
+	tokens := Tokens(e.Message())
+	year := time.Now().Year()
+	poll := "national"
+	if len(tokens) > 1 {
+		poll = strings.ToLower(tokens[1])
 	}
 
-	pollsHomeURL := ""
-	home.Find("ul.navbar-nav").First().Find("a.dropdown-item").Each(func(i int, s *goquery.Selection) {
-		if len(pollsHomeURL) > 0 {
-			return
-		}
-		if strings.TrimSpace(strings.ToLower(s.Text())) == "most recent general election polls" {
-			pollsHomeURL = s.AttrOr("href", "")
-		}
-	})
-
-	if len(pollsHomeURL) == 0 {
-		logger.Warningf(e, "unable to retrieve polling data")
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
-	}
-
-	if !strings.HasPrefix(pollsHomeURL, home270toWinURL) {
-		pollsHomeURL = home270toWinURL + pollsHomeURL
-	}
-
-	pollsHome, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(pollsHomeURL))
-	if err != nil || pollsHome == nil {
-		if err != nil {
-			logger.Warningf(e, "unable to parse pollsHomeURL (%s): %s", pollsHomeURL, err)
-		} else {
-			logger.Warningf(e, "unable to parse pollsHomeURL (%s)", pollsHomeURL)
-		}
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
-	}
-
-	matcher := detailFunctionRegexp.FindStringSubmatch(pollsHome.Text())
-	if len(matcher) != 2 {
-		logger.Warningf(e, "unable to find get_polls(<year>) javascript call")
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
-	}
-	year := matcher[1]
-
-	pollsDetail, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(pollsDetailURL, year)))
-	if err != nil || pollsDetail == nil {
-		if err != nil {
-			logger.Warningf(e, "unable to parse pollsDetailURL (%s): %s", fmt.Sprintf(pollsDetailURL, year), err)
-		} else {
-			logger.Warningf(e, "unable to parse pollsDetailURL (%s)", fmt.Sprintf(pollsDetailURL, year))
-		}
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
-	}
-
-	pollsURL := ""
-	pollsDetail.Find("table#polls-list").First().Find("a").Each(func(i int, s *goquery.Selection) {
-		if len(pollsURL) > 0 {
-			return
-		}
-		if strings.TrimSpace(strings.ToLower(s.Text())) == "national" {
-			pollsURL = s.AttrOr("href", "")
-		}
-	})
-
-	if !strings.HasPrefix(pollsURL, home270toWinURL) {
-		pollsURL = home270toWinURL + pollsURL
-	}
-
-	if len(pollsURL) == 0 {
-		logger.Warningf(e, "unable to determine pollsURL")
-		f.Replyf(e, "Unable to retrieve polling data")
-		return
-	}
-
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(pollsURL))
+	url := fmt.Sprintf(pollsURL, year, poll)
+	doc, err := f.retriever.RetrieveDocumentSelection(e, retriever.DefaultParams(url), "html")
 	if err != nil || doc == nil {
 		if err != nil {
-			logger.Warningf(e, "unable to parse pollsURL (%s): %s", pollsURL, err)
+			logger.Warningf(e, "unable to parse pollsURL (%s): %s", url, err)
 		} else {
-			logger.Warningf(e, "unable to parse pollsURL (%s)", pollsURL)
+			logger.Warningf(e, "unable to parse pollsURL (%s)", url)
 		}
 		f.Replyf(e, "Unable to retrieve polling data")
 		return
 	}
 
-	title := strings.TrimSpace(doc.Find("h3").First().Text())
+	title := strings.TrimSpace(doc.Find("h1").First().Text())
 
 	candidates := make([]string, 0)
 	doc.Find("table#polls").First().Find("th").Each(func(i int, s *goquery.Selection) {
