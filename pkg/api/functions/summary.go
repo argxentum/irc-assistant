@@ -71,6 +71,9 @@ const maximumDescriptionLength = 256
 
 var unwantedTitlePrefixes = []string{
 	"just a moment",
+	"sorry, you have been blocked",
+	"access to this page has been denied",
+	"please verify you are a human",
 }
 
 var domainDenylist = []string{
