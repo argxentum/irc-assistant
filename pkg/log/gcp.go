@@ -41,6 +41,12 @@ func (l *gcpLogger) Log(e *irc.Event, message string, severity Severity) {
 	l.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: createLabels(e)})
 }
 
+func (l *gcpLogger) Rawf(severity Severity, format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
+	l.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity)})
+	fmt.Printf("%s [%s] %s\n", timestamp(), severity, message)
+}
+
 func (l *gcpLogger) Default(e *irc.Event, message any) {
 	l.Defaultf(e, "%s", message)
 }

@@ -99,6 +99,14 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewStockFunction(ctx, cfg, irc)
 		})
+	case addBannedWordFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewAddBannedWordFunction(ctx, cfg, irc)
+		})
+	case removeBannedWordFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewRemoveBannedWordFunction(ctx, cfg, irc)
+		})
 	case "bing/simple/time":
 		return loadFunction(name, func() (Function, error) {
 			return NewBingSimpleAnswerFunction(

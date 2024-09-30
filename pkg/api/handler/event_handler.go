@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode"
 )
 
 type EventHandler interface {
@@ -76,10 +77,22 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 			eh.irc.Join(channel)
 		}
 	case irc.CodePrivateMessage:
-		if f := eh.FindMatchingFunction(e); f != nil {
-			f.IsAuthorized(e, func(authorized bool) {
-				tokens := functions.Tokens(e.Message())
+		tokens := functions.Tokens(e.Message())
 
+		if !e.IsPrivateMessage() {
+			bannedWords := eh.bannedWordsInMessage(e, tokens)
+			if len(bannedWords) > 0 {
+				label := "word"
+				if len(bannedWords) > 1 {
+					label = "words"
+				}
+				eh.irc.Kick(e.ReplyTarget(), e.From, fmt.Sprintf("banned %s: %s", label, strings.Join(bannedWords, ", ")))
+				return
+			}
+		}
+
+		if f := eh.FindMatchingFunction(e); f != nil {
+			f.IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
 				if !authorized {
 					logger.Warningf(e, "unauthorized attempt by %s to use %s", e.From, tokens[0])
 
@@ -95,4 +108,28 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 			})
 		}
 	}
+}
+
+func (eh *eventHandler) bannedWordsInMessage(e *irc.Event, tokens []string) []string {
+	logger := log.Logger()
+
+	wordMap := make(map[string]bool)
+
+	bannedWords := eh.ctx.BannedWords(e.ReplyTarget())
+	for _, token := range tokens {
+		stripped := strings.TrimFunc(strings.ToLower(token), func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsNumber(r)
+		})
+		if _, banned := bannedWords[stripped]; banned {
+			logger.Warningf(e, "banned word detected: %s", stripped)
+			wordMap[stripped] = true
+		}
+	}
+
+	words := make([]string, 0)
+	for word := range wordMap {
+		words = append(words, word)
+	}
+
+	return words
 }

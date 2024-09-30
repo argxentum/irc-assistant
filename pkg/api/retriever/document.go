@@ -90,8 +90,8 @@ type result struct {
 	err error
 }
 
-var disallowedContentTypeError = errors.New("disallowed content type")
-var requestTimedOutError = errors.New("request timed out")
+var DisallowedContentTypeError = errors.New("disallowed content type")
+var RequestTimedOutError = errors.New("request timed out")
 
 func (r *retriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*goquery.Document, error) {
 	logger := log.Logger()
@@ -130,7 +130,7 @@ func (r *retriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*goq
 
 	if !isContentTypeAllowed(resp.Header.Get("Content-Type")) {
 		logger.Debugf(e, "disallowed content type %s", resp.Header.Get("Content-Type"))
-		return nil, disallowedContentTypeError
+		return nil, DisallowedContentTypeError
 	}
 
 	return goquery.NewDocumentFromReader(resp.Body)
@@ -164,7 +164,7 @@ func (r *retriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalPara
 		go func() {
 			doc, err := r.RetrieveDocument(e, params)
 			if err != nil {
-				if errors.Is(err, disallowedContentTypeError) {
+				if errors.Is(err, DisallowedContentTypeError) {
 					logger.Debugf(e, "exiting due to disallowed content type")
 					res <- result{nil, err}
 				} else {
@@ -190,12 +190,12 @@ func (r *retriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalPara
 			}
 
 			logger.Debugf(e, "retrieval attempt %d timed out", attempts)
-			res <- result{nil, requestTimedOutError}
+			res <- result{nil, RequestTimedOutError}
 		}()
 
 		selection = <-res
 
-		if errors.Is(selection.err, requestTimedOutError) {
+		if errors.Is(selection.err, RequestTimedOutError) {
 			continue
 		}
 

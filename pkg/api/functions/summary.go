@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -92,6 +93,10 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	doc, err := f.retriever.RetrieveDocument(e, params)
 	if err != nil || doc == nil {
 		if err != nil {
+			if errors.Is(err, retriever.DisallowedContentTypeError) {
+				logger.Debugf(e, "disallowed content type for %s", url)
+				return
+			}
 			logger.Debugf(e, "unable to retrieve %s (impersonated: %t): %s", url, impersonated, err)
 		} else {
 			logger.Debugf(e, "unable to retrieve %s (impersonated: %t)", url, impersonated)

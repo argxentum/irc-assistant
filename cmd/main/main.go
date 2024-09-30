@@ -5,8 +5,8 @@ import (
 	"assistant/pkg/api/handler"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"fmt"
 	"os"
 )
 
@@ -25,11 +25,13 @@ func main() {
 		panic(err)
 	}
 
-	_, err = log.InitializeGCPLogger(ctx, cfg)
-	if err != nil {
-		panic(fmt.Errorf("error initializing logger, %s", err))
-	}
+	initializeLogger(ctx, cfg)
 	defer log.Logger().Close()
+
+	initializeFirestore(ctx, cfg)
+	defer firestore.Get().Close()
+
+	initializeBannedWords(ctx, cfg)
 
 	svc := irc.NewIRC(ctx)
 	err = svc.Connect(cfg, nil)

@@ -62,7 +62,7 @@ func (f *helpFunction) Execute(e *irc.Event) {
 			}
 			fns += cmd
 		}
-		reply = append(reply, splitMessageIfNecessary(fmt.Sprintf("%s: %s (* requires authorization)", style.Underline("Commands"), fns))...)
+		reply = append(reply, fmt.Sprintf("%s: %s (* requires authorization)", style.Underline("Commands"), fns))
 		usages := ""
 		for _, u := range f.Usages {
 			if len(usages) > 0 {

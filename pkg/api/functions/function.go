@@ -17,7 +17,7 @@ const (
 )
 
 type Function interface {
-	IsAuthorized(e *irc.Event, callback func(bool))
+	IsAuthorized(e *irc.Event, channel string, callback func(bool))
 	MayExecute(e *irc.Event) bool
 	Execute(e *irc.Event)
 	Replyf(e *irc.Event, message string, args ...any)
@@ -85,9 +85,8 @@ func (f *FunctionStub) userChannelStatus(user, channel string, callback func(str
 }
 
 // isUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status
-func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *irc.Event, required string, callback func(bool)) {
+func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *irc.Event, channel, required string, callback func(bool)) {
 	user, _ := e.Sender()
-	channel := e.ReplyTarget()
 
 	f.userChannelStatus(user, channel, func(status string) {
 		if !irc.IsChannelStatusAtLeast(status, required) {
@@ -99,9 +98,9 @@ func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *irc.Event, required st
 }
 
 // IsAuthorized checks authorization using both channel status-based and role-based authorization
-func (f *FunctionStub) IsAuthorized(e *irc.Event, callback func(bool)) {
+func (f *FunctionStub) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
 	if len(f.ChannelStatus) > 0 {
-		f.isUserAuthorizedByChannelStatus(e, f.ChannelStatus, func(authorized bool) {
+		f.isUserAuthorizedByChannelStatus(e, channel, f.ChannelStatus, func(authorized bool) {
 			if authorized {
 				callback(true)
 				return
@@ -144,8 +143,7 @@ func (f *FunctionStub) isTriggerValid(trigger string) bool {
 	return false
 }
 
-// isValid checks if the input meets minimum validation requirements for the function. If the function requires role-based authorization and not channel status-based authorization, then it is also checked. Otherwise, the union of both authorization methods will be checked during execution.
-func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
+func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTokens int) bool {
 	user, _ := e.Sender()
 	tokens := Tokens(e.Message())
 	attempted := f.isTriggerValid(tokens[0])
@@ -201,6 +199,11 @@ func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
 	return attempted
 }
 
+// isValid checks if the input meets minimum validation requirements for the function. If the function requires role-based authorization and not channel status-based authorization, then it is also checked. Otherwise, the union of both authorization methods will be checked during execution.
+func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
+	return f.isValidForChannel(e, e.ReplyTarget(), minBodyTokens)
+}
+
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
 func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
 	f.userChannelStatus(f.cfg.Connection.Nick, channel, func(status string) {
@@ -218,7 +221,7 @@ func (f *FunctionStub) SendMessages(e *irc.Event, target string, messages []stri
 	f.irc.SendMessages(target, messages)
 }
 
-// Replyf sends a message to the Replyf target
+// Replyf sends a message to the reply target
 func (f *FunctionStub) Replyf(e *irc.Event, message string, args ...any) {
 	log.Logger().Infof(e, "Replying: %s", fmt.Sprintf(message, args...))
 
@@ -260,25 +263,6 @@ func sanitize(input string) string {
 // Tokens splits the input string into sanitized Tokens
 func Tokens(input string) []string {
 	return strings.Split(sanitize(input), " ")
-}
-
-// splitMessageIfNecessary splits the input string into multiple messages if it exceeds the maximum length
-func splitMessageIfNecessary(input string) []string {
-	if len(input) < inputMaxLength {
-		return []string{input}
-	}
-
-	messages := make([]string, 0)
-	for len(input) > 0 {
-		if len(input) > inputMaxLength {
-			messages = append(messages, strings.TrimSpace(input[:inputMaxLength]))
-			input = input[inputMaxLength:]
-		} else {
-			messages = append(messages, strings.TrimSpace(input))
-			input = ""
-		}
-	}
-	return messages
 }
 
 func coalesce(strings ...string) string {

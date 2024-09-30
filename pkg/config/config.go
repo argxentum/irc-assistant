@@ -16,6 +16,7 @@ type ConnectionConfig struct {
 	Owner             string
 	Admins            []string
 	Server            string
+	ServerName        string `yaml:"server_name"`
 	Port              int
 	TLS               bool
 	Nick              string

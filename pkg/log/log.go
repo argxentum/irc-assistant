@@ -21,6 +21,7 @@ const (
 type Log interface {
 	Close() error
 	Log(e *irc.Event, message string, severity Severity)
+	Rawf(severity Severity, format string, args ...any)
 	Default(e *irc.Event, message any)
 	Defaultf(e *irc.Event, format string, args ...any)
 	Debug(e *irc.Event, message any)
