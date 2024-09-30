@@ -69,6 +69,10 @@ const minimumPreferredTitleLength = 64
 const maximumPreferredTitleLength = 128
 const maximumDescriptionLength = 256
 
+var unwantedTitlePrefixes = []string{
+	"just a moment",
+}
+
 var domainDenylist = []string{
 	"imgur.com",
 }
@@ -133,6 +137,14 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		title = titleMeta
 	} else if len(h1) > 0 {
 		title = h1
+	}
+
+	for _, unwantedTitlePrefix := range unwantedTitlePrefixes {
+		if strings.HasPrefix(strings.ToLower(title), unwantedTitlePrefix) {
+			logger.Debugf(e, "disallowed title: %s", title)
+			f.tryNuggetize(e, url)
+			return
+		}
 	}
 
 	if len(title)+len(description) < minimumTitleLength {
