@@ -69,7 +69,7 @@ const minimumPreferredTitleLength = 64
 const maximumPreferredTitleLength = 128
 const maximumDescriptionLength = 256
 
-var disregardedTitlePrefixes = []string{
+var rejectedTitlePrefixes = []string{
 	"just a moment",
 	"sorry, you have been blocked",
 	"access to this page has been denied",
@@ -143,12 +143,10 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		title = h1
 	}
 
-	for _, unwantedTitlePrefix := range disregardedTitlePrefixes {
-		if strings.HasPrefix(strings.ToLower(title), unwantedTitlePrefix) {
-			logger.Debugf(e, "disallowed title: %s", title)
-			f.tryNuggetize(e, url)
-			return
-		}
+	if isRejectedTitle(title) {
+		logger.Debugf(e, "rejected title: %s", title)
+		f.tryNuggetize(e, url)
+		return
 	}
 
 	if len(title)+len(description) < minimumTitleLength {
@@ -209,6 +207,12 @@ func (f *summaryFunction) tryNuggetize(e *irc.Event, url string) {
 
 	title := strings.TrimSpace(doc.Find("span.title").First().Text())
 
+	if isRejectedTitle(title) {
+		logger.Debugf(e, "rejected title: %s", title)
+		f.tryBing(e, url)
+		return
+	}
+
 	if len(title) < minimumTitleLength {
 		logger.Debugf(e, "nuggetize title too short: %s", title)
 		f.tryBing(e, url)
@@ -248,6 +252,12 @@ func (f *summaryFunction) tryBing(e *irc.Event, url string) {
 	}
 
 	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
+
+	if isRejectedTitle(title) {
+		logger.Debugf(e, "rejected title: %s", title)
+		f.tryDuckDuckGo(e, url)
+		return
+	}
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "bing title contains url': %s", title)
@@ -304,4 +314,13 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 func (f *summaryFunction) isDomainDenylisted(url string, denylist []string) bool {
 	root := retriever.RootDomain(url)
 	return slices.Contains(denylist, root)
+}
+
+func isRejectedTitle(title string) bool {
+	for _, prefix := range rejectedTitlePrefixes {
+		if strings.HasPrefix(strings.ToLower(title), prefix) {
+			return true
+		}
+	}
+	return false
 }
