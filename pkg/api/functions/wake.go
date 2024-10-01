@@ -32,13 +32,13 @@ func (f *wakeFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] wake", e.From, e.ReplyTarget())
 
-	if f.ctx.IsAwake() {
+	if f.ctx.Session().IsAwake {
 		logger.Warningf(e, "already awake")
 		f.Replyf(e, "Already awake.")
 		return
 	}
 
-	f.ctx.SetAwake(true)
+	f.ctx.Session().IsAwake = true
 	logger.Debug(e, "awake")
 	f.SendMessage(e, e.ReplyTarget(), "Now awake.")
 }

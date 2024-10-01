@@ -2,6 +2,7 @@ package functions
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapsed"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
@@ -46,7 +47,7 @@ func (f *redditFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] r/%s %s", e.From, e.ReplyTarget(), f.subreddit, query)
 
-	if isRedditJWTExpired(f.ctx.RedditJWT()) {
+	if isRedditJWTExpired(f.ctx.Session().Reddit.JWT) {
 		logger.Debug(e, "reddit JWT token expired, logging in")
 		err := f.redditLogin()
 		if err != nil {
@@ -71,65 +72,6 @@ func (f *redditFunction) Execute(e *irc.Event) {
 
 const postsTitleMaxLength = 256
 
-func elapsedTimeDescription(t time.Time) string {
-	elapsed := time.Now().Sub(t)
-
-	year := time.Hour * 24 * 365
-	month := time.Hour * 24 * 30
-	week := time.Hour * 24 * 7
-	day := time.Hour * 24
-	hour := time.Hour
-	minute := time.Minute
-	second := time.Second
-
-	if elapsed >= year {
-		years := elapsed / year
-		if years == 1 {
-			return "last year"
-		}
-		return fmt.Sprintf("%d years ago", years)
-	} else if elapsed >= month {
-		months := elapsed / month
-		if months == 1 {
-			return "last month"
-		}
-		return fmt.Sprintf("%d months ago", months)
-	} else if elapsed >= week {
-		weeks := elapsed / week
-		if weeks == 1 {
-			return "last week"
-		}
-		return fmt.Sprintf("%d weeks ago", weeks)
-	} else if elapsed >= day {
-		days := elapsed / day
-		if days == 1 {
-			return "yesterday"
-		}
-		return fmt.Sprintf("%d days ago", days)
-	} else if elapsed >= hour {
-		hours := elapsed / hour
-		if hours == 1 {
-			return "an hour ago"
-		}
-		return fmt.Sprintf("%d hours ago", hours)
-	} else if elapsed >= minute {
-		minutes := elapsed / minute
-		if minutes == 1 {
-			return "a minute ago"
-		}
-		return fmt.Sprintf("%d minutes ago", minutes)
-	} else {
-		seconds := elapsed / second
-		if seconds < 5 {
-			return "just now"
-		}
-		if seconds < 30 {
-			return "a few seconds ago"
-		}
-		return fmt.Sprintf("%d seconds ago", seconds)
-	}
-}
-
 func (f *redditFunction) sendPostMessages(e *irc.Event, posts []RedditPost) {
 	content := make([]string, 0)
 	for i, post := range posts {
@@ -140,7 +82,7 @@ func (f *redditFunction) sendPostMessages(e *irc.Event, posts []RedditPost) {
 		if len(title) > postsTitleMaxLength {
 			title = title[:postsTitleMaxLength] + "..."
 		}
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), f.subreddit, elapsedTimeDescription(time.Unix(int64(post.Created), 0))))
+		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), f.subreddit, elapsed.ElapsedTimeDescription(time.Unix(int64(post.Created), 0))))
 		content = append(content, post.URL)
 		if i < len(posts)-1 {
 			content = append(content, " ")
@@ -207,7 +149,7 @@ func (f *redditFunction) searchNewSubredditPosts(topic string) ([]RedditPost, er
 	req.Header.Set("User-Agent", f.cfg.Reddit.UserAgent)
 
 	client := &http.Client{
-		Jar: f.ctx.RedditCookieJar(),
+		Jar: f.ctx.Session().Reddit.CookieJar,
 	}
 
 	resp, err := client.Do(req)
@@ -263,14 +205,14 @@ func (f *redditFunction) redditLogin() error {
 		return err
 	}
 
-	f.ctx.SetRedditModhash(body.JSON.Data.Modhash)
-	f.ctx.SetRedditJWT(body.JSON.Data.Cookie)
+	f.ctx.Session().Reddit.Modhash = body.JSON.Data.Modhash
+	f.ctx.Session().Reddit.JWT = body.JSON.Data.Cookie
 	u, err := url.Parse("https://reddit.com")
 	if err != nil {
 		return err
 	}
 
-	f.ctx.RedditCookieJar().SetCookies(u, resp.Cookies())
+	f.ctx.Session().Reddit.CookieJar.SetCookies(u, resp.Cookies())
 	return nil
 }
 

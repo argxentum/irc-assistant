@@ -31,10 +31,14 @@ func main() {
 	initializeFirestore(ctx, cfg)
 	defer firestore.Get().Close()
 
-	initializeBannedWords(ctx)
-
 	svc := irc.NewIRC(ctx)
-	err = svc.Connect(cfg, nil)
+	err = svc.Connect(cfg, func(channel, user string) {
+		if user != cfg.Connection.Nick {
+			return
+		}
+
+		initializeChannel(ctx, channel)
+	})
 	if err != nil {
 		panic(err)
 	}

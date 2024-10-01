@@ -115,12 +115,11 @@ func (eh *eventHandler) bannedWordsInMessage(e *irc.Event, tokens []string) []st
 
 	wordMap := make(map[string]bool)
 
-	bannedWords := eh.ctx.BannedWords(e.ReplyTarget())
 	for _, token := range tokens {
 		stripped := strings.TrimFunc(strings.ToLower(token), func(r rune) bool {
 			return !unicode.IsLetter(r) && !unicode.IsNumber(r)
 		})
-		if _, banned := bannedWords[stripped]; banned {
+		if eh.ctx.Session().IsBannedWord(e.ReplyTarget(), stripped) {
 			logger.Warningf(e, "banned word detected: %s", stripped)
 			wordMap[stripped] = true
 		}

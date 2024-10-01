@@ -71,18 +71,9 @@ func (f *removeBannedWordFunction) Execute(e *irc.Event) {
 		}
 	}
 
-	bannedWords, err := store.BannedWords(f.ctx, channel)
-	if err != nil {
-		logger.Errorf(e, "error retrieving banned words: %s", err)
-		return
+	for _, word := range words {
+		f.ctx.Session().RemoveBannedWord(channel, word)
 	}
-
-	updatedWords := make([]string, 0)
-	for _, word := range bannedWords {
-		updatedWords = append(updatedWords, word.Word)
-	}
-
-	f.ctx.SetBannedWords(channel, updatedWords)
 
 	f.Replyf(e, "Updated banned words in %s.", style.Bold(channel))
 }

@@ -35,7 +35,7 @@ func (f *uptimeFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ [%s/%s] uptime", e.From, e.ReplyTarget())
 
-	startedAt := f.ctx.StartedAt()
+	startedAt := f.ctx.Session().StartedAt
 	elapsed := time.Since(startedAt)
 	years := int(elapsed.Hours() / 24 / 365)
 	elapsed -= time.Duration(years) * 24 * 365 * time.Hour

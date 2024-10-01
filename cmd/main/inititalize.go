@@ -22,26 +22,18 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 	}
 }
 
-func initializeBannedWords(ctx context.Context) {
-	bannedWords, err := firestore.Get().AllBannedWords(ctx)
+func initializeChannel(ctx context.Context, channel string) {
+	logger := log.Logger()
+	logger.Rawf(log.Debug, "loading banned words for channel %s", channel)
+
+	bannedWords, err := firestore.Get().BannedWords(ctx, channel)
 	if err != nil {
 		panic(fmt.Errorf("error retrieving banned words, %s", err))
 	}
 
-	byChannel := make(map[string]map[string]bool)
-
-	for _, bw := range bannedWords {
-		if byChannel[bw.Channel] == nil {
-			byChannel[bw.Channel] = make(map[string]bool)
-		}
-		byChannel[bw.Channel][bw.Word] = true
+	for _, word := range bannedWords {
+		ctx.Session().AddBannedWord(channel, word.Word)
 	}
 
-	for channel, words := range byChannel {
-		bw := make([]string, 0)
-		for word := range words {
-			bw = append(bw, word)
-		}
-		ctx.SetBannedWords(channel, bw)
-	}
+	logger.Rawf(log.Debug, "loaded %d banned words for channel %s", len(bannedWords), channel)
 }

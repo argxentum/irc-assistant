@@ -107,6 +107,14 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewRemoveBannedWordFunction(ctx, cfg, irc)
 		})
+	case setKarmaFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewSetKarmaFunction(ctx, cfg, irc)
+		})
+	case getKarmaFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewGetKarmaFunction(ctx, cfg, irc)
+		})
 	case "bing/simple/time":
 		return loadFunction(name, func() (Function, error) {
 			return NewBingSimpleAnswerFunction(

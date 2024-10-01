@@ -52,7 +52,7 @@ const (
 )
 
 type IRC interface {
-	Connect(cfg *config.Config, autoJoinCallback func(channel string)) error
+	Connect(cfg *config.Config, joinCallback func(channel, user string)) error
 	Listen(ech chan *Event)
 	Join(channel string)
 	Part(channel string)
@@ -82,7 +82,7 @@ type service struct {
 	ech  chan *Event
 }
 
-func (s *service) Connect(cfg *config.Config, autoJoinCallback func(channel string)) error {
+func (s *service) Connect(cfg *config.Config, joinCallback func(channel, user string)) error {
 	s.cfg = cfg
 
 	s.conn = irce.IRC(cfg.Connection.Nick, cfg.Connection.Username)
@@ -117,12 +117,11 @@ func (s *service) Connect(cfg *config.Config, autoJoinCallback func(channel stri
 		})
 	}
 
-	s.respondOnce(CodeJoin, func(event *irce.Event) bool {
-		if autoJoinCallback != nil {
-			autoJoinCallback(event.Message())
-		}
-		return true
-	})
+	if joinCallback != nil {
+		s.conn.AddCallback(CodeJoin, func(e *irce.Event) {
+			joinCallback(e.Message(), e.Nick)
+		})
+	}
 
 	err := s.conn.Connect(fmt.Sprintf("%s:%d", cfg.Connection.Server, cfg.Connection.Port))
 	if err != nil {

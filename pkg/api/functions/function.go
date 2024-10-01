@@ -149,7 +149,7 @@ func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTo
 	attempted := f.isTriggerValid(tokens[0])
 
 	// if sleeping, ignore all triggers except wake
-	if !f.ctx.IsAwake() {
+	if !f.ctx.Session().IsAwake {
 		isWakeTrigger := f.Name == wakeFunctionName && slices.Contains(f.functionConfig(wakeFunctionName).Triggers, strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))
 		if isWakeTrigger {
 			if !f.isUserAuthorizedByRole(user, f.Role) {
