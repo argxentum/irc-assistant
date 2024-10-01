@@ -86,9 +86,9 @@ func (f *getKarmaFunction) Execute(e *irc.Event) {
 	thanksTo := thanksToPhrases[rand.IntN(len(thanksToPhrases))]
 
 	if len(h.Reason) == 0 {
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s to %s who %s karma %s ago.", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s who %s karma %s ago.", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime))
 		return
 	}
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s to %s who %s karma %s with the reason: %s", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime, style.Bold(h.Reason)))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s who %s karma %s with the reason: %s", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime, style.Bold(h.Reason)))
 }
