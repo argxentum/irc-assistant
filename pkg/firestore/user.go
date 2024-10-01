@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-func (fs *Firestore) User(ctx context.Context, channel, user string) (*models.User, error) {
+func (fs *Firestore) User(ctx context.Context, channel, nick string) (*models.User, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Connection.Nick, pathChannels, channel, pathUsers)
-	criteria := createQueryCriteria(path, "nick", Equal, user)
+	criteria := createQueryCriteria(path, "nick", Equal, nick)
 	users, err := query[models.User](ctx, fs.client, criteria)
 	if err != nil {
 		return nil, err

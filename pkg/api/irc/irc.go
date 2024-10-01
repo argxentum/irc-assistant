@@ -18,8 +18,13 @@ const (
 	Normal       = ""
 )
 
-func ChannelStatusName(status string) string {
-	switch status {
+type User struct {
+	Nick   string
+	Status string
+}
+
+func StatusName(code string) string {
+	switch code {
 	case Operator:
 		return "operator"
 	case HalfOperator:
@@ -30,7 +35,7 @@ func ChannelStatusName(status string) string {
 	return "normal"
 }
 
-func IsChannelStatusAtLeast(status, required string) bool {
+func IsStatusAtLeast(status, required string) bool {
 	switch required {
 	case Operator:
 		return status == Operator
@@ -52,18 +57,19 @@ const (
 )
 
 type IRC interface {
-	Connect(cfg *config.Config, joinCallback func(channel, user string)) error
+	Connect(cfg *config.Config, joinCallback func(channel, nick string)) error
 	Listen(ech chan *Event)
 	Join(channel string)
 	Part(channel string)
 	SendMessage(target, message string)
 	SendMessages(target string, messages []string)
-	GetUserStatus(channel, user string, callback func(status string))
-	Up(channel, user string)
-	Down(channel, user string)
-	Kick(channel, user, reason string)
+	GetUser(channel, nick string, callback func(user *User))
+	GetUsers(channel string, callback func(users []User))
+	Up(channel, nick string)
+	Down(channel, nick string)
+	Kick(channel, nick, reason string)
 	Ban(channel, mask string)
-	TemporaryBan(channel, user, reason string, duration time.Duration)
+	TemporaryBan(channel, nick, reason string, duration time.Duration)
 	Disconnect()
 }
 
@@ -82,7 +88,7 @@ type service struct {
 	ech  chan *Event
 }
 
-func (s *service) Connect(cfg *config.Config, joinCallback func(channel, user string)) error {
+func (s *service) Connect(cfg *config.Config, joinCallback func(channel, nick string)) error {
 	s.cfg = cfg
 
 	s.conn = irce.IRC(cfg.Connection.Nick, cfg.Connection.Username)
@@ -207,45 +213,54 @@ func (s *service) SendMessages(target string, messages []string) {
 	}()
 }
 
-func (s *service) GetUserStatus(channel, user string, callback func(status string)) {
+func (s *service) GetUsers(channel string, callback func(users []User)) {
 	s.conn.SendRawf("NAMES %s", channel)
 
 	s.respondOnce(s.cfg.Connection.NamesResponseCode, func(e *irce.Event) bool {
-		users := strings.Split(e.Message(), " ")
-		for _, u := range users {
-			if u == fmt.Sprintf("@%s", user) {
-				callback(Operator)
-				return true
-			}
-			if u == fmt.Sprintf("%%%s", user) {
-				callback(HalfOperator)
-				return true
-			}
-			if u == fmt.Sprintf("+%s", user) {
-				callback(Voice)
-				return true
-			}
-			if u == user {
-				callback(Normal)
-				return true
+		statuses := make([]User, 0)
+
+		results := strings.Split(e.Message(), " ")
+		for _, u := range results {
+			if u == fmt.Sprintf("@%s", u) {
+				statuses = append(statuses, User{Nick: u, Status: Operator})
+			} else if u == fmt.Sprintf("%%%s", u) {
+				statuses = append(statuses, User{Nick: u, Status: HalfOperator})
+			} else if u == fmt.Sprintf("+%s", u) {
+				statuses = append(statuses, User{Nick: u, Status: Voice})
+			} else {
+				statuses = append(statuses, User{Nick: u, Status: Normal})
 			}
 		}
-		return false
+
+		callback(statuses)
+		return true
 	})
 }
 
-func (s *service) Up(channel, user string) {
-	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.UpCommand, channel, user)
+func (s *service) GetUser(channel, nick string, callback func(user *User)) {
+	s.GetUsers(channel, func(users []User) {
+		for _, u := range users {
+			if u.Nick == nick {
+				callback(&u)
+				return
+			}
+		}
+		callback(nil)
+	})
 }
 
-func (s *service) Down(channel, user string) {
-	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.DownCommand, channel, user)
+func (s *service) Up(channel, nick string) {
+	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.UpCommand, channel, nick)
 }
 
-func (s *service) Kick(channel, user, reason string) {
-	s.GetUserStatus(channel, s.cfg.Connection.Nick, func(status string) {
-		if status == Operator || status == HalfOperator {
-			s.conn.Kick(user, channel, reason)
+func (s *service) Down(channel, nick string) {
+	s.conn.Privmsgf(s.cfg.Connection.ChanServ.Recipient, s.cfg.Connection.ChanServ.DownCommand, channel, nick)
+}
+
+func (s *service) Kick(channel, nick, reason string) {
+	s.GetUser(channel, s.cfg.Connection.Nick, func(status *User) {
+		if status != nil && (status.Status == Operator || status.Status == HalfOperator) {
+			s.conn.Kick(nick, channel, reason)
 		}
 	})
 }
@@ -254,11 +269,11 @@ func (s *service) Ban(channel, mask string) {
 	s.conn.Mode(channel, "+b", mask)
 }
 
-func (s *service) TemporaryBan(channel, user, reason string, duration time.Duration) {
+func (s *service) TemporaryBan(channel, nick, reason string, duration time.Duration) {
 	go func() {
-		s.Kick(channel, user, reason)
+		s.Kick(channel, nick, reason)
 		time.Sleep(100 * time.Millisecond)
-		s.conn.Mode(channel, "+b", user)
+		s.conn.Mode(channel, "+b", nick)
 	}()
 }
 

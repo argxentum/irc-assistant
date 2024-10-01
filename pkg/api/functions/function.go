@@ -59,16 +59,16 @@ func newFunctionStub(ctx context.Context, cfg *config.Config, irc irc.IRC, name 
 const inputMaxLength = 512
 
 // isUserAuthorizedByRole checks if the given sender is authorized based on authorization configuration settings
-func (f *FunctionStub) isUserAuthorizedByRole(user string, authorization string) bool {
+func (f *FunctionStub) isUserAuthorizedByRole(nick string, authorization string) bool {
 	switch authorization {
 	case owner:
-		return user == f.cfg.Connection.Owner
+		return nick == f.cfg.Connection.Owner
 	case admin:
-		if user == f.cfg.Connection.Owner {
+		if nick == f.cfg.Connection.Owner {
 			return true
 		}
 		for _, a := range f.cfg.Connection.Admins {
-			if user == a {
+			if nick == a {
 				return true
 			}
 		}
@@ -77,19 +77,21 @@ func (f *FunctionStub) isUserAuthorizedByRole(user string, authorization string)
 	return true
 }
 
-// userChannelStatus retrieves the user's status in the channel (e.g., operator, half-operator, etc.)
-func (f *FunctionStub) userChannelStatus(user, channel string, callback func(string)) {
-	f.irc.GetUserStatus(channel, user, func(status string) {
-		callback(status)
-	})
+// userStatus retrieves the user's status in the channel (e.g., operator, half-operator, etc.)
+func (f *FunctionStub) userStatus(channel, nick string, callback func(user *irc.User)) {
+	f.irc.GetUser(channel, nick, callback)
+}
+
+func (f *FunctionStub) userStatuses(channel string, callback func([]irc.User)) {
+	f.irc.GetUsers(channel, callback)
 }
 
 // isUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status
 func (f *FunctionStub) isUserAuthorizedByChannelStatus(e *irc.Event, channel, required string, callback func(bool)) {
-	user, _ := e.Sender()
+	nick, _ := e.Sender()
 
-	f.userChannelStatus(user, channel, func(status string) {
-		if !irc.IsChannelStatusAtLeast(status, required) {
+	f.userStatus(channel, nick, func(user *irc.User) {
+		if user != nil && !irc.IsStatusAtLeast(user.Status, required) {
 			callback(false)
 			return
 		}
@@ -107,8 +109,8 @@ func (f *FunctionStub) IsAuthorized(e *irc.Event, channel string, callback func(
 			}
 
 			if len(f.Role) > 0 {
-				user, _ := e.Sender()
-				if f.isUserAuthorizedByRole(user, f.Role) {
+				nick, _ := e.Sender()
+				if f.isUserAuthorizedByRole(nick, f.Role) {
 					callback(true)
 					return
 				}
@@ -120,8 +122,8 @@ func (f *FunctionStub) IsAuthorized(e *irc.Event, channel string, callback func(
 			callback(false)
 		})
 	} else if len(f.Role) > 0 {
-		user, _ := e.Sender()
-		if f.isUserAuthorizedByRole(user, f.Role) {
+		nick, _ := e.Sender()
+		if f.isUserAuthorizedByRole(nick, f.Role) {
 			callback(true)
 			return
 		}
@@ -144,7 +146,7 @@ func (f *FunctionStub) isTriggerValid(trigger string) bool {
 }
 
 func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTokens int) bool {
-	user, _ := e.Sender()
+	nick, _ := e.Sender()
 	tokens := Tokens(e.Message())
 	attempted := f.isTriggerValid(tokens[0])
 
@@ -152,7 +154,7 @@ func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTo
 	if !f.ctx.Session().IsAwake {
 		isWakeTrigger := f.Name == wakeFunctionName && slices.Contains(f.functionConfig(wakeFunctionName).Triggers, strings.TrimPrefix(tokens[0], f.cfg.Functions.Prefix))
 		if isWakeTrigger {
-			if !f.isUserAuthorizedByRole(user, f.Role) {
+			if !f.isUserAuthorizedByRole(nick, f.Role) {
 				f.UnauthorizedReply(e)
 				return false
 			}
@@ -170,7 +172,7 @@ func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTo
 	}
 
 	// if the function defines role-based authorization and not channel status-based authorization, check it
-	if len(f.Role) > 0 && len(f.ChannelStatus) == 0 && !f.isUserAuthorizedByRole(user, f.Role) {
+	if len(f.Role) > 0 && len(f.ChannelStatus) == 0 && !f.isUserAuthorizedByRole(nick, f.Role) {
 		if attempted {
 			f.UnauthorizedReply(e)
 		}
@@ -206,8 +208,12 @@ func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
 
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
 func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
-	f.userChannelStatus(f.cfg.Connection.Nick, channel, func(status string) {
-		callback(irc.IsChannelStatusAtLeast(status, required))
+	f.userStatus(channel, f.cfg.Connection.Nick, func(user *irc.User) {
+		if user != nil {
+			callback(irc.IsStatusAtLeast(user.Status, required))
+		} else {
+			callback(false)
+		}
 	})
 }
 

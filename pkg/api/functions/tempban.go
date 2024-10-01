@@ -32,10 +32,10 @@ func (f *tempBanFunction) MayExecute(e *irc.Event) bool {
 func (f *tempBanFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
-	user := tokens[1]
+	nick := tokens[1]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] tempban %s %s", e.From, e.ReplyTarget(), channel, user)
+	logger.Infof(e, "⚡ [%s/%s] tempban %s %s", e.From, e.ReplyTarget(), channel, nick)
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
@@ -48,7 +48,7 @@ func (f *tempBanFunction) Execute(e *irc.Event) {
 			reason = strings.Join(tokens[3:], " ")
 		}
 
-		f.irc.TemporaryBan(channel, user, reason, 0)
-		logger.Infof(e, "temporarily banned %s from %s", user, channel)
+		f.irc.TemporaryBan(channel, nick, reason, 0)
+		logger.Infof(e, "temporarily banned %s from %s", nick, channel)
 	})
 }

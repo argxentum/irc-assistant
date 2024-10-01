@@ -13,6 +13,7 @@ import (
 )
 
 const setKarmaFunctionName = "setKarma"
+const maxKarmaReasonLength = 128
 
 type setKarmaFunction struct {
 	FunctionStub
@@ -56,25 +57,35 @@ func (f *setKarmaFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	op := strings.TrimSpace(matches[2])
-	if len(op) == 0 {
-		logger.Debugf(e, "invalid karma operation: %s", e.Message())
-		return
-	}
+	f.userStatus(e.ReplyTarget(), to, func(user *irc.User) {
+		if user == nil {
+			logger.Debugf(e, "ignoring invalid karma target: %s", to)
+			return
+		}
 
-	reason := ""
-	if len(matches) > 3 {
-		reason = strings.TrimSpace(matches[3])
-	}
+		op := strings.TrimSpace(matches[2])
+		if len(op) == 0 {
+			logger.Debugf(e, "invalid karma operation: %s", e.Message())
+			return
+		}
 
-	log.Logger().Infof(e, "⚡ [%s/%s] setKarma %s %s %s", e.From, e.ReplyTarget(), to, op, reason)
+		reason := ""
+		if len(matches) > 3 {
+			reason = strings.TrimSpace(matches[3])
+		}
+		if len(reason) > maxKarmaReasonLength {
+			reason = reason[:maxKarmaReasonLength]
+		}
 
-	fs := firestore.Get()
-	karma, err := fs.AddKarmaHistory(f.ctx, e.ReplyTarget(), e.From, to, op, reason)
-	if err != nil {
-		logger.Errorf(e, "error updating karma: %s", err)
-		return
-	}
+		log.Logger().Infof(e, "⚡ [%s/%s] setKarma %s %s %s", e.From, e.ReplyTarget(), to, op, reason)
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s now has a karma score of %s.", style.Bold(to), style.Bold(fmt.Sprintf("%d", karma))))
+		fs := firestore.Get()
+		karma, err := fs.AddKarmaHistory(f.ctx, e.ReplyTarget(), e.From, to, op, reason)
+		if err != nil {
+			logger.Errorf(e, "error updating karma: %s", err)
+			return
+		}
+
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s now has a karma score of %s.", style.Bold(to), style.Bold(fmt.Sprintf("%d", karma))))
+	})
 }

@@ -31,11 +31,11 @@ func (f *kickFunction) MayExecute(e *irc.Event) bool {
 
 func (f *kickFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	user := tokens[1]
+	nick := tokens[1]
 	channel := e.ReplyTarget()
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] kick %s %s", e.From, e.ReplyTarget(), channel, user)
+	logger.Infof(e, "⚡ [%s/%s] kick %s %s", e.From, e.ReplyTarget(), channel, nick)
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
@@ -48,7 +48,7 @@ func (f *kickFunction) Execute(e *irc.Event) {
 		if len(tokens) > 2 {
 			reason = strings.Join(tokens[2:], " ")
 		}
-		f.irc.Kick(channel, user, reason)
-		logger.Infof(e, "kicked %s in %s", user, channel)
+		f.irc.Kick(channel, nick, reason)
+		logger.Infof(e, "kicked %s in %s", nick, channel)
 	})
 }

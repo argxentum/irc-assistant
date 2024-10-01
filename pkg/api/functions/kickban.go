@@ -33,14 +33,14 @@ func (f *kickBanFunction) MayExecute(e *irc.Event) bool {
 func (f *kickBanFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
-	user := tokens[1]
+	nick := tokens[1]
 	reason := ""
 	if len(tokens) > 2 {
 		reason = strings.Join(tokens[2:], " ")
 	}
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] kickBan %s %s - %s", e.From, e.ReplyTarget(), channel, user, reason)
+	logger.Infof(e, "⚡ [%s/%s] kickBan %s %s - %s", e.From, e.ReplyTarget(), channel, nick, reason)
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
@@ -50,11 +50,11 @@ func (f *kickBanFunction) Execute(e *irc.Event) {
 		}
 
 		go func() {
-			f.irc.Kick(channel, user, reason)
+			f.irc.Kick(channel, nick, reason)
 			time.Sleep(100 * time.Millisecond)
-			f.irc.Ban(channel, user)
+			f.irc.Ban(channel, nick)
 		}()
 
-		logger.Infof(e, "kickBanned %s in %s", user, channel)
+		logger.Infof(e, "kickBanned %s in %s", nick, channel)
 	})
 }

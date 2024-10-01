@@ -35,39 +35,39 @@ func (f *getKarmaFunction) MayExecute(e *irc.Event) bool {
 
 func (f *getKarmaFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	user := tokens[1]
-	log.Logger().Infof(e, "⚡ [%s/%s] getKarma %s", e.From, e.ReplyTarget(), user)
+	nick := tokens[1]
+	log.Logger().Infof(e, "⚡ [%s/%s] getKarma %s", e.From, e.ReplyTarget(), nick)
 
 	fs := firestore.Get()
-	u, err := fs.User(f.ctx, e.ReplyTarget(), user)
+	u, err := fs.User(f.ctx, e.ReplyTarget(), nick)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting user, %s", err)
-		f.Replyf(e, "unable to get karma for %s.", style.Bold(user))
+		f.Replyf(e, "unable to get karma for %s.", style.Bold(nick))
 		return
 	}
 
 	if u == nil {
 		log.Logger().Infof(e, "user not found")
-		f.Replyf(e, "no karma found for %s.", style.Bold(user))
+		f.Replyf(e, "no karma found for %s.", style.Bold(nick))
 		return
 	}
 
 	history, err := fs.KarmaHistory(f.ctx, e.ReplyTarget(), u.ID)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting karma history, %s", err)
-		f.Replyf(e, "unable to get karma for %s.", style.Bold(user))
+		f.Replyf(e, "unable to get karma for %s.", style.Bold(nick))
 		return
 	}
 	if len(history) == 0 {
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s.", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s.", style.Bold(nick), style.Bold(fmt.Sprintf("%d", u.Karma))))
 		return
 	}
 
 	h := history[rand.IntN(len(history))]
 
-	action := "gave"
+	action := "giving"
 	if h.Op == firestore.OpDecrement {
-		action = "took away"
+		action = "taking away"
 	}
 
 	elapsedTime := elapsed.ElapsedTimeDescription(h.CreatedAt)
@@ -86,9 +86,9 @@ func (f *getKarmaFunction) Execute(e *irc.Event) {
 	thanksTo := thanksToPhrases[rand.IntN(len(thanksToPhrases))]
 
 	if len(h.Reason) == 0 {
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s who %s karma %s ago.", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s %s karma %s.", style.Bold(nick), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime))
 		return
 	}
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s who %s karma %s with the reason: %s", style.Bold(user), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime, style.Bold(h.Reason)))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s has a karma score of %s, %s %s %s karma %s with the reason: %s", style.Bold(nick), style.Bold(fmt.Sprintf("%d", u.Karma)), thanksTo, h.From, action, elapsedTime, style.Bold(h.Reason)))
 }

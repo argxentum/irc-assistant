@@ -32,8 +32,8 @@ func main() {
 	defer firestore.Get().Close()
 
 	svc := irc.NewIRC(ctx)
-	err = svc.Connect(cfg, func(channel, user string) {
-		if user != cfg.Connection.Nick {
+	err = svc.Connect(cfg, func(channel, nick string) {
+		if nick != cfg.Connection.Nick {
 			return
 		}
 

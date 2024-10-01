@@ -125,11 +125,11 @@ func (f *helpFunction) Execute(e *irc.Event) {
 
 	footer := ""
 	if len(fn.Role) > 0 && len(fn.ChannelStatus) > 0 {
-		footer = fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.ChannelStatusName(fn.ChannelStatus))
+		footer = fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.StatusName(fn.ChannelStatus))
 	} else if len(fn.Role) > 0 {
 		footer = fmt.Sprintf("Requires %s role.", fn.Role)
 	} else if len(fn.ChannelStatus) > 0 {
-		footer = fmt.Sprintf("Requires %s status or greater.", irc.ChannelStatusName(fn.ChannelStatus))
+		footer = fmt.Sprintf("Requires %s status or greater.", irc.StatusName(fn.ChannelStatus))
 	}
 
 	if fn.DenyPrivateMessages {
