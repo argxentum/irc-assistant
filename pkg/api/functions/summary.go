@@ -69,11 +69,12 @@ const minimumPreferredTitleLength = 64
 const maximumPreferredTitleLength = 128
 const maximumDescriptionLength = 256
 
-var unwantedTitlePrefixes = []string{
+var disregardedTitlePrefixes = []string{
 	"just a moment",
 	"sorry, you have been blocked",
 	"access to this page has been denied",
 	"please verify you are a human",
+	"you are being redirected",
 }
 
 var domainDenylist = []string{
@@ -142,7 +143,7 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		title = h1
 	}
 
-	for _, unwantedTitlePrefix := range unwantedTitlePrefixes {
+	for _, unwantedTitlePrefix := range disregardedTitlePrefixes {
 		if strings.HasPrefix(strings.ToLower(title), unwantedTitlePrefix) {
 			logger.Debugf(e, "disallowed title: %s", title)
 			f.tryNuggetize(e, url)
