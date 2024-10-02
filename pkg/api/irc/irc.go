@@ -221,11 +221,11 @@ func (s *service) GetUsers(channel string, callback func(users []User)) {
 
 		results := strings.Split(e.Message(), " ")
 		for _, u := range results {
-			if u == fmt.Sprintf("@%s", u) {
+			if strings.HasPrefix(u, Operator) {
 				statuses = append(statuses, User{Nick: u, Status: Operator})
-			} else if u == fmt.Sprintf("%%%s", u) {
+			} else if strings.HasPrefix(u, HalfOperator) {
 				statuses = append(statuses, User{Nick: u, Status: HalfOperator})
-			} else if u == fmt.Sprintf("+%s", u) {
+			} else if strings.HasPrefix(u, Voice) {
 				statuses = append(statuses, User{Nick: u, Status: Voice})
 			} else {
 				statuses = append(statuses, User{Nick: u, Status: Normal})
