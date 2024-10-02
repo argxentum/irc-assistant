@@ -57,7 +57,7 @@ func (f *bingSimpleAnswerFunction) Execute(e *irc.Event) {
 		query = url.QueryEscape(fmt.Sprintf(f.query, input))
 	}
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), 3000)
 	if err != nil {
 		logger.Warningf(e, "error fetching bing search results for %s: %s", input, err)
 		f.Replyf(e, "Sorry, something went wrong and I couldn't find an answer.")

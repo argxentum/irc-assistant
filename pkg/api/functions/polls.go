@@ -46,8 +46,10 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	year := time.Now().Year()
 	poll := "national"
+	pollInput := poll
 	if len(tokens) > 1 {
-		poll = strings.ToLower(tokens[1])
+		pollInput = strings.Join(tokens[1:], " ")
+		poll = strings.ToLower(strings.Join(tokens[1:], "-"))
 	}
 
 	url := fmt.Sprintf(pollsURL, year, poll)
@@ -58,7 +60,7 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		} else {
 			logger.Warningf(e, "unable to parse url (%s)", url)
 		}
-		f.Replyf(e, "Unable to retrieve polling data")
+		f.Replyf(e, "Unable to retrieve %s polling data", style.Bold(pollInput))
 		return
 	}
 
@@ -71,16 +73,29 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		}
 	})
 
+	polls := doc.Find("table#polls").First()
+
 	averages := make([]string, 0)
-	average := doc.Find("table#polls").First().Find("td.poll_avg").First()
+	average := polls.Find("td.poll_avg").First()
 	for range candidates {
 		average = average.Next()
-		averages = append(averages, strings.TrimSpace(average.Text()))
+		value := strings.TrimSpace(average.Text())
+		if len(value) > 0 {
+			averages = append(averages, value)
+		}
+	}
+
+	if len(averages) == 0 {
+		average = polls.Find("td.poll_data").First()
+		for range candidates {
+			averages = append(averages, strings.TrimSpace(average.Text()))
+			average = average.Next()
+		}
 	}
 
 	if len(candidates) != len(averages) || len(candidates) == 0 {
 		logger.Warningf(e, "unable to parse polling data, candidates: [%s], averages: [%s]", strings.Join(candidates, ", "), strings.Join(averages, ", "))
-		f.Replyf(e, "Unable to parse polling data")
+		f.Replyf(e, "Unable to parse %s polling data", style.Bold(pollInput))
 		return
 	}
 

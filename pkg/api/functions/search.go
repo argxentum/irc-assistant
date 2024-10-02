@@ -52,7 +52,7 @@ func (f *searchFunction) tryBing(e *irc.Event, input string) {
 	logger.Debugf(e, "trying bing for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), 3000)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve bing search results for %s: %s", input, err)
@@ -110,7 +110,7 @@ func (f *searchFunction) tryDuckDuckGo(e *irc.Event, input string) {
 	logger.Infof(e, "trying duckduckgo for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, query)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, query)), 3000)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)

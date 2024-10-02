@@ -98,7 +98,7 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	params := retriever.DefaultParams(url)
 	params.Impersonate = impersonated
 
-	doc, err := f.retriever.RetrieveDocument(e, params)
+	doc, err := f.retriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
 	if err != nil || doc == nil {
 		if err != nil {
 			if errors.Is(err, retriever.DisallowedContentTypeError) {
@@ -194,7 +194,7 @@ func (f *summaryFunction) tryNuggetize(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying nuggetize for %s", url)
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)), retriever.DefaultTimeout)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
@@ -240,7 +240,7 @@ func (f *summaryFunction) tryBing(e *irc.Event, url string) {
 		return
 	}
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)), retriever.DefaultTimeout)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
@@ -286,7 +286,7 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 		return
 	}
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)))
+	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)), retriever.DefaultTimeout)
 	if err != nil || doc == nil {
 		if err != nil {
 			logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
@@ -298,8 +298,8 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 
 	title := strings.TrimSpace(doc.Find("div.result__body").First().Find("h2.result__title").First().Text())
 
-	if strings.Contains(strings.ToLower(title), fmt.Sprintf("about %s", url[:min(len(url), 24)])) {
-		logger.Debugf(e, "duckduckgo title contains 'about <url>': %s", title)
+	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
+		logger.Debugf(e, "duckduckgo title contains url: %s", title)
 		return
 	}
 
