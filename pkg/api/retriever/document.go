@@ -155,7 +155,7 @@ func (r *retriever) RetrieveDocument(e *irc.Event, params RetrievalParams, timeo
 
 	defer ret.response.Body.Close()
 
-	if !isContentTypeAllowed(ret.response.Header.Get("Content-Type")) {
+	if ret.response.StatusCode == http.StatusOK && !isContentTypeAllowed(ret.response.Header.Get("Content-Type")) {
 		logger.Debugf(e, "disallowed content type %s", ret.response.Header.Get("Content-Type"))
 		return nil, DisallowedContentTypeError
 	}
