@@ -15,8 +15,8 @@ import (
 )
 
 const currencyFunctionName = "currency"
-const currencyConversionLatestURL = "https://api.freecurrencyapi.com/v1/latest?base=%s&currencies=%s&apikey=%s"
-const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/historical?date=%s&base=%s&currencies=%s&apikey=%s"
+const currencyConversionLatestURL = "https://api.freecurrencyapi.com/v1/latest?base_currency=%s&currencies=%s&apikey=%s"
+const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/historical?date=%s&base_currency=%s&currencies=%s&apikey=%s"
 
 type currencyFunction struct {
 	FunctionStub
