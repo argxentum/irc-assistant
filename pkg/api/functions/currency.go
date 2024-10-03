@@ -3,6 +3,7 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -126,6 +127,11 @@ func (f *currencyFunction) convertCurrencies(from, to string) (conversion, error
 		return conversion{}, err
 	}
 
+	headers := retriever.RandomHeaderSet()
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", f.cfg.XE.APIKey))
 
 	resp, err := http.DefaultClient.Do(req)
@@ -161,7 +167,13 @@ func (f *currencyFunction) currencyStatistics(from, to string) (conversionStatis
 		return conversionStatistics{}, err
 	}
 
+	headers := retriever.RandomHeaderSet()
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", f.cfg.XE.APIKey))
+
 	req.URL.RawQuery = url.Values{
 		"from": {from},
 		"to":   {to},
