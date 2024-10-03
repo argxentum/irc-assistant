@@ -49,13 +49,6 @@ func IsStatusAtLeast(status, required string) bool {
 	return false
 }
 
-const (
-	CodeNotice         = "NOTICE"
-	CodeJoin           = "JOIN"
-	CodeInvite         = "INVITE"
-	CodePrivateMessage = "PRIVMSG"
-)
-
 type IRC interface {
 	Connect(cfg *config.Config, joinCallback func(channel, nick string)) error
 	Listen(ech chan *Event)
@@ -146,6 +139,20 @@ func (s *service) respondOnce(code string, callback func(event *irce.Event) bool
 	})
 }
 
+func (s *service) respondUntil(eventCode, completionCode string, eventCallback, completionCallback func(event *irce.Event)) {
+	var codeID int
+	codeID = s.conn.AddCallback(eventCode, func(event *irce.Event) {
+		eventCallback(event)
+	})
+
+	var completionID int
+	completionID = s.conn.AddCallback(completionCode, func(event *irce.Event) {
+		s.conn.RemoveCallback(eventCode, codeID)
+		s.conn.RemoveCallback(completionCode, completionID)
+		completionCallback(event)
+	})
+}
+
 func (s *service) Listen(ech chan *Event) {
 	s.ech = ech
 
@@ -216,24 +223,27 @@ func (s *service) SendMessages(target string, messages []string) {
 func (s *service) GetUsers(channel string, callback func(users []User)) {
 	s.conn.SendRawf("NAMES %s", channel)
 
-	s.respondOnce(s.cfg.Connection.NamesResponseCode, func(e *irce.Event) bool {
-		statuses := make([]User, 0)
+	allUsers := make([]User, 0)
+
+	s.respondUntil(CodeNamesReply, CodeEndOfNames, func(e *irce.Event) {
+		users := make([]User, 0)
 
 		results := strings.Split(e.Message(), " ")
 		for _, u := range results {
 			if strings.HasPrefix(u, Operator) {
-				statuses = append(statuses, User{Nick: strings.TrimPrefix(u, Operator), Status: Operator})
+				users = append(users, User{Nick: strings.TrimPrefix(u, Operator), Status: Operator})
 			} else if strings.HasPrefix(u, HalfOperator) {
-				statuses = append(statuses, User{Nick: strings.TrimPrefix(u, HalfOperator), Status: HalfOperator})
+				users = append(users, User{Nick: strings.TrimPrefix(u, HalfOperator), Status: HalfOperator})
 			} else if strings.HasPrefix(u, Voice) {
-				statuses = append(statuses, User{Nick: strings.TrimPrefix(u, Voice), Status: Voice})
+				users = append(users, User{Nick: strings.TrimPrefix(u, Voice), Status: Voice})
 			} else {
-				statuses = append(statuses, User{Nick: u, Status: Normal})
+				users = append(users, User{Nick: u, Status: Normal})
 			}
 		}
 
-		callback(statuses)
-		return true
+		allUsers = append(allUsers, users...)
+	}, func(e *irce.Event) {
+		callback(allUsers)
 	})
 }
 
