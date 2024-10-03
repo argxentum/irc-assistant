@@ -9,7 +9,7 @@ type Config struct {
 	Connection  ConnectionConfig
 	Reddit      RedditConfig
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
-	XE          XEConfig
+	Currency    CurrencyConfig
 	Functions   FunctionsConfig
 }
 
@@ -59,7 +59,7 @@ type GoogleCloudConfig struct {
 	ServiceAccountFilename string `yaml:"service_account_filename"`
 }
 
-type XEConfig struct {
+type CurrencyConfig struct {
 	APIKey string `yaml:"api_key"`
 }
 

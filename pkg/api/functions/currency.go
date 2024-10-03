@@ -3,25 +3,20 @@ package functions
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
-	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-viper/mapstructure/v2"
-	"io"
 	"math"
 	"net/http"
-	"net/url"
 	"strings"
+	"time"
 )
 
 const currencyFunctionName = "currency"
-const currencyConversionURL = "https://www.xe.com/api/protected/midmarket-converter"
-const currencyConversionStatisticsURL = "https://www.xe.com/api/protected/statistics"
-const currencyConversionDetailsURL = "https://www.xe.com/currencyconverter/convert/?Amount=1&From=%s&To=%s"
+const currencyConversionLatestURL = "https://api.freecurrencyapi.com/v1/latest?base=%s&currencies=%s&apikey=%s"
+const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/historical?date=%s&base=%s&currencies=%s&apikey=%s"
 
 type currencyFunction struct {
 	FunctionStub
@@ -63,146 +58,80 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 
 	log.Logger().Infof(e, "⚡ [%s/%s] currency %s to %s", e.From, e.ReplyTarget(), from, to)
 
-	conv, err := f.convertCurrencies(from, to)
+	latest, err := f.latestConversion(from, to)
 	if err != nil {
-		logger.Warningf(e, "error converting currencies: %s", err)
+		logger.Warningf(e, "error retrieving latest currency conversion: %s", err)
 		f.Replyf(e, "Unable to convert from %s to %s.", style.Bold(from), style.Bold(to))
 		return
 	}
 
-	stats, err := f.currencyStatistics(from, to)
+	lastMonth := time.Now().AddDate(0, -1, 0).Format("2006-01-02")
+	historicalMonth, err := f.historicalConversion(lastMonth, from, to)
 	if err != nil {
-		logger.Warningf(e, "error retrieving currency statistics: %s", err)
-
-		f.SendMessages(e, e.ReplyTarget(), []string{
-			fmt.Sprintf("1 %s = %s", conv.From, style.Underline(fmt.Sprintf("%.2f %s", conv.Rate, conv.To))),
-			fmt.Sprintf(currencyConversionDetailsURL, conv.From, conv.To),
-		})
+		logger.Warningf(e, "error retrieving 1m historical currency conversion: %s", err)
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to))))
 		return
 	}
 
-	summary90days := ""
-	rate := math.Abs(conv.Rate-stats.Last90Days.Average) / conv.Rate * 100.0
-	if stats.Last90Days.Average < conv.Rate {
-		summary90days = style.ColorForeground(fmt.Sprintf("▼ %.2f%%", rate), style.ColorRed)
+	lastYear := time.Now().AddDate(-1, 0, 0).Format("2006-01-02")
+	historicalYear, err := f.historicalConversion(lastYear, from, to)
+	if err != nil {
+		logger.Warningf(e, "error retrieving 1y historical currency conversion: %s", err)
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to))))
+		return
+	}
+
+	summary := ""
+
+	rateMonth := math.Abs(latest.Data[to]-historicalMonth.Data[lastMonth][to]) / historicalMonth.Data[lastMonth][to] * 100.0
+	if historicalMonth.Data[lastMonth][to] < latest.Data[to] {
+		summary = style.ColorForeground(fmt.Sprintf("▲ %.2f%%", rateMonth), style.ColorGreen) + " (1M)"
 	} else {
-		summary90days = style.ColorForeground(fmt.Sprintf("▲ %.2f%%", rate), style.ColorGreen)
+		summary = style.ColorForeground(fmt.Sprintf("▼ %.2f%%", rateMonth), style.ColorRed) + " (1M)"
 	}
 
-	f.SendMessages(e, e.ReplyTarget(), []string{
-		fmt.Sprintf("1 %s = %s (%s, 90 days)", conv.From, style.Underline(fmt.Sprintf("%.2f %s", conv.Rate, conv.To)), summary90days),
-		fmt.Sprintf(currencyConversionDetailsURL, conv.From, conv.To),
-	})
+	summary += " | "
+
+	rateYear := math.Abs(latest.Data[to]-historicalYear.Data[lastYear][to]) / historicalYear.Data[lastYear][to] * 100.0
+	if historicalYear.Data[lastYear][to] < latest.Data[to] {
+		summary += style.ColorForeground(fmt.Sprintf("▲ %.2f%%", rateYear), style.ColorGreen) + " (1Y)"
+	} else {
+		summary += style.ColorForeground(fmt.Sprintf("▼ %.2f%%", rateYear), style.ColorRed) + " (1Y)"
+	}
+
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s | %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to)), summary))
 }
 
-type usdConversionRates struct {
-	Timestamp float64
-	Rates     map[string]float64
+type latestConversion struct {
+	Data map[string]float64
 }
 
-type conversionStatistics struct {
-	Last1Days  conversionStatistic `mapstructure:"last1days"`
-	Last7Days  conversionStatistic `mapstructure:"last7days"`
-	Last30Days conversionStatistic `mapstructure:"last30days"`
-	Last60Days conversionStatistic `mapstructure:"last60days"`
-	Last90Days conversionStatistic `mapstructure:"last90days"`
+type historicalConversion struct {
+	Data map[string]map[string]float64
 }
 
-type conversionStatistic struct {
-	To                string
-	High              float64
-	Low               float64
-	Average           float64
-	StandardDeviation float64
-	Volatility        float64
-}
-
-type conversion struct {
-	From string
-	To   string
-	Rate float64
-}
-
-func (f *currencyFunction) convertCurrencies(from, to string) (conversion, error) {
-	req, err := http.NewRequest(http.MethodGet, currencyConversionURL, nil)
+func (f *currencyFunction) latestConversion(from, to string) (latestConversion, error) {
+	resp, err := http.Get(fmt.Sprintf(currencyConversionLatestURL, from, to, f.cfg.Currency.APIKey))
 	if err != nil {
-		return conversion{}, err
-	}
-
-	headers := retriever.RandomHeaderSet()
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", f.cfg.XE.APIKey))
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return conversion{}, err
+		return latestConversion{}, err
 	}
 
 	defer resp.Body.Close()
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return conversion{}, err
-	}
-
-	log.Logger().Rawf(log.Debug, "XE response: %s", string(b))
-
-	var usdRates usdConversionRates
-	if err = json.NewDecoder(bytes.NewReader(b)).Decode(&usdRates); err != nil {
-		return conversion{}, err
-	}
-
-	fromRate, ok := usdRates.Rates[from]
-	if !ok {
-		return conversion{}, fmt.Errorf("no rate for %s", from)
-	}
-
-	toRate, ok := usdRates.Rates[to]
-	if !ok {
-		return conversion{}, fmt.Errorf("no rate for %s", to)
-	}
-
-	return conversion{
-		From: from,
-		To:   to,
-		Rate: (1 / fromRate) * toRate,
-	}, nil
+	var conversion latestConversion
+	err = json.NewDecoder(resp.Body).Decode(&conversion)
+	return conversion, err
 }
 
-func (f *currencyFunction) currencyStatistics(from, to string) (conversionStatistics, error) {
-	req, err := http.NewRequest(http.MethodGet, currencyConversionStatisticsURL, nil)
+func (f *currencyFunction) historicalConversion(date, from, to string) (historicalConversion, error) {
+	resp, err := http.Get(fmt.Sprintf(currencyConversionHistoricalURL, date, from, to, f.cfg.Currency.APIKey))
 	if err != nil {
-		return conversionStatistics{}, err
-	}
-
-	headers := retriever.RandomHeaderSet()
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", f.cfg.XE.APIKey))
-
-	req.URL.RawQuery = url.Values{
-		"from": {from},
-		"to":   {to},
-	}.Encode()
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return conversionStatistics{}, err
+		return historicalConversion{}, err
 	}
 
 	defer resp.Body.Close()
 
-	var stats map[string]map[string]any
-	if err = json.NewDecoder(resp.Body).Decode(&stats); err != nil {
-		return conversionStatistics{}, err
-	}
-
-	statistics := conversionStatistics{}
-	_ = mapstructure.Decode(stats, &statistics)
-	return statistics, nil
+	var conversion historicalConversion
+	err = json.NewDecoder(resp.Body).Decode(&conversion)
+	return conversion, err
 }
