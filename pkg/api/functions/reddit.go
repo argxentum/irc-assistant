@@ -157,6 +157,8 @@ func (f *redditFunction) searchNewSubredditPosts(topic string) ([]RedditPost, er
 		return nil, err
 	}
 
+	defer resp.Body.Close()
+
 	var listing RedditListing
 	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
 		return nil, err

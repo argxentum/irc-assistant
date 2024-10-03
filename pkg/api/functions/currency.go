@@ -7,9 +7,11 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/go-viper/mapstructure/v2"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -139,8 +141,17 @@ func (f *currencyFunction) convertCurrencies(from, to string) (conversion, error
 		return conversion{}, err
 	}
 
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return conversion{}, err
+	}
+
+	log.Logger().Rawf(log.Debug, "XE response: %s", string(b))
+
 	var usdRates usdConversionRates
-	if err = json.NewDecoder(resp.Body).Decode(&usdRates); err != nil {
+	if err = json.NewDecoder(bytes.NewReader(b)).Decode(&usdRates); err != nil {
 		return conversion{}, err
 	}
 
@@ -183,6 +194,8 @@ func (f *currencyFunction) currencyStatistics(from, to string) (conversionStatis
 	if err != nil {
 		return conversionStatistics{}, err
 	}
+
+	defer resp.Body.Close()
 
 	var stats map[string]map[string]any
 	if err = json.NewDecoder(resp.Body).Decode(&stats); err != nil {
