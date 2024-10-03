@@ -17,6 +17,7 @@ import (
 const currencyFunctionName = "currency"
 const currencyConversionLatestURL = "https://api.freecurrencyapi.com/v1/latest?base_currency=%s&currencies=%s&apikey=%s"
 const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/historical?date=%s&base_currency=%s&currencies=%s&apikey=%s"
+const currencyMetadataURL = "https://api.freecurrencyapi.com/v1/currencies?currencies=%s,%s&apikey=%s"
 
 type currencyFunction struct {
 	FunctionStub
@@ -58,6 +59,16 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 
 	log.Logger().Infof(e, "⚡ [%s/%s] currency %s to %s", e.From, e.ReplyTarget(), from, to)
 
+	metadata, err := f.currencyMetadata(from, to)
+	if err != nil {
+		logger.Warningf(e, "error retrieving currency metadata: %s", err)
+		f.Replyf(e, "Unable to convert from %s to %s.", style.Bold(from), style.Bold(to))
+		return
+	}
+
+	fromSingular := metadata.Data[from].Name
+	toPlural := metadata.Data[to].NamePlural
+
 	latest, err := f.latestConversion(from, to)
 	if err != nil {
 		logger.Warningf(e, "error retrieving latest currency conversion: %s", err)
@@ -69,7 +80,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 	historicalMonth, err := f.historicalConversion(lastMonth, from, to)
 	if err != nil {
 		logger.Warningf(e, "error retrieving 1m historical currency conversion: %s", err)
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to))))
 		return
 	}
 
@@ -77,7 +88,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 	historicalYear, err := f.historicalConversion(lastYear, from, to)
 	if err != nil {
 		logger.Warningf(e, "error retrieving 1y historical currency conversion: %s", err)
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to))))
 		return
 	}
 
@@ -99,7 +110,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 		summary += style.ColorForeground(fmt.Sprintf("▼ %.2f%%", rateYear), style.ColorRed) + " (1Y)"
 	}
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s = %s | %s", from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], to)), summary))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s | %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to)), summary))
 }
 
 type latestConversion struct {
@@ -108,6 +119,13 @@ type latestConversion struct {
 
 type historicalConversion struct {
 	Data map[string]map[string]float64
+}
+
+type currencyMetadata struct {
+	Data map[string]struct {
+		Name       string
+		NamePlural string `json:"name_plural"`
+	}
 }
 
 func (f *currencyFunction) latestConversion(from, to string) (latestConversion, error) {
@@ -134,4 +152,17 @@ func (f *currencyFunction) historicalConversion(date, from, to string) (historic
 	var conversion historicalConversion
 	err = json.NewDecoder(resp.Body).Decode(&conversion)
 	return conversion, err
+}
+
+func (f *currencyFunction) currencyMetadata(from, to string) (currencyMetadata, error) {
+	resp, err := http.Get(fmt.Sprintf(currencyMetadataURL, from, to, f.cfg.Currency.APIKey))
+	if err != nil {
+		return currencyMetadata{}, err
+	}
+
+	defer resp.Body.Close()
+
+	var metadata currencyMetadata
+	err = json.NewDecoder(resp.Body).Decode(&metadata)
+	return metadata, err
 }
