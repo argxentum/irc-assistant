@@ -99,6 +99,10 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewStockFunction(ctx, cfg, irc)
 		})
+	case currencyFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewCurrencyFunction(ctx, cfg, irc)
+		})
 	case addBannedWordFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewAddBannedWordFunction(ctx, cfg, irc)
