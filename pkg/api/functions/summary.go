@@ -75,6 +75,7 @@ var rejectedTitlePrefixes = []string{
 	"access to this page has been denied",
 	"please verify you are a human",
 	"you are being redirected",
+	"whoa there, pardner",
 }
 
 var domainDenylist = []string{
