@@ -89,7 +89,7 @@ var descriptionDomainDenylist = []string{
 
 func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool) {
 	logger := log.Logger()
-	logger.Infof(e, "trying direct (impersonated: %t) for %s", impersonated, url)
+	logger.Infof(e, "trying direct for %s", url)
 
 	if f.isDomainDenylisted(url, domainDenylist) {
 		logger.Debugf(e, "domain denylisted %s", url)
@@ -97,7 +97,9 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	}
 
 	params := retriever.DefaultParams(url)
-	params.Impersonate = impersonated
+	params.Impersonate = impersonated || f.requiresDomainSpecificHandling(url)
+
+	logger.Debugf(e, "impersonated: %t", params.Impersonate)
 
 	doc, err := f.retriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
 	if err != nil || doc == nil {

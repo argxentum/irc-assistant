@@ -11,6 +11,11 @@ var domainSpecificDirectHandling = map[string]func(url string, doc *goquery.Docu
 	"reddit.com":  parseRedditMessage,
 }
 
+func (f *summaryFunction) requiresDomainSpecificHandling(url string) bool {
+	domain := retriever.RootDomain(url)
+	return domainSpecificDirectHandling[domain] != nil
+}
+
 func (f *summaryFunction) domainSpecificMessage(url string, doc *goquery.Document) string {
 	domain := retriever.RootDomain(url)
 	if domainSpecificDirectHandling[domain] == nil {
