@@ -49,7 +49,7 @@ func Uncapitalize(s string, lowerRemainder bool) string {
 	}
 
 	if mustBeCapitalized(s) {
-		return strings.ToUpper(s[:1]) + s[1:]
+		return Capitalize(s, lowerRemainder)
 	}
 
 	result := strings.ToLower(s[:1])

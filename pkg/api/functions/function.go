@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
@@ -232,12 +233,7 @@ func (f *FunctionStub) Replyf(e *irc.Event, message string, args ...any) {
 	log.Logger().Infof(e, "Replying: %s", fmt.Sprintf(message, args...))
 
 	if !e.IsPrivateMessage() {
-		first := strings.ToLower(message[0:1])
-		remainder := message[1:]
-		if first == "i" || first == "a" && strings.HasPrefix(remainder, " ") {
-			first = strings.ToUpper(first)
-		}
-		message = fmt.Sprintf("%s: %s%s", e.From, first, remainder)
+		message = fmt.Sprintf("%s: %s", e.From, text.Uncapitalize(message, false))
 	}
 
 	if len(args) == 0 {
