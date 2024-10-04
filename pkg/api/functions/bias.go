@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
@@ -121,35 +122,35 @@ func (f *biasFunction) Execute(e *irc.Event) {
 		if len(detail) > 0 {
 			rating := biasRatingRegexp.FindStringSubmatch(detail)
 			if len(rating) > 1 {
-				content := strings.ToUpper(rating[1][:1]) + strings.ToLower(rating[1][1:])
+				content := text.Capitalize(rating[1], true)
 				content = strings.TrimFunc(content, func(r rune) bool {
 					return !unicode.IsLetter(r)
 				})
-				message += fmt.Sprintf("%s: %s", style.Underline("bias"), content)
+				message += fmt.Sprintf("%s: %s", style.Underline("Bias"), text.CapitalizeEveryWord(content, true))
 			}
 
 			factual := factualReportingRegexp.FindStringSubmatch(detail)
 			if len(factual) > 1 {
-				content := strings.ToUpper(factual[1][:1]) + strings.ToLower(factual[1][1:])
+				content := text.Capitalize(factual[1], true)
 				content = strings.TrimFunc(content, func(r rune) bool {
 					return !unicode.IsLetter(r)
 				})
 				if len(message) > 0 {
 					message += ", "
 				}
-				message += fmt.Sprintf("%s: %s", style.Underline("factual reporting"), content)
+				message += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), text.CapitalizeEveryWord(content, true))
 			}
 
 			credibility := credibilityRegexp.FindStringSubmatch(detail)
 			if len(credibility) > 1 {
-				content := strings.ToUpper(credibility[1][:1]) + strings.ToLower(credibility[1][1:])
+				content := text.Capitalize(credibility[1], true)
 				content = strings.TrimFunc(content, func(r rune) bool {
 					return !unicode.IsLetter(r)
 				})
 				if len(message) > 0 {
 					message += ", "
 				}
-				message += fmt.Sprintf("%s: %s", style.Underline("credibility"), content)
+				message += fmt.Sprintf("%s: %s", style.Underline("Credibility"), text.CapitalizeEveryWord(content, true))
 			}
 
 			if len(message) > 0 {

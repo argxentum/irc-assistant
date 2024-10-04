@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"encoding/json"
@@ -80,7 +81,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 	historicalMonth, err := f.historicalConversion(lastMonth, from, to)
 	if err != nil {
 		logger.Warningf(e, "error retrieving 1m historical currency conversion: %s", err)
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", text.CapitalizeEveryWord(fromSingular, false), from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], text.CapitalizeEveryWord(toPlural, false), to))))
 		return
 	}
 
@@ -88,7 +89,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 	historicalYear, err := f.historicalConversion(lastYear, from, to)
 	if err != nil {
 		logger.Warningf(e, "error retrieving 1y historical currency conversion: %s", err)
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s", text.CapitalizeEveryWord(fromSingular, false), from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], text.CapitalizeEveryWord(toPlural, false), to))))
 		return
 	}
 
@@ -110,7 +111,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 		summary += style.ColorForeground(fmt.Sprintf("▼ %.2f%%", rateYear), style.ColorRed) + " (1Y)"
 	}
 
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s | %s", fromSingular, from, style.Underline(fmt.Sprintf("%.2f %s (%s)", latest.Data[to], toPlural, to)), summary))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("1 %s (%s) = %s (%s) | %s", text.CapitalizeEveryWord(fromSingular, false), from, style.Underline(fmt.Sprintf("%.2f %s", latest.Data[to], text.CapitalizeEveryWord(toPlural, false))), to, summary))
 }
 
 type latestConversion struct {
