@@ -120,7 +120,7 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		return
 	}
 
-	domainSpecific := f.domainSpecificMessage(url, doc.Text())
+	domainSpecific := f.domainSpecificMessage(url, doc)
 	if len(domainSpecific) > 0 {
 		logger.Debugf(e, "performed domain specific handling: %s", url)
 		f.SendMessage(e, e.ReplyTarget(), domainSpecific)

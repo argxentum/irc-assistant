@@ -4,12 +4,13 @@ import (
 	"assistant/pkg/api/style"
 	"encoding/json"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"regexp"
 )
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);`)
 
-func parseYouTubeMessage(doc string) string {
+func parseYouTubeMessage(url string, doc *goquery.Document) string {
 	var ytData struct {
 		Contents struct {
 			TwoColumnWatchNextResults struct {
@@ -49,7 +50,8 @@ func parseYouTubeMessage(doc string) string {
 		}
 	}
 
-	matches := ytInitialDataRegexp.FindStringSubmatch(doc)
+	html := doc.Text()
+	matches := ytInitialDataRegexp.FindStringSubmatch(html)
 	if len(matches) < 2 {
 		return ""
 	}
