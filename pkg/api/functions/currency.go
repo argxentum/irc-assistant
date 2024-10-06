@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -135,6 +136,10 @@ func (f *currencyFunction) latestConversion(from, to string) (latestConversion, 
 		return latestConversion{}, err
 	}
 
+	if resp == nil {
+		return latestConversion{}, errors.New("nil response")
+	}
+
 	defer resp.Body.Close()
 
 	var conversion latestConversion
@@ -148,6 +153,10 @@ func (f *currencyFunction) historicalConversion(date, from, to string) (historic
 		return historicalConversion{}, err
 	}
 
+	if resp == nil {
+		return historicalConversion{}, errors.New("nil response")
+	}
+
 	defer resp.Body.Close()
 
 	var conversion historicalConversion
@@ -159,6 +168,10 @@ func (f *currencyFunction) currencyMetadata(from, to string) (currencyMetadata, 
 	resp, err := http.Get(fmt.Sprintf(currencyMetadataURL, from, to, f.cfg.Currency.APIKey))
 	if err != nil {
 		return currencyMetadata{}, err
+	}
+
+	if resp == nil {
+		return currencyMetadata{}, errors.New("nil response")
 	}
 
 	defer resp.Body.Close()

@@ -3,6 +3,7 @@ package reddit
 import (
 	"assistant/pkg/api/retriever"
 	"encoding/json"
+	"errors"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"net/url"
@@ -75,6 +76,10 @@ func Login(username, password string) (*LoginResult, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp == nil {
+		return nil, errors.New("no response")
 	}
 
 	var body struct {

@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -60,6 +61,10 @@ func (f *summaryFunction) parseRedditMessage(e *irc.Event, url string) (*summary
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp == nil {
+		return nil, errors.New("no response")
 	}
 
 	defer resp.Body.Close()
