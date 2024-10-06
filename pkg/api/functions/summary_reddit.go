@@ -16,7 +16,7 @@ import (
 
 var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
 
-func (f *summaryFunction) parseRedditMessage(e *irc.Event, url string) (*summary, error) {
+func (f *summaryFunction) parseReddit(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 
 	if reddit.IsJWTExpired(f.ctx.Session().Reddit.JWT) {

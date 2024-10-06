@@ -102,8 +102,7 @@ var domainDenylist = []string{
 }
 
 var descriptionDomainDenylist = []string{
-	"youtube.com",
-	"youtu.be",
+	//
 }
 
 func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool) {
@@ -234,10 +233,7 @@ func (f *summaryFunction) tryNuggetize(e *irc.Event, url string) {
 }
 
 var bingDomainDenylist = []string{
-	"youtube.com",
-	"youtu.be",
-	"twitter.com",
-	"x.com",
+	//
 }
 
 func (f *summaryFunction) tryBing(e *irc.Event, url string) {

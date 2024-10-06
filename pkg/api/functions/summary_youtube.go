@@ -83,11 +83,11 @@ func (f *summaryFunction) parseYouTubeShort(e *irc.Event, url string) (*summary,
 	author := strings.TrimPrefix(items[0].VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
 
 	if len(title) > 0 && len(views) > 0 && len(author) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s • %s (%s)", style.Bold(title), author, views)}, nil
+		return &summary{fmt.Sprintf("%s • %s (%s)", style.Bold(title), author, views)}, nil
 	} else if len(title) > 0 && len(views) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s (%s)", style.Bold(title), views)}, nil
+		return &summary{fmt.Sprintf("%s (%s)", style.Bold(title), views)}, nil
 	} else if len(title) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s", style.Bold(title))}, nil
+		return &summary{fmt.Sprintf("%s", style.Bold(title))}, nil
 	}
 
 	return nil, nil
@@ -198,11 +198,11 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 	}
 
 	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s • @%s (%s)", style.Bold(title), author, viewCount)}, nil
+		return &summary{fmt.Sprintf("%s • @%s (%s)", style.Bold(title), author, viewCount)}, nil
 	} else if len(title) > 0 && len(viewCount) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s (%s)", style.Bold(title), viewCount)}, nil
+		return &summary{fmt.Sprintf("%s (%s)", style.Bold(title), viewCount)}, nil
 	} else if len(title) > 0 {
-		return &summary{fmt.Sprintf("YouTube: %s", style.Bold(title))}, nil
+		return &summary{fmt.Sprintf("%s", style.Bold(title))}, nil
 	}
 
 	return nil, nil

@@ -16,7 +16,9 @@ func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.E
 		dsf = map[string]func(e *irc.Event, url string) (*summary, error){
 			"youtube.com": f.parseYouTube,
 			"youtu.be":    f.parseYouTube,
-			"reddit.com":  f.parseRedditMessage,
+			"reddit.com":  f.parseReddit,
+			"twitter.com": f.parseTwitter,
+			"x.com":       f.parseTwitter,
 		}
 	}
 
