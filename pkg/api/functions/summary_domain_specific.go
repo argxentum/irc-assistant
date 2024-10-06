@@ -1,31 +1,38 @@
 package functions
 
 import (
+	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"github.com/PuerkitoBio/goquery"
 )
 
-var domainSpecificDirectHandling = map[string]func(url string, doc *goquery.Document) string{
-	"youtube.com": parseYouTubeMessage,
-	"youtu.be":    parseYouTubeMessage,
-	"reddit.com":  parseRedditMessage,
+type summary struct {
+	text string
 }
 
-func (f *summaryFunction) requiresDomainSpecificHandling(url string) bool {
-	domain := retriever.RootDomain(url)
-	return domainSpecificDirectHandling[domain] != nil
+var dsf map[string]func(e *irc.Event, url string) (*summary, error)
+
+func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
+	if dsf == nil {
+		dsf = map[string]func(e *irc.Event, url string) (*summary, error){
+			"youtube.com": f.parseYouTube,
+			"youtu.be":    f.parseYouTube,
+			"reddit.com":  f.parseRedditMessage,
+		}
+	}
+
+	return dsf
 }
 
-func (f *summaryFunction) domainSpecificMessage(url string, doc *goquery.Document) string {
+func (f *summaryFunction) requiresDomainSpecificSummarization(url string) bool {
 	domain := retriever.RootDomain(url)
-	if domainSpecificDirectHandling[domain] == nil {
-		return ""
+	return f.domainSpecificSummarization()[domain] != nil
+}
+
+func (f *summaryFunction) domainSpecificSummary(e *irc.Event, url string) (*summary, error) {
+	domain := retriever.RootDomain(url)
+	if f.domainSpecificSummarization()[domain] == nil {
+		return nil, nil
 	}
 
-	message := domainSpecificDirectHandling[domain](url, doc)
-	if len(message) == 0 {
-		return ""
-	}
-
-	return message
+	return f.domainSpecificSummarization()[domain](e, url)
 }

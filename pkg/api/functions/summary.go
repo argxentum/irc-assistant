@@ -52,6 +52,25 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 	}
 
 	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
+
+	if f.isDomainDenied(url, domainDenylist) {
+		logger.Debugf(e, "domain denied %s", url)
+		return
+	}
+
+	if f.requiresDomainSpecificSummarization(url) {
+		ds, err := f.domainSpecificSummary(e, url)
+		if err != nil {
+			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
+		} else if ds != nil {
+			logger.Debugf(e, "performed domain specific handling: %s", url)
+			f.SendMessage(e, e.ReplyTarget(), ds.text)
+		} else {
+			logger.Debugf(e, "domain specific summarization failed for %s", url)
+		}
+		return
+	}
+
 	f.tryDirect(e, url, false)
 }
 
@@ -91,13 +110,8 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	logger := log.Logger()
 	logger.Infof(e, "trying direct for %s", url)
 
-	if f.isDomainDenylisted(url, domainDenylist) {
-		logger.Debugf(e, "domain denylisted %s", url)
-		return
-	}
-
 	params := retriever.DefaultParams(url)
-	params.Impersonate = impersonated || f.requiresDomainSpecificHandling(url)
+	params.Impersonate = impersonated
 
 	logger.Debugf(e, "impersonated: %t", params.Impersonate)
 
@@ -119,13 +133,6 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		}
 
 		f.tryNuggetize(e, url)
-		return
-	}
-
-	domainSpecific := f.domainSpecificMessage(url, doc)
-	if len(domainSpecific) > 0 {
-		logger.Debugf(e, "performed domain specific handling: %s", url)
-		f.SendMessage(e, e.ReplyTarget(), domainSpecific)
 		return
 	}
 
@@ -159,7 +166,7 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 	}
 
 	includeDescription := true
-	if f.isDomainDenylisted(url, descriptionDomainDenylist) {
+	if f.isDomainDenied(url, descriptionDomainDenylist) {
 		includeDescription = false
 	}
 
@@ -237,7 +244,7 @@ func (f *summaryFunction) tryBing(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying bing for %s", url)
 
-	if f.isDomainDenylisted(url, bingDomainDenylist) {
+	if f.isDomainDenied(url, bingDomainDenylist) {
 		logger.Debugf(e, "bing domain denylisted %s", url)
 		f.tryDuckDuckGo(e, url)
 		return
@@ -284,7 +291,7 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 	logger := log.Logger()
 	logger.Infof(e, "trying duckduckgo for %s", url)
 
-	if f.isDomainDenylisted(url, duckDuckGoDomainDenylist) {
+	if f.isDomainDenied(url, duckDuckGoDomainDenylist) {
 		logger.Debugf(e, "duckduckgo domain denylisted %s", url)
 		return
 	}
@@ -314,7 +321,7 @@ func (f *summaryFunction) tryDuckDuckGo(e *irc.Event, url string) {
 	logger.Debugf(e, "unable to summarize %s", url)
 }
 
-func (f *summaryFunction) isDomainDenylisted(url string, denylist []string) bool {
+func (f *summaryFunction) isDomainDenied(url string, denylist []string) bool {
 	root := retriever.RootDomain(url)
 	return slices.Contains(denylist, root)
 }

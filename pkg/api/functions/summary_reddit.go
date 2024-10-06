@@ -1,45 +1,84 @@
 package functions
 
 import (
+	"assistant/pkg/api/irc"
+	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
+	"encoding/json"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"strconv"
+	"net/http"
+	"regexp"
 	"strings"
 )
 
-func parseRedditMessage(url string, doc *goquery.Document) string {
+var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
+
+func (f *summaryFunction) parseRedditMessage(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 
-	if strings.Contains(strings.ToLower(url), "old.reddit.com") {
-		title := doc.Find("meta[property='og:title']").First().AttrOr("content", "")
-		if len(title) == 0 {
-			logger.Rawf(log.Debug, "could not find og:title meta tag for %s", url)
-			return ""
+	if reddit.IsJWTExpired(f.ctx.Session().Reddit.JWT) {
+		logger.Debug(e, "reddit JWT token expired, logging in")
+		result, err := reddit.Login(f.cfg.Reddit.Username, f.cfg.Reddit.Password)
+		if err != nil {
+			logger.Errorf(e, "error logging into reddit: %s", err)
+			return nil, err
 		}
 
-		description := doc.Find("meta[property='og:description']").First().AttrOr("content", "")
-		return fmt.Sprintf("%s (%s)", style.Bold(strings.TrimSpace(title)), strings.TrimSpace(description))
+		if result == nil {
+			logger.Errorf(e, "unable to login to reddit")
+			return nil, err
+		}
+
+		f.ctx.Session().Reddit.JWT = result.JWT
+		f.ctx.Session().Reddit.Modhash = result.Modhash
+		f.ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
 	}
 
-	post := doc.Find("shreddit-post")
-	if post == nil {
-		logger.Rawf(log.Debug, "could not find shreddit-post element for %s", url)
-		return ""
+	match := redditCompleteDomainPattern.FindStringSubmatch(url)
+	if len(match) < 2 {
+		return nil, fmt.Errorf("unable to parse reddit domain from URL %s", url)
 	}
 
-	title := post.AttrOr("post-title", "")
-	if len(title) == 0 {
-		logger.Rawf(log.Debug, "could not find post-title attribute for %s", url)
-		return ""
+	domain := match[1]
+	url = strings.Replace(url, domain, "api.reddit.com", 1)
+
+	logger.Debugf(e, "fetching reddit API URL %s", url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	subreddit := post.AttrOr("subreddit-prefixed-name", "")
-	author := post.AttrOr("author", "")
-	score, _ := strconv.Atoi(strings.TrimSpace(post.AttrOr("score", "")))
-	comments, _ := strconv.Atoi(strings.TrimSpace(post.AttrOr("comment-count", "")))
-	description := fmt.Sprintf("Posted in %s by u/%s • %s points and %s comments", subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments))
-	return fmt.Sprintf("%s (%s)", style.Bold(strings.TrimSpace(title)), strings.TrimSpace(description))
+	req.Header.Set("User-Agent", f.cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: f.ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var listings []reddit.Listing
+	if err := json.NewDecoder(resp.Body).Decode(&listings); err != nil {
+		return nil, err
+	}
+
+	if len(listings) == 0 {
+		return nil, fmt.Errorf("no reddit parent found")
+	}
+
+	if len(listings[0].Data.Children) == 0 {
+		return nil, fmt.Errorf("no posts found in reddit listing")
+	}
+
+	post := listings[0].Data.Children[0].Data
+	return &summary{
+		fmt.Sprintf("%s (Posted in r/%s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(post.Title)), post.Subreddit, post.Author, text.DecorateNumberWithCommas(post.Score), text.DecorateNumberWithCommas(post.NumComments)),
+	}, nil
 }

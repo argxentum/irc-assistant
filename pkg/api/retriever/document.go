@@ -131,11 +131,15 @@ func (r *retriever) RetrieveDocument(e *irc.Event, params RetrievalParams, timeo
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			logger.Debugf(e, "retrieval error (status %d), %s", resp.StatusCode, err)
+			if resp != nil {
+				logger.Debugf(e, "retrieval error (status %d), %s", resp.StatusCode, err)
+			} else {
+				logger.Debugf(e, "retrieval error, %s", err)
+			}
 			rc <- retrieved{nil, err}
 		}
 		if resp == nil {
-			logger.Debugf(e, "retrieval error (status %s)", resp.Status)
+			logger.Debugf(e, "retrieval error")
 			rc <- retrieved{nil, errors.New("no response")}
 		}
 		rc <- retrieved{resp, nil}
