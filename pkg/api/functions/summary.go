@@ -135,6 +135,19 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 		return
 	}
 
+	if css := f.contentSpecificSummarizer(doc); css != nil {
+		logger.Debugf(e, "performing content specific summarization for %s", url)
+
+		s, err := css(e, doc)
+		if err != nil {
+			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
+		}
+		if s != nil {
+			f.SendMessage(e, e.ReplyTarget(), s.text)
+			return
+		}
+	}
+
 	title := strings.TrimSpace(doc.Find("title").First().Text())
 	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
 	titleMeta := strings.TrimSpace(titleAttr)

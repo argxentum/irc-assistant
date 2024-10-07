@@ -19,6 +19,7 @@ func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.E
 			"reddit.com":  f.parseReddit,
 			"twitter.com": f.parseTwitter,
 			"x.com":       f.parseTwitter,
+			"bsky.app":    f.parseBlueSky,
 		}
 	}
 
