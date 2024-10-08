@@ -45,13 +45,19 @@ func (f *helpFunction) Execute(e *irc.Event) {
 		// create map of function name to slice of current user authorization and allowed user status
 		commands := make([]string, 0)
 		for fn := range f.cfg.Functions.EnabledFunctions {
-			for _, t := range f.functionConfig(fn).Triggers {
-				key := strings.TrimPrefix(t, f.cfg.Functions.Prefix)
-				if len(f.cfg.Functions.EnabledFunctions[fn].Role) > 0 || len(f.cfg.Functions.EnabledFunctions[fn].ChannelStatus) > 0 {
-					key = fmt.Sprintf("%s*", key)
+			fnt := ""
+			for i, t := range f.functionConfig(fn).Triggers {
+				if len(fnt) > 0 {
+					fnt += "/"
 				}
-				commands = append(commands, key)
+
+				if i == len(f.functionConfig(fn).Triggers)-1 && (len(f.cfg.Functions.EnabledFunctions[fn].Role) > 0 || len(f.cfg.Functions.EnabledFunctions[fn].ChannelStatus) > 0) {
+					fnt += fmt.Sprintf("%s*", strings.TrimPrefix(t, f.cfg.Functions.Prefix))
+				} else {
+					fnt += strings.TrimPrefix(t, f.cfg.Functions.Prefix)
+				}
 			}
+			commands = append(commands, fnt)
 		}
 		slices.Sort(commands)
 
