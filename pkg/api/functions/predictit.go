@@ -45,7 +45,7 @@ type predictItSearchResult struct {
 		Contracts []struct {
 			ID     int     `json:"contractId"`
 			Name   string  `json:"contractName"`
-			Price  float64 `json:"latestTradePrice"`
+			Price  float64 `json:"lastTradePrice"`
 			Trades int     `json:"totalTrades"`
 		}
 	}
