@@ -99,6 +99,7 @@ var rejectedTitlePrefixes = []string{
 	"please verify you are a human",
 	"you are being redirected",
 	"whoa there, pardner",
+	"page not found",
 }
 
 var domainDenylist = []string{
