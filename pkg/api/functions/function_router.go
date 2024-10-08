@@ -63,6 +63,10 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewPollsFunction(ctx, cfg, irc)
 		})
+	case predictItFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewPredictItFunction(ctx, cfg, irc)
+		})
 	case searchFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewSearchFunction(ctx, cfg, irc)
