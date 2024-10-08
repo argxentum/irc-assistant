@@ -4,9 +4,11 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -78,14 +80,15 @@ func (f *summaryFunction) parseYouTubeShort(e *irc.Event, url string) (*summary,
 		return nil, fmt.Errorf("no YouTube items found for %s", url)
 	}
 
-	title := items[0].VideoDescriptionHeaderRenderer.Title.Runs[0].Text
-	views := items[0].VideoDescriptionHeaderRenderer.Views.SimpleText
+	title := strings.TrimSpace(items[0].VideoDescriptionHeaderRenderer.Title.Runs[0].Text)
+	views := strings.TrimSpace(items[0].VideoDescriptionHeaderRenderer.Views.SimpleText)
+	views = strings.TrimSuffix(views, " views")
 	author := strings.TrimPrefix(items[0].VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
 
 	if len(title) > 0 && len(views) > 0 && len(author) > 0 {
-		return &summary{fmt.Sprintf("%s • %s (%s)", style.Bold(title), author, views)}, nil
+		return &summary{fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, views)}, nil
 	} else if len(title) > 0 && len(views) > 0 {
-		return &summary{fmt.Sprintf("%s (%s)", style.Bold(title), views)}, nil
+		return &summary{fmt.Sprintf("%s • %s views", style.Bold(title), views)}, nil
 	} else if len(title) > 0 {
 		return &summary{fmt.Sprintf("%s", style.Bold(title))}, nil
 	}
@@ -114,9 +117,16 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 		}
 		ViewCount struct {
 			VideoViewCountRenderer struct {
+				ViewCount struct {
+					SimpleText string
+				}
 				ShortViewCount struct {
 					SimpleText string
 				}
+				ExtraShortViewCount struct {
+					SimpleText string
+				}
+				OriginalViewCount string
 			}
 		}
 	}
@@ -127,6 +137,11 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 				Title struct {
 					Runs []struct {
 						Text string
+					}
+				}
+				NavigationEndpoint struct {
+					BrowseEndpoint struct {
+						CanonicalBaseUrl string
 					}
 				}
 			}
@@ -159,6 +174,7 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 	title := ""
 	viewCount := ""
 	author := ""
+	authorHandle := ""
 	for _, result := range ytResults {
 		if _, ok := result.(map[string]interface{})["videoPrimaryInfoRenderer"]; ok {
 			j, err := json.Marshal(result.(map[string]interface{})["videoPrimaryInfoRenderer"])
@@ -174,7 +190,20 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 				continue
 			}
 			title = titles[0].Text
+
 			viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ShortViewCount.SimpleText
+			if len(viewCount) == 0 {
+				viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ExtraShortViewCount.SimpleText
+			}
+			if len(viewCount) == 0 {
+				viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ViewCount.SimpleText
+			}
+			if len(viewCount) == 0 {
+				n, err := strconv.Atoi(primaryInfo.ViewCount.VideoViewCountRenderer.OriginalViewCount)
+				if err == nil {
+					viewCount = text.DecorateNumberWithCommas(n)
+				}
+			}
 		}
 		if _, ok := result.(map[string]interface{})["videoSecondaryInfoRenderer"]; ok {
 			j, err := json.Marshal(result.(map[string]interface{})["videoSecondaryInfoRenderer"])
@@ -190,6 +219,7 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 				continue
 			}
 			author = authors[0].Text
+			authorHandle = strings.TrimPrefix(secondaryInfo.Owner.VideoOwnerRenderer.NavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
 		}
 
 		if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
@@ -197,10 +227,14 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 		}
 	}
 
-	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-		return &summary{fmt.Sprintf("%s • @%s (%s)", style.Bold(title), author, viewCount)}, nil
+	viewCount = strings.TrimSuffix(viewCount, " views")
+
+	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 && len(authorHandle) > 0 {
+		return &summary{fmt.Sprintf("%s • %s (%s) • %s views", style.Bold(title), author, authorHandle, viewCount)}, nil
+	} else if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
+		return &summary{fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, viewCount)}, nil
 	} else if len(title) > 0 && len(viewCount) > 0 {
-		return &summary{fmt.Sprintf("%s (%s)", style.Bold(title), viewCount)}, nil
+		return &summary{fmt.Sprintf("%s • %s views", style.Bold(title), viewCount)}, nil
 	} else if len(title) > 0 {
 		return &summary{fmt.Sprintf("%s", style.Bold(title))}, nil
 	}
