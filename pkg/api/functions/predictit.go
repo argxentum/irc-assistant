@@ -43,11 +43,10 @@ type predictItSearchResult struct {
 		Name      string `json:"marketName"`
 		Status    string `json:"status"`
 		Contracts []struct {
-			ID       int     `json:"contractId"`
-			Name     string  `json:"contractName"`
-			YesPrice float64 `json:"bestYesPrice"`
-			NoPrice  float64 `json:"bestNoPrice"`
-			Trades   int     `json:"totalTrades"`
+			ID     int     `json:"contractId"`
+			Name   string  `json:"contractName"`
+			Price  float64 `json:"latestTradePrice"`
+			Trades int     `json:"totalTrades"`
 		}
 	}
 }
@@ -125,14 +124,14 @@ func (f *predictItFunction) Execute(e *irc.Event) {
 	maxYes := 0.0
 	maxContractID := market.Contracts[0].ID
 	for _, contract := range market.Contracts {
-		if contract.YesPrice > maxYes {
-			maxYes = contract.YesPrice
+		if contract.Price > maxYes {
+			maxYes = contract.Price
 			maxContractID = contract.ID
 		}
 	}
 
 	for _, contract := range market.Contracts {
-		message := fmt.Sprintf("%s: $%.02f", style.Underline(contract.Name), contract.YesPrice)
+		message := fmt.Sprintf("%s: $%.02f", style.Underline(contract.Name), contract.Price)
 		if contract.ID == maxContractID {
 			contracts = append(contracts, fmt.Sprintf("%s (%s trades)", style.ColorForeground(message, style.ColorGreen), text.DecorateNumberWithCommas(contract.Trades)))
 		} else {
