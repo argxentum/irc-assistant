@@ -171,12 +171,20 @@ func (f *summaryFunction) tryDirect(e *irc.Event, url string, impersonated bool)
 
 	if isRejectedTitle(title) {
 		logger.Debugf(e, "rejected title: %s", title)
+		if !impersonated {
+			f.tryDirect(e, url, true)
+			return
+		}
 		f.tryNuggetize(e, url)
 		return
 	}
 
 	if len(title)+len(description) < minimumTitleLength {
 		logger.Debugf(e, "title and description too short, title: %s, description: %s", title, description)
+		if !impersonated {
+			f.tryDirect(e, url, true)
+			return
+		}
 		f.tryNuggetize(e, url)
 		return
 	}
