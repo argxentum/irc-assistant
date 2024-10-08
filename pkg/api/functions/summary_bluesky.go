@@ -34,5 +34,17 @@ func (f *summaryFunction) parseBlueSky(e *irc.Event, url string) (*summary, erro
 		description = description[:maximumDescriptionLength] + "..."
 	}
 
+	if len(title) == 0 {
+		title = strings.TrimSpace(doc.Find("title").First().Text())
+	}
+
+	if isRejectedTitle(title) {
+		return nil, fmt.Errorf("rejected title: %s", title)
+	}
+
+	if len(title)+len(description) < minimumTitleLength {
+		return nil, fmt.Errorf("title and description too short, title: %s, description: %s", title, description)
+	}
+
 	return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
 }
