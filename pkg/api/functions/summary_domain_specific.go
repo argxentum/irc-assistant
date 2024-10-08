@@ -5,10 +5,6 @@ import (
 	"assistant/pkg/api/retriever"
 )
 
-type summary struct {
-	text string
-}
-
 var dsf map[string]func(e *irc.Event, url string) (*summary, error)
 
 func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {

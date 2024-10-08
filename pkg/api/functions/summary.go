@@ -16,6 +16,10 @@ import (
 
 const summaryFunctionName = "summary"
 
+type summary struct {
+	text string
+}
+
 type summaryFunction struct {
 	FunctionStub
 	retriever retriever.DocumentRetriever
