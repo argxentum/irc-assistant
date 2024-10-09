@@ -1,0 +1,41 @@
+package functions
+
+import (
+	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
+	"assistant/pkg/api/style"
+	"assistant/pkg/log"
+	"errors"
+	"fmt"
+	"strings"
+)
+
+func (f *summaryFunction) nuggetizeRequest(e *irc.Event, url string) (*summary, error) {
+	logger := log.Logger()
+	logger.Infof(e, "nuggetize request for %s", url)
+
+	doc, err := f.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)), retriever.DefaultTimeout)
+	if err != nil {
+		logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
+		return nil, err
+	}
+
+	if doc == nil {
+		logger.Debugf(e, "unable to retrieve nuggetize summary for %s", url)
+		return nil, errors.New("nuggetize summary doc nil")
+	}
+
+	title := strings.TrimSpace(doc.Find("span.title").First().Text())
+
+	if isRejectedTitle(title) {
+		logger.Debugf(e, "rejected title: %s", title)
+		return nil, rejectedTitleError
+	}
+
+	if len(title) < minimumTitleLength {
+		logger.Debugf(e, "nuggetize title too short: %s", title)
+		return nil, summaryTooShortError
+	}
+
+	return &summary{style.Bold(title)}, nil
+}

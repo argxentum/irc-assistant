@@ -8,7 +8,12 @@ import (
 	"strings"
 )
 
-func (f *summaryFunction) parseMastodon(_ *irc.Event, doc *goquery.Document) (*summary, error) {
+func (f *summaryFunction) parseMastodon(_ *irc.Event, body string) (*summary, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
 	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
 	title := strings.TrimSpace(titleAttr)
 	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
@@ -30,5 +35,9 @@ func (f *summaryFunction) parseMastodon(_ *irc.Event, doc *goquery.Document) (*s
 		return nil, fmt.Errorf("title and description too short, title: %s, description: %s", title, description)
 	}
 
-	return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+	if len(description) > 0 {
+		return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+	} else {
+		return &summary{text: title}, nil
+	}
 }

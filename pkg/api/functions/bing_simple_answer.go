@@ -35,7 +35,7 @@ func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minToke
 		reply:        reply,
 		footnote:     footnote,
 		minTokens:    minTokens,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

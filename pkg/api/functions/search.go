@@ -29,7 +29,7 @@ func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fu
 
 	return &searchFunction{
 		FunctionStub: stub,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

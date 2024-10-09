@@ -32,7 +32,7 @@ func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config
 	return &redditFunction{
 		FunctionStub: stub,
 		subreddit:    subreddit,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

@@ -31,7 +31,7 @@ func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fun
 
 	return &pollsFunction{
 		FunctionStub: stub,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

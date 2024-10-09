@@ -31,7 +31,7 @@ func NewBiasFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Func
 
 	return &biasFunction{
 		FunctionStub: stub,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

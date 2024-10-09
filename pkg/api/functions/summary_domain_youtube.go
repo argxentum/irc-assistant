@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);`)
+var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 
 func (f *summaryFunction) parseYouTube(e *irc.Event, url string) (*summary, error) {
 	if strings.Contains(url, "/shorts/") {
@@ -51,16 +51,16 @@ func (f *summaryFunction) parseYouTubeShort(e *irc.Event, url string) (*summary,
 		}
 	}
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	body, err := f.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
 	}
 
-	if doc == nil {
+	if body == nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
 	}
 
-	html := doc.Text()
+	html := string(body)
 	matches := ytInitialDataRegexp.FindStringSubmatch(html)
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)
@@ -148,14 +148,14 @@ func (f *summaryFunction) parseYouTubeVideo(e *irc.Event, url string) (*summary,
 		}
 	}
 
-	doc, err := f.retriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	body, err := f.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
-	} else if doc == nil {
+	} else if body == nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
 	}
 
-	html := doc.Text()
+	html := string(body)
 	matches := ytInitialDataRegexp.FindStringSubmatch(html)
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)

@@ -29,7 +29,7 @@ func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (F
 
 	return &marketsFunction{
 		FunctionStub: stub,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

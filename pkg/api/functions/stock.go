@@ -27,7 +27,7 @@ func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Fun
 
 	return &stockFunction{
 		FunctionStub: stub,
-		retriever:    retriever.NewDocumentRetriever(),
+		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}, nil
 }
 

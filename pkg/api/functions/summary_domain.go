@@ -7,7 +7,7 @@ import (
 
 var dsf map[string]func(e *irc.Event, url string) (*summary, error)
 
-func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
+func (f *summaryFunction) domainSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
 	if dsf == nil {
 		dsf = map[string]func(e *irc.Event, url string) (*summary, error){
 			"youtube.com": f.parseYouTube,
@@ -22,16 +22,16 @@ func (f *summaryFunction) domainSpecificSummarization() map[string]func(e *irc.E
 	return dsf
 }
 
-func (f *summaryFunction) requiresDomainSpecificSummarization(url string) bool {
+func (f *summaryFunction) requiresDomainSummary(url string) bool {
 	domain := retriever.RootDomain(url)
-	return f.domainSpecificSummarization()[domain] != nil
+	return f.domainSummarization()[domain] != nil
 }
 
-func (f *summaryFunction) domainSpecificSummary(e *irc.Event, url string) (*summary, error) {
+func (f *summaryFunction) domainSummary(e *irc.Event, url string) (*summary, error) {
 	domain := retriever.RootDomain(url)
-	if f.domainSpecificSummarization()[domain] == nil {
+	if f.domainSummarization()[domain] == nil {
 		return nil, nil
 	}
 
-	return f.domainSpecificSummarization()[domain](e, url)
+	return f.domainSummarization()[domain](e, url)
 }

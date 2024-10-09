@@ -13,7 +13,7 @@ func (f *summaryFunction) parseBlueSky(e *irc.Event, url string) (*summary, erro
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 
-	doc, err := f.retriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
+	doc, err := f.docRetriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
 	if err != nil || doc == nil {
 		if err != nil {
 			if errors.Is(err, retriever.DisallowedContentTypeError) {
@@ -46,5 +46,9 @@ func (f *summaryFunction) parseBlueSky(e *irc.Event, url string) (*summary, erro
 		return nil, fmt.Errorf("title and description too short, title: %s, description: %s", title, description)
 	}
 
-	return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+	if len(description) > 0 {
+		return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+	} else {
+		return &summary{text: title}, nil
+	}
 }
