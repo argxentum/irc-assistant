@@ -15,6 +15,7 @@ import (
 const searchFunctionName = "search"
 const bingSearchURL = "https://www.bing.com/search?q=%s"
 const duckDuckGoSearchURL = "https://html.duckduckgo.com/html?q=%s"
+const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 
 type searchFunction struct {
 	FunctionStub
