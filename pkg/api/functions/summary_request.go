@@ -18,8 +18,8 @@ func (f *summaryFunction) requestChain() []func(e *irc.Event, url string) (*summ
 			f.directRequest,
 			f.impersonatedRequest,
 			f.nuggetizeRequest,
-			f.bingRequest,
 			f.duckduckgoRequest,
+			f.bingRequest,
 			f.startPageRequest,
 		}
 	}
