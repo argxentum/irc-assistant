@@ -122,17 +122,15 @@ func (f *predictItFunction) Execute(e *irc.Event) {
 
 	contracts := make([]string, 0)
 	maxYes := 0.0
-	maxContractID := market.Contracts[0].ID
 	for _, contract := range market.Contracts {
 		if contract.Price > maxYes {
 			maxYes = contract.Price
-			maxContractID = contract.ID
 		}
 	}
 
 	for _, contract := range market.Contracts {
 		message := fmt.Sprintf("%s: $%.02f", style.Underline(contract.Name), contract.Price)
-		if contract.ID == maxContractID {
+		if contract.Price == maxYes {
 			contracts = append(contracts, fmt.Sprintf("%s (%s trades)", style.ColorForeground(message, style.ColorGreen), text.DecorateNumberWithCommas(contract.Trades)))
 		} else {
 			contracts = append(contracts, fmt.Sprintf("%s (%s trades)", message, text.DecorateNumberWithCommas(contract.Trades)))
