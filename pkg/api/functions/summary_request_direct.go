@@ -58,19 +58,19 @@ func (f *summaryFunction) request(e *irc.Event, url string, impersonated bool) (
 	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
 		if strings.Contains(description, title) || strings.Contains(title, description) {
 			if len(description) > len(title) {
-				return &summary{style.Bold(description)}, nil
+				return createSummary(style.Bold(description)), nil
 			}
-			return &summary{style.Bold(title)}, nil
+			return createSummary(style.Bold(title)), nil
 		}
-		return &summary{fmt.Sprintf("%s: %s", style.Bold(title), description)}, nil
+		return createSummary(fmt.Sprintf("%s: %s", style.Bold(title), description)), nil
 	}
 
 	if len(title) > 0 {
-		return &summary{style.Bold(title)}, nil
+		return createSummary(style.Bold(title)), nil
 	}
 
 	if len(description) > 0 {
-		return &summary{style.Bold(description)}, nil
+		return createSummary(style.Bold(description)), nil
 	}
 
 	return nil, noContentError

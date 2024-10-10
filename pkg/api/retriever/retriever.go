@@ -49,6 +49,7 @@ type retrieved struct {
 	err      error
 }
 
+var domainRegexp = regexp.MustCompile(`https?://([^/]+)`)
 var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
 
 var headerSets = []map[string]string{
@@ -85,20 +86,12 @@ func isContentTypeAllowed(contentType string) bool {
 }
 
 func translateURL(url string) string {
-	domain := rootDomain(url)
+	domain := RootDomain(url)
 	switch domain {
 	case "x.com":
 		return replaceRoot(url, "x.com", "fixupx.com")
 	case "twitter.com":
 		return replaceRoot(url, "twitter.com", "fxtwitter.com")
-	}
-	return url
-}
-
-func rootDomain(url string) string {
-	matches := rootDomainRegexp.FindStringSubmatch(url)
-	if len(matches) > 1 {
-		return matches[1]
 	}
 	return url
 }
@@ -112,5 +105,17 @@ func RandomHeaderSet() map[string]string {
 }
 
 func RootDomain(url string) string {
-	return rootDomain(url)
+	matches := rootDomainRegexp.FindStringSubmatch(url)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return url
+}
+
+func Domain(url string) string {
+	matches := domainRegexp.FindStringSubmatch(url)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return url
 }

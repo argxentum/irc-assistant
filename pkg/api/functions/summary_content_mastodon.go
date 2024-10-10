@@ -2,14 +2,14 @@ package functions
 
 import (
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
 	"strings"
 )
 
-func (f *summaryFunction) parseMastodon(_ *irc.Event, body string) (*summary, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
+func (f *summaryFunction) parseMastodon(e *irc.Event, url string) (*summary, error) {
+	doc, err := f.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), 500)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +36,8 @@ func (f *summaryFunction) parseMastodon(_ *irc.Event, body string) (*summary, er
 	}
 
 	if len(description) > 0 {
-		return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+		return createSummary(fmt.Sprintf("%s • %s", style.Bold(description), title)), nil
 	} else {
-		return &summary{text: title}, nil
+		return createSummary(title), nil
 	}
 }

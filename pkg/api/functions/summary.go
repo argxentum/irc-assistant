@@ -19,7 +19,20 @@ const minimumPreferredTitleLength = 64
 const maximumDescriptionLength = 300
 
 type summary struct {
-	text string
+	messages []string
+}
+
+func createSummary(message ...string) *summary {
+	m := make([]string, 0)
+	if len(message) > 0 {
+		m = append(m, message...)
+	}
+
+	return &summary{messages: m}
+}
+
+func (s *summary) addMessage(message string) {
+	s.messages = append(s.messages, message)
 }
 
 type summaryFunction struct {
@@ -61,7 +74,12 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
 
-	if f.isRootDomainIn(url, domainDenylist) {
+	if f.isRootDomainIn(url, rootDomainDenylist) {
+		logger.Debugf(e, "root domain denied %s", url)
+		return
+	}
+
+	if f.isDomainIn(url, domainDenylist) {
 		logger.Debugf(e, "domain denied %s", url)
 		return
 	}
@@ -74,7 +92,7 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
-			f.SendMessage(e, e.ReplyTarget(), ds.text)
+			f.SendMessages(e, e.ReplyTarget(), ds.messages)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
 		}
@@ -97,7 +115,7 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
 		}
 		if s != nil {
-			f.SendMessage(e, e.ReplyTarget(), s.text)
+			f.SendMessages(e, e.ReplyTarget(), s.messages)
 			return
 		}
 	}
@@ -110,7 +128,7 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
-		f.SendMessage(e, e.ReplyTarget(), s.text)
+		f.SendMessages(e, e.ReplyTarget(), s.messages)
 	}
 }
 
@@ -133,13 +151,22 @@ var rejectedTitlePrefixes = []string{
 	"page not found",
 }
 
-var domainDenylist = []string{
+var rootDomainDenylist = []string{
 	"imgur.com",
+}
+
+var domainDenylist = []string{
+	"i.redd.it",
 }
 
 func (f *summaryFunction) isRootDomainIn(url string, domains []string) bool {
 	root := retriever.RootDomain(url)
 	return slices.Contains(domains, root)
+}
+
+func (f *summaryFunction) isDomainIn(url string, domains []string) bool {
+	domain := retriever.Domain(url)
+	return slices.Contains(domains, domain)
 }
 
 func isRejectedTitle(title string) bool {

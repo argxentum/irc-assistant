@@ -36,5 +36,5 @@ func (f *summaryFunction) startPageRequest(e *irc.Event, url string) (*summary, 
 		return nil, summaryTooShortError
 	}
 
-	return &summary{style.Bold(title)}, nil
+	return createSummary(style.Bold(title)), nil
 }

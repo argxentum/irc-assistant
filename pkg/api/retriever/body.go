@@ -45,11 +45,15 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 		}
 	}
 
+	success := false
+
 	var rc = make(chan retrieved)
 	go func() {
 		go func() {
 			time.Sleep(timeout * time.Millisecond)
-			logger.Debugf(e, "timing out request")
+			if !success {
+				logger.Debugf(e, "timing out request")
+			}
 			rc <- retrieved{nil, RequestTimedOutError}
 		}()
 
@@ -67,6 +71,7 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 			rc <- retrieved{nil, NoResponseError}
 		}
 		rc <- retrieved{resp, nil}
+		success = true
 	}()
 
 	ret := <-rc
@@ -82,6 +87,8 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 	}
 
 	defer ret.response.Body.Close()
+
+	logger.Debugf(e, "[%d] (%s) %s", ret.response.StatusCode, ret.response.Header.Get("Content-Type"), req.URL.String())
 
 	if ret.response.StatusCode == http.StatusOK && !isContentTypeAllowed(ret.response.Header.Get("Content-Type")) {
 		logger.Debugf(e, "disallowed content type %s", ret.response.Header.Get("Content-Type"))

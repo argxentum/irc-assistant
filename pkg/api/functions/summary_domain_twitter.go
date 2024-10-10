@@ -47,8 +47,8 @@ func (f *summaryFunction) parseTwitter(e *irc.Event, url string) (*summary, erro
 	}
 
 	if len(description) > 0 {
-		return &summary{text: fmt.Sprintf("%s • %s", style.Bold(description), title)}, nil
+		return createSummary(fmt.Sprintf("%s • %s", style.Bold(description), title)), nil
 	} else {
-		return &summary{text: title}, nil
+		return createSummary(title), nil
 	}
 }
