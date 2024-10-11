@@ -11,6 +11,7 @@ type Config struct {
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
 	Functions   FunctionsConfig
+	Ignore      []string
 }
 
 type ConnectionConfig struct {

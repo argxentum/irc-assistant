@@ -91,6 +91,11 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 			}
 		}
 
+		if slices.Contains(eh.cfg.Ignore, e.From) {
+			logger.Debugf(e, "ignoring message from %s", e.From)
+			return
+		}
+
 		if f := eh.FindMatchingFunction(e); f != nil {
 			f.IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
 				if !authorized {
