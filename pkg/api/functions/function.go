@@ -136,9 +136,9 @@ func (f *FunctionStub) IsAuthorized(e *irc.Event, channel string, callback func(
 }
 
 // isTriggerValid checks if the given trigger is valid for the function
-func (f *FunctionStub) isTriggerValid(trigger string) bool {
+func (f *FunctionStub) isTriggerValid(e *irc.Event, trigger string) bool {
 	for _, t := range f.Triggers {
-		if strings.TrimPrefix(trigger, f.cfg.Functions.Prefix) == t && strings.HasPrefix(trigger, f.cfg.Functions.Prefix) {
+		if strings.TrimPrefix(trigger, f.cfg.Functions.Prefix) == t && (strings.HasPrefix(trigger, f.cfg.Functions.Prefix) || e.IsPrivateMessage()) {
 			return true
 		}
 	}
@@ -149,7 +149,7 @@ func (f *FunctionStub) isTriggerValid(trigger string) bool {
 func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTokens int) bool {
 	nick, _ := e.Sender()
 	tokens := Tokens(e.Message())
-	attempted := f.isTriggerValid(tokens[0])
+	attempted := f.isTriggerValid(e, tokens[0])
 
 	// if sleeping, ignore all triggers except wake
 	if !f.ctx.Session().IsAwake {
@@ -193,8 +193,8 @@ func (f *FunctionStub) isValidForChannel(e *irc.Event, channel string, minBodyTo
 		return true
 	}
 
-	// if the function has function triggers but the input doesn't start with the function prefix, ignore
-	if !strings.HasPrefix(tokens[0], f.cfg.Functions.Prefix) {
+	// if the function has function triggers but the input doesn't start with the function prefix and not in a private message, ignore
+	if !e.IsPrivateMessage() && !strings.HasPrefix(tokens[0], f.cfg.Functions.Prefix) {
 		return false
 	}
 
