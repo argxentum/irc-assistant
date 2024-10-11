@@ -86,6 +86,6 @@ func (f *setKarmaFunction) Execute(e *irc.Event) {
 			return
 		}
 
-		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s now has a karma score of %s.", style.Bold(to), style.Bold(fmt.Sprintf("%d", karma))))
+		f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s now has a karma of %s.", style.Bold(to), style.Bold(fmt.Sprintf("%d", karma))))
 	})
 }
