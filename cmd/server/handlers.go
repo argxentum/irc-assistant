@@ -19,6 +19,7 @@ func (s *server) animatedTextHandler(w http.ResponseWriter, r *http.Request) {
 
 	text := r.PathValue("text")
 	text = strings.Replace(text, "_", " ", -1)
+	text = strings.TrimSuffix(text, ".gif")
 
 	animatedText, err := giphy.GetAnimatedText(s.cfg, text)
 	if err != nil {
