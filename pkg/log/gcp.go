@@ -1,25 +1,33 @@
 package log
 
 import (
-	"assistant/pkg/api/context"
 	"assistant/pkg/config"
 	"cloud.google.com/go/logging"
+	"context"
 	"fmt"
 	"google.golang.org/api/option"
 	"time"
 )
 
-func InitializeGCPLogger(ctx context.Context, config *config.Config) (Log, error) {
+func InitializeGCPLogger(ctx context.Context, cfg *config.Config, logID string) (Log, error) {
 	if logger != nil {
 		return logger, nil
 	}
 
-	client, err := logging.NewClient(ctx, config.GoogleCloud.ProjectID, option.WithCredentialsFile(config.GoogleCloud.ServiceAccountFilename))
+	client, err := logging.NewClient(ctx, cfg.GoogleCloud.ProjectID, option.WithCredentialsFile(cfg.GoogleCloud.ServiceAccountFilename))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if client == nil {
+		return nil, fmt.Errorf("error creating logging client")
+	}
 
 	logger = &gcpLogger{
 		ctx:    ctx,
 		client: client,
-		logger: client.Logger(config.IRC.Nick),
+		logger: client.Logger(logID),
 	}
 
 	return logger, err
@@ -36,7 +44,11 @@ func (gl *gcpLogger) Close() error {
 }
 
 func (gl *gcpLogger) Log(l Labeler, message string, severity Severity) {
-	gl.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: l.Labels()})
+	var labels map[string]string
+	if l != nil {
+		labels = l.Labels()
+	}
+	gl.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: labels})
 }
 
 func (gl *gcpLogger) Rawf(severity Severity, format string, args ...any) {

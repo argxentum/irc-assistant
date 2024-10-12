@@ -1,16 +1,17 @@
 package main
 
 import (
-	"assistant/pkg/api/context"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"context"
 	"os"
 )
 
 const defaultConfigFilename = "config.yaml"
 
 func main() {
-	serviceCtx := context.NewContext()
+	ctx := context.Background()
 
 	configFilename := defaultConfigFilename
 	if len(os.Args) > 1 {
@@ -22,8 +23,11 @@ func main() {
 		panic(err)
 	}
 
-	log.InitializeGCPLogger(serviceCtx, cfg)
+	initializeLogger(ctx, cfg)
 	defer log.Logger().Close()
+
+	initializeFirestore(ctx, cfg)
+	defer firestore.Get().Close()
 
 	s := &server{
 		cfg: cfg,

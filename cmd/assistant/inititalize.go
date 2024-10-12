@@ -9,7 +9,7 @@ import (
 )
 
 func initializeLogger(ctx context.Context, cfg *config.Config) {
-	_, err := log.InitializeGCPLogger(ctx, cfg)
+	_, err := log.InitializeGCPLogger(ctx, cfg, cfg.IRC.Nick)
 	if err != nil {
 		panic(fmt.Errorf("error initializing logger, %s", err))
 	}
