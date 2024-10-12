@@ -24,7 +24,7 @@ func (s *server) giphyAnimatedTextHandler(w http.ResponseWriter, r *http.Request
 	animatedText, err := giphy.CreateAnimatedText(s.cfg, text)
 	if err != nil {
 		logger.Rawf(log.Error, "error getting giphy animated text, %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "request error", http.StatusInternalServerError)
 		return
 	}
 
@@ -33,7 +33,14 @@ func (s *server) giphyAnimatedTextHandler(w http.ResponseWriter, r *http.Request
 		http.Error(w, "no data", http.StatusNotFound)
 	}
 
-	resp, err := http.Get(animatedText.Data[rand.IntN(len(animatedText.Data))].URL)
+	url := animatedText.Data[rand.IntN(len(animatedText.Data))].Images["original"].URL
+	if len(url) == 0 {
+		logger.Rawf(log.Error, "no url returned for giphy animated text")
+		http.Error(w, "bad url", http.StatusNotFound)
+		return
+	}
+
+	resp, err := http.Get(url)
 	if err != nil {
 		logger.Rawf(log.Error, "error fetching giphy animated text data, %s", err)
 		http.Error(w, "generation error", http.StatusInternalServerError)
@@ -67,7 +74,7 @@ func (s *server) giphyAnimatedTextHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Expires", "0")
 	w.Header().Set("Pragma", "no-cache")
 
-	if _, err := w.Write(data); err != nil {
+	if _, err = w.Write(data); err != nil {
 		logger.Rawf(log.Error, "error writing giphy animated text, %s", err)
 		http.Error(w, "write error", http.StatusInternalServerError)
 		return
@@ -84,7 +91,7 @@ func (s *server) giphySearchHandler(w http.ResponseWriter, r *http.Request) {
 	gif, err := giphy.SearchGIFs(s.cfg, query)
 	if err != nil {
 		logger.Rawf(log.Error, "error searching for gif, %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "request error", http.StatusInternalServerError)
 		return
 	}
 
@@ -93,7 +100,14 @@ func (s *server) giphySearchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no data", http.StatusNotFound)
 	}
 
-	resp, err := http.Get(gif.Data[0].URL)
+	url := gif.Data[0].Images["original"].URL
+	if len(url) == 0 {
+		logger.Rawf(log.Error, "no url returned for giphy animated text")
+		http.Error(w, "bad url", http.StatusNotFound)
+		return
+	}
+
+	resp, err := http.Get(url)
 	if err != nil {
 		logger.Rawf(log.Error, "error fetching searched gif data, %s", err)
 		http.Error(w, "generation error", http.StatusInternalServerError)
@@ -127,7 +141,7 @@ func (s *server) giphySearchHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Expires", "0")
 	w.Header().Set("Pragma", "no-cache")
 
-	if _, err := w.Write(data); err != nil {
+	if _, err = w.Write(data); err != nil {
 		logger.Rawf(log.Error, "error writing giphy gif, %s", err)
 		http.Error(w, "write error", http.StatusInternalServerError)
 		return

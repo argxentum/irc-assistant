@@ -13,16 +13,13 @@ const gifSearchURL = "https://api.giphy.com/v1/gifs/search?api_key=%s&q=%s&limit
 
 type GifSearch struct {
 	Data []struct {
-		Type   string
 		ID     string
 		URL    string
-		Images []struct {
-			Original struct {
-				URL    string
-				Width  string
-				Height string
-				Size   string
-			}
+		Images map[string]struct {
+			URL    string
+			Width  string
+			Height string
+			Size   string
 		}
 	}
 }
