@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+echo "Pulling latest changes"
 git pull
 
 if [ "$1" == "--irc" ]; then
