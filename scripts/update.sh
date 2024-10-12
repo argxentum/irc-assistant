@@ -13,4 +13,3 @@ else
 	go build -o bin/assistant assistant/cmd/assistant
 	go build -o bin/assistant-web assistant/cmd/assistant-web
 fi
-
