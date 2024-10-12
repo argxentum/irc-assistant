@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"strings"
 )
 
 func (s *server) defaultHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +17,10 @@ func (s *server) defaultHandler(w http.ResponseWriter, r *http.Request) {
 func (s *server) animatedTextHandler(w http.ResponseWriter, r *http.Request) {
 	logger := log.Logger()
 
-	animatedText, err := giphy.GetAnimatedText(s.cfg, r.PathValue("text"))
+	text := r.PathValue("text")
+	text = strings.Replace(text, "_", " ", -1)
+
+	animatedText, err := giphy.GetAnimatedText(s.cfg, text)
 	if err != nil {
 		logger.Rawf(log.Error, "error getting giphy animated text, %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
