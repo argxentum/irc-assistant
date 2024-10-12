@@ -84,32 +84,32 @@ type service struct {
 func (s *service) Connect(cfg *config.Config, joinCallback func(channel, nick string)) error {
 	s.cfg = cfg
 
-	s.conn = irce.IRC(cfg.Client.Nick, cfg.Client.Username)
-	s.conn.RealName = cfg.Client.RealName
+	s.conn = irce.IRC(cfg.IRC.Nick, cfg.IRC.Username)
+	s.conn.RealName = cfg.IRC.RealName
 	s.conn.Debug = false
 	s.conn.VerboseCallbackHandler = false
 
-	if cfg.Client.TLS {
-		s.conn.UseTLS = cfg.Client.TLS
+	if cfg.IRC.TLS {
+		s.conn.UseTLS = cfg.IRC.TLS
 		s.conn.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	if len(cfg.Client.NickServ.Password) > 0 {
+	if len(cfg.IRC.NickServ.Password) > 0 {
 		s.respondOnce(CodeNotice, func(event *irce.Event) bool {
-			if strings.Contains(event.Message(), cfg.Client.NickServ.IdentifyPattern) {
-				s.conn.Privmsgf(cfg.Client.NickServ.Recipient, cfg.Client.NickServ.IdentifyCommand, cfg.Client.NickServ.Password)
+			if strings.Contains(event.Message(), cfg.IRC.NickServ.IdentifyPattern) {
+				s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.IdentifyCommand, cfg.IRC.NickServ.Password)
 				return true
 			}
 			return false
 		})
 	}
 
-	if len(cfg.Client.PostConnect.Code) > 0 {
-		s.respondOnce(cfg.Client.PostConnect.Code, func(event *irce.Event) bool {
-			for _, command := range cfg.Client.PostConnect.Commands {
-				s.conn.SendRawf(command, cfg.Client.Nick)
+	if len(cfg.IRC.PostConnect.Code) > 0 {
+		s.respondOnce(cfg.IRC.PostConnect.Code, func(event *irce.Event) bool {
+			for _, command := range cfg.IRC.PostConnect.Commands {
+				s.conn.SendRawf(command, cfg.IRC.Nick)
 			}
-			for _, channel := range cfg.Client.PostConnect.AutoJoin {
+			for _, channel := range cfg.IRC.PostConnect.AutoJoin {
 				s.conn.Join(channel)
 			}
 			return true
@@ -122,7 +122,7 @@ func (s *service) Connect(cfg *config.Config, joinCallback func(channel, nick st
 		})
 	}
 
-	err := s.conn.Connect(fmt.Sprintf("%s:%d", cfg.Client.Server, cfg.Client.Port))
+	err := s.conn.Connect(fmt.Sprintf("%s:%d", cfg.IRC.Server, cfg.IRC.Port))
 	if err != nil {
 		return err
 	}
@@ -260,15 +260,15 @@ func (s *service) GetUser(channel, nick string, callback func(user *User)) {
 }
 
 func (s *service) Up(channel, nick string) {
-	s.conn.Privmsgf(s.cfg.Client.ChanServ.Recipient, s.cfg.Client.ChanServ.UpCommand, channel, nick)
+	s.conn.Privmsgf(s.cfg.IRC.ChanServ.Recipient, s.cfg.IRC.ChanServ.UpCommand, channel, nick)
 }
 
 func (s *service) Down(channel, nick string) {
-	s.conn.Privmsgf(s.cfg.Client.ChanServ.Recipient, s.cfg.Client.ChanServ.DownCommand, channel, nick)
+	s.conn.Privmsgf(s.cfg.IRC.ChanServ.Recipient, s.cfg.IRC.ChanServ.DownCommand, channel, nick)
 }
 
 func (s *service) Kick(channel, nick, reason string) {
-	s.GetUser(channel, s.cfg.Client.Nick, func(status *User) {
+	s.GetUser(channel, s.cfg.IRC.Nick, func(status *User) {
 		if status != nil && (status.Status == Operator || status.Status == HalfOperator) {
 			s.conn.Kick(nick, channel, reason)
 		}

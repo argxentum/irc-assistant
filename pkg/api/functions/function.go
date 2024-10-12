@@ -63,12 +63,12 @@ const inputMaxLength = 512
 func (f *FunctionStub) isUserAuthorizedByRole(nick string, authorization string) bool {
 	switch authorization {
 	case owner:
-		return nick == f.cfg.Client.Owner
+		return nick == f.cfg.IRC.Owner
 	case admin:
-		if nick == f.cfg.Client.Owner {
+		if nick == f.cfg.IRC.Owner {
 			return true
 		}
-		for _, a := range f.cfg.Client.Admins {
+		for _, a := range f.cfg.IRC.Admins {
 			if nick == a {
 				return true
 			}
@@ -209,7 +209,7 @@ func (f *FunctionStub) isValid(e *irc.Event, minBodyTokens int) bool {
 
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
 func (f *FunctionStub) isBotAuthorizedByChannelStatus(channel string, required string, callback func(bool)) {
-	f.userStatus(channel, f.cfg.Client.Nick, func(user *irc.User) {
+	f.userStatus(channel, f.cfg.IRC.Nick, func(user *irc.User) {
 		if user != nil {
 			callback(irc.IsStatusAtLeast(user.Status, required))
 		} else {

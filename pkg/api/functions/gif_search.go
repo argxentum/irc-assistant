@@ -34,5 +34,5 @@ func (f *gifSearchFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], "_") + ".gif"
 	log.Logger().Infof(e, "⚡ [%s/%s] gifSearch %s", e.From, e.ReplyTarget(), message)
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s/gifs/%s", f.cfg.Server.ExternalRootURL, message))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s/gifs/%s", f.cfg.Web.ExternalRootURL, message))
 }

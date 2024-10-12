@@ -14,10 +14,10 @@ type server struct {
 
 func (s *server) start() {
 	logger := log.Logger()
-	logger.Rawf(log.Info, "starting %s on :%d", s.cfg.Server.ExternalRootURL, s.cfg.Server.Port)
+	logger.Rawf(log.Info, "starting %s on :%d", s.cfg.Web.ExternalRootURL, s.cfg.Web.Port)
 
 	http.HandleFunc("/", s.defaultHandler)
 	http.HandleFunc("/text/{text}", s.giphyAnimatedTextHandler)
 	http.HandleFunc("/gifs/{q}", s.giphySearchHandler)
-	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Server.Port), nil))
+	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }

@@ -45,7 +45,7 @@ func (f *kickBanFunction) Execute(e *irc.Event) {
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
 			logger.Warningf(e, "bot lacks needed channel permissions in %s", channel)
-			f.Replyf(e, "Missing required permissions to kick users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.Client.Nick)
+			f.Replyf(e, "Missing required permissions to kick users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.IRC.Nick)
 			return
 		}
 

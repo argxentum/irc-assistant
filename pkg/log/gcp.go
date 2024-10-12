@@ -19,7 +19,7 @@ func InitializeGCPLogger(ctx context.Context, config *config.Config) (Log, error
 	logger = &gcpLogger{
 		ctx:    ctx,
 		client: client,
-		logger: client.Logger(config.Client.Nick),
+		logger: client.Logger(config.IRC.Nick),
 	}
 
 	return logger, err

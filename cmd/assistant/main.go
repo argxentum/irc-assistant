@@ -33,7 +33,7 @@ func main() {
 
 	svc := irc.NewIRC(ctx)
 	err = svc.Connect(cfg, func(channel, nick string) {
-		if nick != cfg.Client.Nick {
+		if nick != cfg.IRC.Nick {
 			return
 		}
 

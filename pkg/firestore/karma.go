@@ -13,7 +13,7 @@ const (
 )
 
 func (fs *Firestore) KarmaHistory(ctx context.Context, channel, userID string) ([]*models.KarmaHistory, error) {
-	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Client.Nick, pathChannels, channel, pathUsers, userID, pathKarmaHistory)
+	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, userID, pathKarmaHistory)
 	criteria := QueryCriteria{
 		Path: path,
 		OrderBy: []OrderBy{
@@ -53,6 +53,6 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 	}
 
 	karmaHistory := models.NewKarmaHistory(to, from, op, reason)
-	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.Client.Nick, pathChannels, channel, pathUsers, u.ID, pathKarmaHistory, karmaHistory.ID)
+	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, u.ID, pathKarmaHistory, karmaHistory.ID)
 	return u.Karma, create(ctx, fs.client, path, karmaHistory)
 }

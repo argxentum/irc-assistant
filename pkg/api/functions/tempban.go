@@ -39,7 +39,7 @@ func (f *tempBanFunction) Execute(e *irc.Event) {
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
-			f.Replyf(e, "Missing required permissions to temporarily ban users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.Client.Nick)
+			f.Replyf(e, "Missing required permissions to temporarily ban users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.IRC.Nick)
 			return
 		}
 

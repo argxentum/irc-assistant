@@ -11,7 +11,7 @@ import (
 )
 
 func (s *server) defaultHandler(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, s.cfg.Server.DefaultRedirect, http.StatusSeeOther)
+	http.Redirect(w, r, s.cfg.Web.DefaultRedirect, http.StatusSeeOther)
 }
 
 func (s *server) giphyAnimatedTextHandler(w http.ResponseWriter, r *http.Request) {

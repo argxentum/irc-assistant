@@ -6,8 +6,8 @@ import (
 )
 
 type Config struct {
-	Client      ClientConfig
-	Server      ServerConfig
+	IRC         IRCConfig `yaml:"irc"`
+	Web         WebConfig `yaml:"web"`
 	Reddit      RedditConfig
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
@@ -16,7 +16,7 @@ type Config struct {
 	Giphy       GiphyConfig
 }
 
-type ClientConfig struct {
+type IRCConfig struct {
 	Owner             string
 	Admins            []string
 	Server            string
@@ -32,7 +32,8 @@ type ClientConfig struct {
 	NamesResponseCode string            `yaml:"names_response_code"`
 }
 
-type ServerConfig struct {
+type WebConfig struct {
+	Domain          string
 	Port            int
 	ExternalRootURL string `yaml:"external_root_url"`
 	DefaultRedirect string `yaml:"default_redirect"`
