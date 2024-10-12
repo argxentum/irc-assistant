@@ -72,7 +72,7 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 	case irc.CodeInvite:
 		// if the sender of invite is the owner or an admin, join the channel
 		sender, _ := e.Sender()
-		if sender == eh.cfg.Connection.Owner || slices.Contains(eh.cfg.Connection.Admins, sender) {
+		if sender == eh.cfg.Client.Owner || slices.Contains(eh.cfg.Client.Admins, sender) {
 			channel := e.Arguments[1]
 			eh.irc.Join(channel)
 		}

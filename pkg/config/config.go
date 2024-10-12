@@ -6,15 +6,17 @@ import (
 )
 
 type Config struct {
-	Connection  ConnectionConfig
+	Client      ClientConfig
+	Server      ServerConfig
 	Reddit      RedditConfig
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
 	Functions   FunctionsConfig
 	Ignore      []string
+	Giphy       GiphyConfig
 }
 
-type ConnectionConfig struct {
+type ClientConfig struct {
 	Owner             string
 	Admins            []string
 	Server            string
@@ -28,6 +30,11 @@ type ConnectionConfig struct {
 	ChanServ          ChanServConfig    `yaml:"chanserv"`
 	PostConnect       PostConnectConfig `yaml:"post_connect"`
 	NamesResponseCode string            `yaml:"names_response_code"`
+}
+
+type ServerConfig struct {
+	Port            int
+	ExternalRootURL string
 }
 
 type NickServConfig struct {
@@ -76,6 +83,10 @@ type FunctionConfig struct {
 	Triggers            []string
 	Description         string
 	Usages              []string
+}
+
+type GiphyConfig struct {
+	APIKey string `yaml:"api_key"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
