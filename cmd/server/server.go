@@ -18,6 +18,6 @@ func (s *server) start() {
 
 	http.HandleFunc("/", s.defaultHandler)
 	http.HandleFunc("/text/{text}", s.giphyAnimatedTextHandler)
-	http.HandleFunc("/gif/{q}", s.giphySearchHandler)
+	http.HandleFunc("/gifs/{q}", s.giphySearchHandler)
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Server.Port), nil))
 }
