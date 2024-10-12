@@ -137,9 +137,7 @@ func (s *server) giphySearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "image/gif")
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Expires", "0")
-	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
 
 	if _, err = w.Write(data); err != nil {
 		logger.Rawf(log.Error, "error writing giphy gif, %s", err)
