@@ -60,7 +60,7 @@ func (f *predictItFunction) Execute(e *irc.Event) {
 
 	baseURL, err := url.Parse(predictItSearchBaseURL)
 	if err != nil {
-		fmt.Println("Malformed URL: ", err.Error())
+		logger.Warningf(e, "malformed URL: %s", err)
 		return
 	}
 
