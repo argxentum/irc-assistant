@@ -44,8 +44,6 @@ func (s *server) animatedTextHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer resp.Body.Close()
 
-	w.Header().Set("Content-Type", "image/gif")
-
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Rawf(log.Error, "error reading giphy animated text data, %s", err)
@@ -53,8 +51,11 @@ func (s *server) animatedTextHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "image/gif")
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Pragma", "no-cache")
 
 	if _, err := w.Write(data); err != nil {
 		logger.Rawf(log.Error, "error writing giphy animated text data, %s", err)
