@@ -12,7 +12,7 @@ type Config struct {
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
 	Functions   FunctionsConfig
-	Ignore      []string
+	Ignore      IgnoreConfig
 	Giphy       GiphyConfig
 }
 
@@ -83,6 +83,11 @@ type FunctionConfig struct {
 	Triggers            []string
 	Description         string
 	Usages              []string
+}
+
+type IgnoreConfig struct {
+	Users   []string
+	Domains []string
 }
 
 type GiphyConfig struct {

@@ -91,7 +91,7 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 			}
 		}
 
-		if slices.Contains(eh.cfg.Ignore, e.From) {
+		if slices.Contains(eh.cfg.Ignore.Users, e.From) {
 			logger.Debugf(e, "ignoring message from %s", e.From)
 			return
 		}

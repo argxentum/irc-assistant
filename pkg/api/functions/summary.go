@@ -74,7 +74,7 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
 
-	if f.isRootDomainIn(url, rootDomainDenylist) {
+	if f.isRootDomainIn(url, f.cfg.Ignore.Domains) {
 		logger.Debugf(e, "root domain denied %s", url)
 		return
 	}
@@ -149,10 +149,6 @@ var rejectedTitlePrefixes = []string{
 	"you are being redirected",
 	"whoa there, pardner",
 	"page not found",
-}
-
-var rootDomainDenylist = []string{
-	"imgur.com",
 }
 
 var domainDenylist = []string{
