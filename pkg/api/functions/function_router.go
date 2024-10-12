@@ -123,6 +123,14 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewGetKarmaFunction(ctx, cfg, irc)
 		})
+	case animatedTextFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewAnimatedTextFunction(ctx, cfg, irc)
+		})
+	case gifSearchFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewGifSearchFunction(ctx, cfg, irc)
+		})
 	case "bing/simple/time":
 		return loadFunction(name, func() (Function, error) {
 			return NewBingSimpleAnswerFunction(

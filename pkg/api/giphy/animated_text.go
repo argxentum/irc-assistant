@@ -9,37 +9,36 @@ import (
 	"net/url"
 )
 
-const giphyAPIAnimatedTextURL = "https://api.giphy.com/v1/text/animate?api_key=%s&m=%s"
+const animatedTextURL = "https://api.giphy.com/v1/text/animate?api_key=%s&m=%s"
 
 type AnimatedText struct {
 	Data []struct {
-		ID     string `json:"id"`
-		Type   string `json:"type"`
-		URL    string `json:"url"`
-		Title  string `json:"title"`
+		ID     string
+		Type   string
+		URL    string
+		Title  string
 		Style  string `json:"animated_text_style"`
 		Images map[string]struct {
-			URL    string `json:"url"`
-			Height string `json:"height"`
-			Width  string `json:"width"`
-			Size   string `json:"size"`
-			Webp   string `json:"webp"`
+			URL    string
+			Height string
+			Width  string
+			Size   string
 		}
 	}
 	Pagination struct {
 		TotalCount int `json:"total_count"`
-		Count      int `json:"count"`
-		Offset     int `json:"offset"`
+		Count      int
+		Offset     int
 	}
 	Meta struct {
-		Status     int    `json:"status"`
-		Msg        string `json:"msg"`
+		Status     int
+		Msg        string
 		ResponseID string `json:"response_id"`
 	}
 }
 
-func GetAnimatedText(cfg *config.Config, message string) (AnimatedText, error) {
-	resp, err := http.Get(fmt.Sprintf(giphyAPIAnimatedTextURL, cfg.Giphy.APIKey, url.QueryEscape(message)))
+func CreateAnimatedText(cfg *config.Config, message string) (AnimatedText, error) {
+	resp, err := http.Get(fmt.Sprintf(animatedTextURL, cfg.Giphy.APIKey, url.QueryEscape(message)))
 	if err != nil {
 		return AnimatedText{}, err
 	}

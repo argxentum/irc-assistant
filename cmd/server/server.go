@@ -17,6 +17,7 @@ func (s *server) start() {
 	logger.Rawf(log.Info, "starting %s on :%d", s.cfg.Server.ExternalRootURL, s.cfg.Server.Port)
 
 	http.HandleFunc("/", s.defaultHandler)
-	http.HandleFunc("/animated/{text}", s.animatedTextHandler)
+	http.HandleFunc("/text/{text}", s.giphyAnimatedTextHandler)
+	http.HandleFunc("/gif/{q}", s.giphySearchHandler)
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Server.Port), nil))
 }
