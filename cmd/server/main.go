@@ -1,15 +1,17 @@
 package main
 
 import (
+	"assistant/pkg/api/context"
 	"assistant/pkg/config"
-	"fmt"
-	"net/http"
+	"assistant/pkg/log"
 	"os"
 )
 
 const defaultConfigFilename = "config.yaml"
 
 func main() {
+	serviceCtx := context.NewContext()
+
 	configFilename := defaultConfigFilename
 	if len(os.Args) > 1 {
 		configFilename = os.Args[1]
@@ -20,9 +22,12 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
+	log.InitializeGCPLogger(serviceCtx, cfg)
+	defer log.Logger().Close()
 
-	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Server.Port), nil)
+	s := &server{
+		cfg: cfg,
+	}
+
+	s.start()
 }

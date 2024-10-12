@@ -1,8 +1,7 @@
-package functions
+package giphy
 
 import (
-	"assistant/pkg/api/irc"
-	"assistant/pkg/log"
+	"assistant/pkg/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +11,7 @@ import (
 
 const giphyAPIAnimatedTextURL = "https://api.giphy.com/v1/text/animate?api_key=%s&m=%s"
 
-type giphyAnimatedTextResponse struct {
+type AnimatedText struct {
 	Data []struct {
 		ID     string `json:"id"`
 		Type   string `json:"type"`
@@ -39,31 +38,25 @@ type giphyAnimatedTextResponse struct {
 	}
 }
 
-func (f *FunctionStub) giphyAnimatedTextRequest(e *irc.Event, message string) (giphyAnimatedTextResponse, error) {
-	logger := log.Logger()
-
-	resp, err := http.Get(fmt.Sprintf(giphyAPIAnimatedTextURL, f.cfg.Giphy.APIKey, url.QueryEscape(message)))
+func GetAnimatedText(cfg *config.Config, message string) (AnimatedText, error) {
+	resp, err := http.Get(fmt.Sprintf(giphyAPIAnimatedTextURL, cfg.Giphy.APIKey, url.QueryEscape(message)))
 	if err != nil {
-		logger.Errorf(e, "error getting giphy text, %s", err)
-		return giphyAnimatedTextResponse{}, err
+		return AnimatedText{}, err
 	}
 
 	if resp == nil {
-		logger.Errorf(e, "no response from giphy")
-		return giphyAnimatedTextResponse{}, errors.New("no response from giphy")
+		return AnimatedText{}, errors.New("no response from giphy")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Errorf(e, "error getting giphy text, %s", resp.Status)
-		return giphyAnimatedTextResponse{}, fmt.Errorf("error getting giphy text, status %s", resp.Status)
+		return AnimatedText{}, fmt.Errorf("error getting giphy text, status %s", resp.Status)
 	}
 
 	defer resp.Body.Close()
 
-	var giphy giphyAnimatedTextResponse
+	var giphy AnimatedText
 	if err := json.NewDecoder(resp.Body).Decode(&giphy); err != nil {
-		logger.Errorf(e, "error decoding giphy text, %s", err)
-		return giphyAnimatedTextResponse{}, err
+		return AnimatedText{}, err
 	}
 
 	return giphy, nil

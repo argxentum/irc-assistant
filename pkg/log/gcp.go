@@ -2,12 +2,10 @@ package log
 
 import (
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"cloud.google.com/go/logging"
 	"fmt"
 	"google.golang.org/api/option"
-	"strings"
 	"time"
 )
 
@@ -33,135 +31,110 @@ type gcpLogger struct {
 	logger *logging.Logger
 }
 
-func (l *gcpLogger) Close() error {
-	return l.client.Close()
+func (gl *gcpLogger) Close() error {
+	return gl.client.Close()
 }
 
-func (l *gcpLogger) Log(e *irc.Event, message string, severity Severity) {
-	l.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: createLabels(e)})
+func (gl *gcpLogger) Log(l Labeler, message string, severity Severity) {
+	gl.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: l.Labels()})
 }
 
-func (l *gcpLogger) Rawf(severity Severity, format string, args ...any) {
+func (gl *gcpLogger) Rawf(severity Severity, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity)})
+	gl.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity)})
 	fmt.Printf("%s [ ] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Default(e *irc.Event, message any) {
-	l.Defaultf(e, "%s", message)
+func (gl *gcpLogger) Default(l Labeler, message any) {
+	gl.Defaultf(l, "%s", message)
 }
 
-func (l *gcpLogger) Defaultf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Defaultf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Default)
+	gl.Log(l, message, Default)
 	fmt.Printf("%s [-] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Debug(e *irc.Event, message any) {
-	l.Debugf(e, "%s", message)
+func (gl *gcpLogger) Debug(l Labeler, message any) {
+	gl.Debugf(l, "%s", message)
 }
 
-func (l *gcpLogger) Debugf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Debugf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Debug)
+	gl.Log(l, message, Debug)
 	fmt.Printf("%s [D] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Info(e *irc.Event, message any) {
-	l.Infof(e, "%s", message)
+func (gl *gcpLogger) Info(l Labeler, message any) {
+	gl.Infof(l, "%s", message)
 }
 
-func (l *gcpLogger) Infof(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Infof(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Info)
+	gl.Log(l, message, Info)
 	fmt.Printf("%s [I] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Notice(e *irc.Event, message any) {
-	l.Noticef(e, "%s", message)
+func (gl *gcpLogger) Notice(l Labeler, message any) {
+	gl.Noticef(l, "%s", message)
 }
 
-func (l *gcpLogger) Noticef(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Noticef(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Notice)
+	gl.Log(l, message, Notice)
 	fmt.Printf("%s [N] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Warning(e *irc.Event, message any) {
-	l.Warningf(e, "%s", message)
+func (gl *gcpLogger) Warning(l Labeler, message any) {
+	gl.Warningf(l, "%s", message)
 }
 
-func (l *gcpLogger) Warningf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Warningf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Warning)
+	gl.Log(l, message, Warning)
 	fmt.Printf("%s [W] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Error(e *irc.Event, message any) {
-	l.Errorf(e, "%s", message)
+func (gl *gcpLogger) Error(l Labeler, message any) {
+	gl.Errorf(l, "%s", message)
 }
 
-func (l *gcpLogger) Errorf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Errorf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Error)
+	gl.Log(l, message, Error)
 	fmt.Printf("%s [E] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Critical(e *irc.Event, message any) {
-	l.Criticalf(e, "%s", message)
+func (gl *gcpLogger) Critical(l Labeler, message any) {
+	gl.Criticalf(l, "%s", message)
 }
 
-func (l *gcpLogger) Criticalf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Criticalf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Critical)
+	gl.Log(l, message, Critical)
 	fmt.Printf("%s [X] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Alert(e *irc.Event, message any) {
-	l.Alertf(e, "%s", message)
+func (gl *gcpLogger) Alert(l Labeler, message any) {
+	gl.Alertf(l, "%s", message)
 }
 
-func (l *gcpLogger) Alertf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Alertf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Alert)
+	gl.Log(l, message, Alert)
 	fmt.Printf("%s [Y] %s\n", timestamp(), message)
 }
 
-func (l *gcpLogger) Emergency(e *irc.Event, message any) {
-	l.Emergencyf(e, "%s", message)
+func (gl *gcpLogger) Emergency(l Labeler, message any) {
+	gl.Emergencyf(l, "%s", message)
 }
 
-func (l *gcpLogger) Emergencyf(e *irc.Event, format string, args ...any) {
+func (gl *gcpLogger) Emergencyf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
-	l.Log(e, message, Emergency)
+	gl.Log(l, message, Emergency)
 	fmt.Printf("%s [Z] %s\n", timestamp(), message)
 }
 
 func timestamp() string {
 	return time.Now().Format("2006-01-02 15:04:05.000")
-}
-
-func createLabels(e *irc.Event) map[string]string {
-	labels := make(map[string]string)
-	labels["id"] = e.ID
-	labels["code"] = e.Code
-	labels["raw"] = e.Raw
-	labels["from"] = e.From
-	labels["source"] = e.Source
-	labels["arguments"] = fmt.Sprintf("[%s]", strings.Join(e.Arguments, ", "))
-	labels["is_private_message"] = fmt.Sprintf("%t", e.IsPrivateMessage())
-
-	from, fromType := e.Sender()
-	to, toType := e.Recipient()
-
-	if e.Code == irc.CodePrivateMessage && len(from) > 0 {
-		labels["entity_from"] = fmt.Sprintf("%s::%s", fromType, from)
-		labels["entity_to"] = fmt.Sprintf("%s::%s", toType, to)
-	} else if len(from) > 0 && len(e.Source) > 0 {
-		labels["entity_from"] = fmt.Sprintf("%s::%s (%s)", fromType, from, e.Source)
-	} else {
-		labels["entity_from"] = fmt.Sprintf("%s", e.From)
-	}
-
-	return labels
 }

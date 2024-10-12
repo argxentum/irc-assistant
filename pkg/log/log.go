@@ -1,9 +1,5 @@
 package log
 
-import (
-	"assistant/pkg/api/irc"
-)
-
 type Severity int
 
 const (
@@ -18,28 +14,32 @@ const (
 	Emergency Severity = 800 // One or more systems are unusable
 )
 
+type Labeler interface {
+	Labels() map[string]string
+}
+
 type Log interface {
 	Close() error
-	Log(e *irc.Event, message string, severity Severity)
+	Log(l Labeler, message string, severity Severity)
+	Default(l Labeler, message any)
+	Defaultf(l Labeler, format string, args ...any)
+	Debug(l Labeler, message any)
+	Debugf(l Labeler, format string, args ...any)
+	Info(l Labeler, message any)
+	Infof(l Labeler, format string, args ...any)
+	Notice(l Labeler, message any)
+	Noticef(l Labeler, format string, args ...any)
+	Warning(l Labeler, message any)
+	Warningf(l Labeler, format string, args ...any)
+	Error(l Labeler, message any)
+	Errorf(l Labeler, format string, args ...any)
+	Critical(l Labeler, message any)
+	Criticalf(l Labeler, format string, args ...any)
+	Alert(l Labeler, message any)
+	Alertf(l Labeler, format string, args ...any)
+	Emergency(l Labeler, message any)
+	Emergencyf(l Labeler, format string, args ...any)
 	Rawf(severity Severity, format string, args ...any)
-	Default(e *irc.Event, message any)
-	Defaultf(e *irc.Event, format string, args ...any)
-	Debug(e *irc.Event, message any)
-	Debugf(e *irc.Event, format string, args ...any)
-	Info(e *irc.Event, message any)
-	Infof(e *irc.Event, format string, args ...any)
-	Notice(e *irc.Event, message any)
-	Noticef(e *irc.Event, format string, args ...any)
-	Warning(e *irc.Event, message any)
-	Warningf(e *irc.Event, format string, args ...any)
-	Error(e *irc.Event, message any)
-	Errorf(e *irc.Event, format string, args ...any)
-	Critical(e *irc.Event, message any)
-	Criticalf(e *irc.Event, format string, args ...any)
-	Alert(e *irc.Event, message any)
-	Alertf(e *irc.Event, format string, args ...any)
-	Emergency(e *irc.Event, message any)
-	Emergencyf(e *irc.Event, format string, args ...any)
 }
 
 var logger Log = nil

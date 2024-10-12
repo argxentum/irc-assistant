@@ -34,7 +34,7 @@ type ClientConfig struct {
 
 type ServerConfig struct {
 	Port            int
-	ExternalRootURL string
+	ExternalRootURL string `yaml:"external_root_url"`
 }
 
 type NickServConfig struct {

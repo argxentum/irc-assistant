@@ -2,6 +2,7 @@ package functions
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/giphy"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -37,7 +38,7 @@ func (f *giphyAnimatedTextFunction) Execute(e *irc.Event) {
 	message := strings.Join(tokens[1:], " ")
 	logger.Infof(e, "⚡ [%s/%s] giphyAnimatedText %s", e.From, e.ReplyTarget(), message)
 
-	res, err := f.giphyAnimatedTextRequest(e, message)
+	res, err := giphy.GetAnimatedText(f.cfg, message)
 	if err != nil {
 		logger.Errorf(e, "error getting giphy animated text, %s", err)
 		f.Replyf(e, "unable to perform your request")
