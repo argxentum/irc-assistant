@@ -10,7 +10,7 @@ import (
 )
 
 func (s *server) defaultHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("OK"))
+	w.Header().Set("Location", s.cfg.Server.DefaultRedirect)
 }
 
 func (s *server) animatedTextHandler(w http.ResponseWriter, r *http.Request) {
