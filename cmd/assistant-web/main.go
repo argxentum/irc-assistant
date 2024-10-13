@@ -11,7 +11,7 @@ import (
 const defaultConfigFilename = "config.yaml"
 
 func main() {
-	ctx := context.Background()
+	serviceCtx := context.Background()
 
 	configFilename := defaultConfigFilename
 	if len(os.Args) > 1 {
@@ -23,10 +23,10 @@ func main() {
 		panic(err)
 	}
 
-	initializeLogger(ctx, cfg)
+	initializeLogger(serviceCtx, cfg)
 	defer log.Logger().Close()
 
-	initializeFirestore(ctx, cfg)
+	initializeFirestore(serviceCtx, cfg)
 	defer firestore.Get().Close()
 
 	s := &server{

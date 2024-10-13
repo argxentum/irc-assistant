@@ -1,4 +1,4 @@
-package handler
+package events
 
 import (
 	"assistant/pkg/api/context"
@@ -13,22 +13,22 @@ import (
 	"unicode"
 )
 
-type EventHandler interface {
+type Handler interface {
 	ReloadFunctions()
 	AddFunction(f functions.Function)
 	FindMatchingFunction(e *irc.Event) functions.Function
 	Handle(e *irc.Event)
 }
 
-type eventHandler struct {
+type handler struct {
 	ctx context.Context
 	cfg *config.Config
 	irc irc.IRC
 	fn  []functions.Function
 }
 
-func NewEventHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) EventHandler {
-	eh := &eventHandler{
+func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
+	eh := &handler{
 		ctx: ctx,
 		cfg: cfg,
 		irc: irc,
@@ -39,7 +39,7 @@ func NewEventHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Event
 	return eh
 }
 
-func (eh *eventHandler) ReloadFunctions() {
+func (eh *handler) ReloadFunctions() {
 	eh.fn = make([]functions.Function, 0)
 	for name := range eh.cfg.Functions.EnabledFunctions {
 		f, err := functions.Route(eh.ctx, eh.cfg, eh.irc, name)
@@ -51,11 +51,11 @@ func (eh *eventHandler) ReloadFunctions() {
 	}
 }
 
-func (eh *eventHandler) AddFunction(f functions.Function) {
+func (eh *handler) AddFunction(f functions.Function) {
 	eh.fn = append(eh.fn, f)
 }
 
-func (eh *eventHandler) FindMatchingFunction(e *irc.Event) functions.Function {
+func (eh *handler) FindMatchingFunction(e *irc.Event) functions.Function {
 	for _, f := range eh.fn {
 		if f.MayExecute(e) {
 			return f
@@ -64,7 +64,7 @@ func (eh *eventHandler) FindMatchingFunction(e *irc.Event) functions.Function {
 	return nil
 }
 
-func (eh *eventHandler) Handle(e *irc.Event) {
+func (eh *handler) Handle(e *irc.Event) {
 	logger := log.Logger()
 	logger.Default(e, e.Raw)
 
@@ -115,7 +115,7 @@ func (eh *eventHandler) Handle(e *irc.Event) {
 	}
 }
 
-func (eh *eventHandler) bannedWordsInMessage(e *irc.Event, tokens []string) []string {
+func (eh *handler) bannedWordsInMessage(e *irc.Event, tokens []string) []string {
 	logger := log.Logger()
 
 	wordMap := make(map[string]bool)

@@ -2,7 +2,7 @@ package main
 
 import (
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/handler"
+	"assistant/pkg/api/events"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -46,7 +46,7 @@ func main() {
 	ech := make(chan *irc.Event)
 	go svc.Listen(ech)
 
-	h := handler.NewEventHandler(ctx, cfg, svc)
+	h := events.NewHandler(ctx, cfg, svc)
 	for {
 		e := <-ech
 		h.Handle(e)
