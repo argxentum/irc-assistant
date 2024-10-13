@@ -3,6 +3,7 @@ package firestore
 import (
 	"cloud.google.com/go/firestore"
 	"context"
+	"errors"
 	"fmt"
 	"google.golang.org/api/iterator"
 )
@@ -121,7 +122,7 @@ func removeCollection(ctx context.Context, client *firestore.Client, cr *firesto
 	iter := cr.Documents(ctx)
 	for {
 		ds, err := iter.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
@@ -150,7 +151,7 @@ func removeDocument(ctx context.Context, client *firestore.Client, dr *firestore
 	iter := dr.Collections(ctx)
 	for {
 		cr, err := iter.Next()
-		if err == iterator.Done {
+		if errors.Is(err, iterator.Done) {
 			break
 		}
 		if err != nil {
