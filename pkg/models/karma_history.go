@@ -11,17 +11,18 @@ type KarmaHistory struct {
 	CreatedAt time.Time `firestore:"created_at"`
 	To        string    `firestore:"to"`
 	Op        string    `firestore:"op"`
+	Quantity  int       `firestore:"quantity"`
 	From      string    `firestore:"from"`
 	Reason    string    `firestore:"reason"`
 }
 
-func NewKarmaHistory(to, from, op, reason string) *KarmaHistory {
+func NewKarmaHistory(from, op string, quantity int, reason string) *KarmaHistory {
 	return &KarmaHistory{
 		ID:        fmt.Sprintf("%s-%s", PrefixKarma, uuid.NewString()),
 		CreatedAt: time.Now(),
-		To:        to,
-		Op:        op,
 		From:      from,
+		Op:        op,
+		Quantity:  quantity,
 		Reason:    reason,
 	}
 }

@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	OpIncrement = "++"
-	OpDecrement = "--"
+	OpAdd      = "+"
+	OpSubtract = "-"
 )
 
 func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]*models.KarmaHistory, error) {
@@ -40,9 +40,9 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 		}
 	}
 
-	if op == OpIncrement {
+	if op == OpAdd {
 		u.Karma++
-	} else if op == OpDecrement {
+	} else if op == OpSubtract {
 		u.Karma--
 	} else {
 		return 0, fmt.Errorf("invalid operation, %s", op)
@@ -52,7 +52,7 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 		return 0, err
 	}
 
-	karmaHistory := models.NewKarmaHistory(to, from, op, reason)
+	karmaHistory := models.NewKarmaHistory(from, op, 1, reason)
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, u.Nick, pathKarmaHistory, karmaHistory.ID)
 	return u.Karma, create(ctx, fs.client, path, karmaHistory)
 }

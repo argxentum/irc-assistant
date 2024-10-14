@@ -66,7 +66,7 @@ func (f *getKarmaFunction) Execute(e *irc.Event) {
 	h := history[rand.IntN(len(history))]
 
 	action := "giving"
-	if h.Op == firestore.OpDecrement {
+	if h.Op == firestore.OpSubtract {
 		action = "taking away"
 	}
 
