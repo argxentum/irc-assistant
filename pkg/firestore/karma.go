@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	OpAdd      = "+"
-	OpSubtract = "-"
+	OpAdd       = "+"
+	OpIncrement = "++"
+	OpSubtract  = "-"
+	OpDecrement = "--"
 )
 
 func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]*models.KarmaHistory, error) {
@@ -29,7 +31,7 @@ func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]
 	return query[models.KarmaHistory](ctx, fs.client, criteria)
 }
 
-func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op, reason string) (int, error) {
+func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, operation, reason string) (int, error) {
 	u, err := fs.User(ctx, channel, to)
 	if status.Code(err) == codes.NotFound || u == nil {
 		u = models.NewUser(to)
@@ -39,12 +41,16 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 		}
 	}
 
-	if op == OpAdd {
+	op := ""
+
+	if operation == OpIncrement {
+		op = OpAdd
 		u.Karma++
-	} else if op == OpSubtract {
+	} else if operation == OpDecrement {
+		op = OpSubtract
 		u.Karma--
 	} else {
-		return 0, fmt.Errorf("invalid operation, %s", op)
+		return 0, fmt.Errorf("invalid operation, %s", operation)
 	}
 
 	if err = fs.UpdateUser(ctx, channel, u); err != nil {
