@@ -52,7 +52,7 @@ func (f *getKarmaFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	history, err := fs.KarmaHistory(f.ctx, e.ReplyTarget(), u.ID)
+	history, err := fs.KarmaHistory(f.ctx, e.ReplyTarget(), u.Nick)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting karma history, %s", err)
 		f.Replyf(e, "unable to get karma for %s.", style.Bold(nick))
