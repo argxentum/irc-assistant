@@ -47,7 +47,7 @@ func get[T any](ctx context.Context, client *firestore.Client, documentPath stri
 
 	ds, err := dr.Get(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting document, %s", err)
+		return nil, err
 	}
 
 	t := new(T)

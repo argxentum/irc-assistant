@@ -5,6 +5,8 @@ import (
 	"assistant/pkg/models"
 	"cloud.google.com/go/firestore"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -29,10 +31,7 @@ func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]
 
 func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op, reason string) (int, error) {
 	u, err := fs.User(ctx, channel, to)
-	if err != nil {
-		return 0, err
-	}
-	if u == nil {
+	if status.Code(err) == codes.NotFound || u == nil {
 		u = models.NewUser(to)
 		err = fs.CreateUser(ctx, channel, u)
 		if err != nil {
