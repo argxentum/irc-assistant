@@ -47,6 +47,10 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 		return loadFunction(name, func() (Function, error) {
 			return NewKickBanFunction(ctx, cfg, irc)
 		})
+	case tempBanFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewTempBanFunction(ctx, cfg, irc)
+		})
 	case sleepFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewSleepFunction(ctx, cfg, irc)
@@ -122,6 +126,10 @@ func Route(ctx context.Context, cfg *config.Config, irc irc.IRC, name string) (F
 	case getKarmaFunctionName:
 		return loadFunction(name, func() (Function, error) {
 			return NewGetKarmaFunction(ctx, cfg, irc)
+		})
+	case reminderFunctionName:
+		return loadFunction(name, func() (Function, error) {
+			return NewReminderFunction(ctx, cfg, irc)
 		})
 	case animatedTextFunctionName:
 		return loadFunction(name, func() (Function, error) {

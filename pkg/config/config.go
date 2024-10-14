@@ -6,8 +6,9 @@ import (
 )
 
 type Config struct {
-	IRC         IRCConfig `yaml:"irc"`
-	Web         WebConfig `yaml:"web"`
+	IRC         IRCConfig
+	Web         WebConfig
+	Queue       QueueConfig
 	Reddit      RedditConfig
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
@@ -94,6 +95,11 @@ type IgnoreConfig struct {
 
 type GiphyConfig struct {
 	APIKey string `yaml:"api_key"`
+}
+
+type QueueConfig struct {
+	Topic        string
+	Subscription string
 }
 
 func ReadConfig(filename string) (*Config, error) {

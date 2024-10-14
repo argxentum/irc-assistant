@@ -1,20 +1,18 @@
 package main
 
 import (
-	"assistant/pkg/api/context"
-	"assistant/pkg/api/events"
-	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/queue"
+	"context"
 	"os"
 )
 
 const defaultConfigFilename = "config.yaml"
 
 func main() {
-	ctx := context.NewContext()
+	ctx := context.Background()
 
 	configFilename := defaultConfigFilename
 	if len(os.Args) > 1 {
@@ -35,23 +33,10 @@ func main() {
 	initializeQueue(ctx, cfg)
 	defer queue.Get().Close()
 
-	svc := irc.NewIRC(ctx)
-	err = svc.Connect(cfg, processTasks, func(channel, nick string) {
-		if nick != cfg.IRC.Nick {
-			return
-		}
-		initializeChannel(ctx, channel)
-	})
-	if err != nil {
-		panic(err)
+	s := &scheduler{
+		ctx: ctx,
+		cfg: cfg,
 	}
 
-	ech := make(chan *irc.Event)
-	go svc.Listen(ech)
-
-	h := events.NewHandler(ctx, cfg, svc)
-	for {
-		e := <-ech
-		h.Handle(e)
-	}
+	s.start()
 }

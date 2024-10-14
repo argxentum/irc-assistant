@@ -50,7 +50,7 @@ func IsStatusAtLeast(status, required string) bool {
 }
 
 type IRC interface {
-	Connect(cfg *config.Config, joinCallback func(channel, nick string)) error
+	Connect(cfg *config.Config, connectCallback func(i IRC), joinCallback func(channel, nick string)) error
 	Listen(ech chan *Event)
 	Join(channel string)
 	Part(channel string)
@@ -62,7 +62,7 @@ type IRC interface {
 	Down(channel, nick string)
 	Kick(channel, nick, reason string)
 	Ban(channel, mask string)
-	TemporaryBan(channel, nick, reason string, duration time.Duration)
+	Unban(channel, mask string)
 	Disconnect()
 }
 
@@ -81,7 +81,7 @@ type service struct {
 	ech  chan *Event
 }
 
-func (s *service) Connect(cfg *config.Config, joinCallback func(channel, nick string)) error {
+func (s *service) Connect(cfg *config.Config, connectCallback func(irc IRC), joinCallback func(channel, nick string)) error {
 	s.cfg = cfg
 
 	s.conn = irce.IRC(cfg.IRC.Nick, cfg.IRC.Username)
@@ -112,6 +112,7 @@ func (s *service) Connect(cfg *config.Config, joinCallback func(channel, nick st
 			for _, channel := range cfg.IRC.PostConnect.AutoJoin {
 				s.conn.Join(channel)
 			}
+			connectCallback(s)
 			return true
 		})
 	}
@@ -279,12 +280,8 @@ func (s *service) Ban(channel, mask string) {
 	s.conn.Mode(channel, "+b", mask)
 }
 
-func (s *service) TemporaryBan(channel, nick, reason string, duration time.Duration) {
-	go func() {
-		s.Kick(channel, nick, reason)
-		time.Sleep(100 * time.Millisecond)
-		s.conn.Mode(channel, "+b", nick)
-	}()
+func (s *service) Unban(channel, mask string) {
+	s.conn.Mode(channel, "-b", mask)
 }
 
 func (s *service) Disconnect() {

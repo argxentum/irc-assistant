@@ -2,7 +2,7 @@ package functions
 
 import (
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/elapsed"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
@@ -70,7 +70,7 @@ func (f *getKarmaFunction) Execute(e *irc.Event) {
 		action = "taking away"
 	}
 
-	elapsedTime := elapsed.ElapsedTimeDescription(h.CreatedAt)
+	elapsedTime := elapse.TimeDescription(h.CreatedAt)
 
 	thanksToPhrases := []string{
 		"in small part thanks to",

@@ -2,7 +2,7 @@ package functions
 
 import (
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/elapsed"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/retriever"
@@ -91,7 +91,7 @@ func (f *redditFunction) sendPostMessages(e *irc.Event, posts []reddit.Post) {
 		if len(title) > postsTitleMaxLength {
 			title = title[:postsTitleMaxLength] + "..."
 		}
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), f.subreddit, elapsed.ElapsedTimeDescription(time.Unix(int64(post.Created), 0))))
+		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), f.subreddit, elapse.TimeDescription(time.Unix(int64(post.Created), 0))))
 		content = append(content, post.URL)
 		if i < len(posts)-1 {
 			content = append(content, " ")

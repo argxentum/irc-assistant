@@ -2,10 +2,15 @@ package functions
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/style"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"strings"
+	"assistant/pkg/models"
+	"fmt"
+	"time"
 )
 
 const tempBanFunctionName = "tempban"
@@ -26,16 +31,25 @@ func NewTempBanFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (F
 }
 
 func (f *tempBanFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 3)
+	return f.isValid(e, 2)
 }
 
 func (f *tempBanFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
-	nick := tokens[1]
+
+	duration := tokens[1]
+	mask := tokens[2]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] tempban %s %s", e.From, e.ReplyTarget(), channel, nick)
+	logger.Infof(e, "⚡ [%s/%s] tempban %s %s", e.From, e.ReplyTarget(), channel, mask)
+
+	seconds, err := elapse.ParseDuration(duration)
+	if err != nil {
+		logger.Errorf(e, "error parsing duration, %s", err)
+		f.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.cfg.Functions.EnabledFunctions[tempBanFunctionName].Triggers[0])))
+		return
+	}
 
 	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
 		if !authorized {
@@ -43,12 +57,15 @@ func (f *tempBanFunction) Execute(e *irc.Event) {
 			return
 		}
 
-		reason := ""
-		if len(tokens) > 3 {
-			reason = strings.Join(tokens[3:], " ")
+		f.irc.Ban(channel, mask)
+
+		task := models.NewBanRemovalTask(time.Now().Add(seconds), mask, channel)
+		err = firestore.Get().AddTask(task)
+		if err != nil {
+			logger.Errorf(e, "error adding task, %s", err)
+			return
 		}
 
-		f.irc.TemporaryBan(channel, nick, reason, 0)
-		logger.Infof(e, "temporarily banned %s from %s", nick, channel)
+		logger.Infof(e, "temporarily banned %s from %s for %s", mask, channel, duration)
 	})
 }

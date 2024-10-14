@@ -6,4 +6,5 @@ const (
 	pathBannedWords  = "banned-words"
 	pathUsers        = "users"
 	pathKarmaHistory = "karma-history"
+	pathTasks        = "tasks"
 )

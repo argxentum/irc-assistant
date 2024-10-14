@@ -3,12 +3,14 @@ package main
 import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"context"
 	"fmt"
 	nativeLog "log"
 	"net/http"
 )
 
 type server struct {
+	ctx context.Context
 	cfg *config.Config
 }
 

@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"assistant/pkg/api/elapsed"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/retriever"
@@ -92,7 +92,7 @@ func (f *summaryFunction) parseReddit(e *irc.Event, url string) (*summary, error
 
 	post := listings[0].Data.Children[0].Data
 	createdAt := time.Unix(int64(post.Created), 0)
-	return createSummary(fmt.Sprintf("%s (Posted %s in r/%s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(post.Title)), elapsed.ElapsedTimeDescription(createdAt), post.Subreddit, post.Author, text.DecorateNumberWithCommas(post.Score), text.DecorateNumberWithCommas(post.NumComments))), nil
+	return createSummary(fmt.Sprintf("%s (Posted %s in r/%s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(post.Title)), elapse.TimeDescription(createdAt), post.Subreddit, post.Author, text.DecorateNumberWithCommas(post.Score), text.DecorateNumberWithCommas(post.NumComments))), nil
 }
 
 func (f *summaryFunction) parseRedditShortlink(e *irc.Event, url string) (*summary, error) {
@@ -149,7 +149,7 @@ func (f *summaryFunction) parseRedditShortlink(e *irc.Event, url string) (*summa
 
 	created = ""
 	if !createdAt.IsZero() {
-		created = fmt.Sprintf(" %s", elapsed.ElapsedTimeDescription(createdAt))
+		created = fmt.Sprintf(" %s", elapse.TimeDescription(createdAt))
 	}
 
 	return createSummary(fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments))), nil

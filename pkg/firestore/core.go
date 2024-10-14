@@ -26,7 +26,7 @@ func count(ctx context.Context, client *firestore.Client, collectionPath string)
 	return c
 }
 
-func create[T any](ctx context.Context, client *firestore.Client, documentPath string, t T) error {
+func create[T any](ctx context.Context, client *firestore.Client, documentPath string, t *T) error {
 	dr := client.Doc(documentPath)
 	if dr == nil {
 		return fmt.Errorf("invalid document path, %s", documentPath)
@@ -58,7 +58,7 @@ func get[T any](ctx context.Context, client *firestore.Client, documentPath stri
 	return t, nil
 }
 
-func set[T any](ctx context.Context, client *firestore.Client, documentPath string, t T) error {
+func set[T any](ctx context.Context, client *firestore.Client, documentPath string, t *T) error {
 	dr := client.Doc(documentPath)
 	if dr == nil {
 		return fmt.Errorf("invalid document path, %s", documentPath)
