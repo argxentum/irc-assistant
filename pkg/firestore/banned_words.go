@@ -17,7 +17,7 @@ func (fs *Firestore) BannedWords(ctx context.Context, channel string) ([]*models
 func (fs *Firestore) AddBannedWord(ctx context.Context, channel, word string) error {
 	id := fmt.Sprintf("%s-%s", models.PrefixBannedWord, uuid.NewString())
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords, id)
-	return create(ctx, fs.client, path, &models.BannedWord{ID: id, Channel: strings.ToLower(channel), Word: strings.ToLower(word)})
+	return create(ctx, fs.client, path, &models.BannedWord{ID: id, Word: strings.ToLower(word)})
 }
 
 func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string) error {

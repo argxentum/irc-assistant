@@ -33,8 +33,8 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 		return 0, err
 	}
 	if u == nil {
-		u = models.NewUser(to, channel)
-		err = fs.CreateUser(ctx, u)
+		u = models.NewUser(to)
+		err = fs.CreateUser(ctx, channel, u)
 		if err != nil {
 			return 0, err
 		}
@@ -48,7 +48,7 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, op,
 		return 0, fmt.Errorf("invalid operation, %s", op)
 	}
 
-	if err = fs.UpdateUser(ctx, u); err != nil {
+	if err = fs.UpdateUser(ctx, channel, u); err != nil {
 		return 0, err
 	}
 
