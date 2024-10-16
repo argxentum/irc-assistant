@@ -93,6 +93,12 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 		return
 	}
 
+	if latest.Data == nil {
+		logger.Warningf(e, "error retrieving currency data")
+		f.Replyf(e, "Unable to convert from %s to %s.", style.Bold(from), style.Bold(to))
+		return
+	}
+
 	lastMonth := time.Now().AddDate(0, -1, 0).Format("2006-01-02")
 	historicalMonth, err := f.historicalConversion(lastMonth, from, to)
 	if err != nil {
