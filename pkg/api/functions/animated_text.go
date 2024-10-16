@@ -30,7 +30,7 @@ func (f *animatedTextFunction) Description() string {
 }
 
 func (f *animatedTextFunction) Triggers() []string {
-	return []string{"text"}
+	return []string{"animate", "animated", "text"}
 }
 
 func (f *animatedTextFunction) Usages() []string {
@@ -49,5 +49,5 @@ func (f *animatedTextFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], "_") + ".gif"
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), message)
-	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s/text/%s", f.cfg.Web.ExternalRootURL, message))
+	f.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s/animated/%s", f.cfg.Web.ExternalRootURL, message))
 }
