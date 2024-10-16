@@ -12,33 +12,48 @@ import (
 const sleepFunctionName = "sleep"
 
 type sleepFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewSleepFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, sleepFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSleepFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &sleepFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *sleepFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *sleepFunction) Name() string {
+	return sleepFunctionName
+}
+
+func (f *sleepFunction) Description() string {
+	return "Puts the bot to sleep, disabling it across all channels until awakened."
+}
+
+func (f *sleepFunction) Triggers() []string {
+	return []string{"sleep"}
+}
+
+func (f *sleepFunction) Usages() []string {
+	return []string{"%s"}
+}
+
+func (f *sleepFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *sleepFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *sleepFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] sleep", e.From, e.ReplyTarget())
+	logger.Infof(e, "⚡ %s [%s/%s]", f.Name(), e.From, e.ReplyTarget())
 
 	wakeTrigger := ""
-	for k, v := range f.cfg.Functions.EnabledFunctions {
+	for k, v := range registry.Functions() {
 		if k == wakeFunctionName {
-			if len(v.Triggers) > 0 {
-				wakeTrigger = fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, v.Triggers[0])
+			if len(v.Triggers()) > 0 {
+				wakeTrigger = fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, v.Triggers()[0])
 			}
 		}
 	}

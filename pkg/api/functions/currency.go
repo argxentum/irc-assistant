@@ -22,22 +22,37 @@ const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/hist
 const currencyMetadataURL = "https://api.freecurrencyapi.com/v1/currencies?currencies=%s,%s&apikey=%s"
 
 type currencyFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewCurrencyFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, currencyFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewCurrencyFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &currencyFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
+	}
 }
 
-func (f *currencyFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *currencyFunction) Name() string {
+	return currencyFunctionName
+}
+
+func (f *currencyFunction) Description() string {
+	return "Converts from one currency to another. Converts from USD if no <from> value is provided."
+}
+
+func (f *currencyFunction) Triggers() []string {
+	return []string{"currency", "convert"}
+}
+
+func (f *currencyFunction) Usages() []string {
+	return []string{"%s <from> <to>", "%s <to>"}
+}
+
+func (f *currencyFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *currencyFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 func (f *currencyFunction) Execute(e *irc.Event) {
@@ -59,7 +74,7 @@ func (f *currencyFunction) Execute(e *irc.Event) {
 	from = strings.ToUpper(from)
 	to = strings.ToUpper(to)
 
-	log.Logger().Infof(e, "⚡ [%s/%s] currency %s to %s", e.From, e.ReplyTarget(), from, to)
+	log.Logger().Infof(e, "⚡ %s [%s/%s] %s to %s", f.Name(), e.From, e.ReplyTarget(), from, to)
 
 	metadata, err := f.currencyMetadata(from, to)
 	if err != nil {

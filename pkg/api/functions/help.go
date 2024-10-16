@@ -14,44 +14,59 @@ import (
 const helpFunctionName = "help"
 
 type helpFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewHelpFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, helpFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewHelpFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &helpFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
+	}
 }
 
-func (f *helpFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *helpFunction) Name() string {
+	return helpFunctionName
+}
+
+func (f *helpFunction) Description() string {
+	return "Displays help for the given command."
+}
+
+func (f *helpFunction) Triggers() []string {
+	return []string{"help"}
+}
+
+func (f *helpFunction) Usages() []string {
+	return []string{"%s", "%s <command>"}
+}
+
+func (f *helpFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *helpFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *helpFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] help - %s", e.From, e.ReplyTarget(), e.Message())
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), e.Message())
 
 	// if no command is specified, list all available commands
 	if len(tokens) == 1 {
 		reply := make([]string, 0)
-		reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(f.Name)), f.Description))
+		reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(f.Name())), f.Description()))
 
 		// create map of function name to slice of current user authorization and allowed user status
 		commands := make([]string, 0)
-		for fn := range f.cfg.Functions.EnabledFunctions {
+		for _, fn := range registry.Functions() {
 			fnt := ""
-			for i, t := range f.functionConfig(fn).Triggers {
+			for i, t := range fn.Triggers() {
 				if len(fnt) > 0 {
 					fnt += "/"
 				}
 
-				if i == len(f.functionConfig(fn).Triggers)-1 && (len(f.cfg.Functions.EnabledFunctions[fn].Role) > 0 || len(f.cfg.Functions.EnabledFunctions[fn].ChannelStatus) > 0) {
+				if i == len(fn.Triggers())-1 && (len(fn.Authorizer().RequiredRole()) > 0 || len(fn.Authorizer().RequiredChannelStatus()) > 0) {
 					fnt += fmt.Sprintf("%s*", strings.TrimPrefix(t, f.cfg.Functions.Prefix))
 				} else {
 					fnt += strings.TrimPrefix(t, f.cfg.Functions.Prefix)
@@ -70,7 +85,7 @@ func (f *helpFunction) Execute(e *irc.Event) {
 		}
 		reply = append(reply, fmt.Sprintf("%s: %s (* requires authorization)", style.Underline("Commands"), fns))
 		usages := ""
-		for _, u := range f.Usages {
+		for _, u := range f.Usages() {
 			if len(usages) > 0 {
 				usages += ", "
 			}
@@ -84,45 +99,43 @@ func (f *helpFunction) Execute(e *irc.Event) {
 
 	trigger := strings.TrimPrefix(tokens[1], f.cfg.Functions.Prefix)
 
-	found := false
-	var fn config.FunctionConfig
-	for _, s := range f.cfg.Functions.EnabledFunctions {
-		for _, t := range s.Triggers {
+	var fn Function
+	for _, s := range registry.Functions() {
+		for _, t := range s.Triggers() {
 			if trigger == t {
-				found = true
 				fn = s
 			}
 		}
 	}
 
-	if !found {
+	if fn == nil {
 		logger.Warningf(e, "command %s not found", trigger)
-		f.Replyf(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.functionConfig(helpFunctionName).Triggers[0])))
+		f.Replyf(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, registry.Function(helpFunctionName).Triggers()[0])))
 		return
 	}
 
-	if len(fn.Triggers) == 0 {
+	if len(fn.Triggers()) == 0 {
 		return
 	}
 
 	reply := make([]string, 0)
-	reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(trigger)), fn.Description))
+	reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(trigger)), fn.Description()))
 
-	slices.SortFunc(fn.Triggers, func(a, b string) int {
+	slices.SortFunc(fn.Triggers(), func(a, b string) int {
 		if len(a) != len(b) {
 			return len(a) - len(b)
 		}
 		return strings.Compare(a, b)
 	})
 
-	if len(fn.Usages) > 0 {
+	if len(fn.Usages()) > 0 {
 		usages := ""
-		for _, u := range fn.Usages {
-			if len(fn.Triggers) > 0 {
+		for _, u := range fn.Usages() {
+			if len(fn.Triggers()) > 0 {
 				if len(usages) > 0 {
 					usages += ", "
 				}
-				usages += fmt.Sprintf(u, fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, fn.Triggers[0]))
+				usages += fmt.Sprintf(u, fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, fn.Triggers()[0]))
 			}
 		}
 
@@ -130,15 +143,15 @@ func (f *helpFunction) Execute(e *irc.Event) {
 	}
 
 	footer := ""
-	if len(fn.Role) > 0 && len(fn.ChannelStatus) > 0 {
-		footer = fmt.Sprintf("Requires %s role or %s status or greater.", fn.Role, irc.StatusName(fn.ChannelStatus))
-	} else if len(fn.Role) > 0 {
-		footer = fmt.Sprintf("Requires %s role.", fn.Role)
-	} else if len(fn.ChannelStatus) > 0 {
-		footer = fmt.Sprintf("Requires %s status or greater.", irc.StatusName(fn.ChannelStatus))
+	if len(fn.Authorizer().RequiredRole()) > 0 && len(fn.Authorizer().RequiredChannelStatus()) > 0 {
+		footer = fmt.Sprintf("Requires %s role or %s status or greater.", fn.Authorizer().RequiredRole(), irc.StatusName(fn.Authorizer().RequiredChannelStatus()))
+	} else if len(fn.Authorizer().RequiredRole()) > 0 {
+		footer = fmt.Sprintf("Requires %s role.", fn.Authorizer().RequiredRole())
+	} else if len(fn.Authorizer().RequiredChannelStatus()) > 0 {
+		footer = fmt.Sprintf("Requires %s status or greater.", irc.StatusName(fn.Authorizer().RequiredChannelStatus()))
 	}
 
-	if fn.DenyPrivateMessages {
+	if !fn.AllowedInPrivateMessages() {
 		if len(footer) > 0 {
 			footer += " "
 		}

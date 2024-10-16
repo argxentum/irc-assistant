@@ -11,39 +11,41 @@ import (
 	"time"
 )
 
+type ChannelStatus string
+
 const (
-	Operator     = "@"
-	HalfOperator = "%"
-	Voice        = "+"
-	Normal       = ""
+	ChannelStatusOperator     ChannelStatus = "@"
+	ChannelStatusHalfOperator ChannelStatus = "%"
+	ChannelStatusVoice        ChannelStatus = "+"
+	ChannelStatusNormal       ChannelStatus = ""
 )
 
 type User struct {
 	Nick   string
-	Status string
+	Status ChannelStatus
 }
 
-func StatusName(code string) string {
-	switch code {
-	case Operator:
+func StatusName(status ChannelStatus) string {
+	switch status {
+	case ChannelStatusOperator:
 		return "operator"
-	case HalfOperator:
+	case ChannelStatusHalfOperator:
 		return "half-operator"
-	case Voice:
+	case ChannelStatusVoice:
 		return "voice"
 	}
 	return "normal"
 }
 
-func IsStatusAtLeast(status, required string) bool {
+func IsStatusAtLeast(status, required ChannelStatus) bool {
 	switch required {
-	case Operator:
-		return status == Operator
-	case HalfOperator:
-		return status == Operator || status == HalfOperator
-	case Voice:
-		return status == Operator || status == HalfOperator || status == Voice
-	case Normal:
+	case ChannelStatusOperator:
+		return status == ChannelStatusOperator
+	case ChannelStatusHalfOperator:
+		return status == ChannelStatusOperator || status == ChannelStatusHalfOperator
+	case ChannelStatusVoice:
+		return status == ChannelStatusOperator || status == ChannelStatusHalfOperator || status == ChannelStatusVoice
+	case ChannelStatusNormal:
 		return true
 	}
 	return false
@@ -231,14 +233,14 @@ func (s *service) GetUsers(channel string, callback func(users []User)) {
 
 		results := strings.Split(e.Message(), " ")
 		for _, u := range results {
-			if strings.HasPrefix(u, Operator) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, Operator), Status: Operator})
-			} else if strings.HasPrefix(u, HalfOperator) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, HalfOperator), Status: HalfOperator})
-			} else if strings.HasPrefix(u, Voice) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, Voice), Status: Voice})
+			if strings.HasPrefix(u, string(ChannelStatusOperator)) {
+				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusOperator)), Status: ChannelStatusOperator})
+			} else if strings.HasPrefix(u, string(ChannelStatusHalfOperator)) {
+				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusHalfOperator)), Status: ChannelStatusHalfOperator})
+			} else if strings.HasPrefix(u, string(ChannelStatusVoice)) {
+				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusVoice)), Status: ChannelStatusVoice})
 			} else {
-				users = append(users, User{Nick: u, Status: Normal})
+				users = append(users, User{Nick: u, Status: ChannelStatusNormal})
 			}
 		}
 
@@ -270,7 +272,7 @@ func (s *service) Down(channel, nick string) {
 
 func (s *service) Kick(channel, nick, reason string) {
 	s.GetUser(channel, s.cfg.IRC.Nick, func(status *User) {
-		if status != nil && (status.Status == Operator || status.Status == HalfOperator) {
+		if status != nil && (status.Status == ChannelStatusOperator || status.Status == ChannelStatusHalfOperator) {
 			s.conn.Kick(nick, channel, reason)
 		}
 	})

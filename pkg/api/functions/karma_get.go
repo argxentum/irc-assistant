@@ -14,31 +14,46 @@ import (
 	"math/rand/v2"
 )
 
-const getKarmaFunctionName = "getKarma"
+const karmaGetFunctionName = "karmaGet"
 
-type getKarmaFunction struct {
-	FunctionStub
+type karmaGetFunction struct {
+	*functionStub
 }
 
-func NewGetKarmaFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, getKarmaFunctionName)
-	if err != nil {
-		return nil, err
+func NewKarmaGetFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
+	return &karmaGetFunction{
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 	}
-
-	return &getKarmaFunction{
-		FunctionStub: stub,
-	}, nil
 }
 
-func (f *getKarmaFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *karmaGetFunction) Name() string {
+	return karmaGetFunctionName
 }
 
-func (f *getKarmaFunction) Execute(e *irc.Event) {
+func (f *karmaGetFunction) Description() string {
+	return "Displays the given user's karma."
+}
+
+func (f *karmaGetFunction) Triggers() []string {
+	return []string{"karma"}
+}
+
+func (f *karmaGetFunction) Usages() []string {
+	return []string{"%s <user>"}
+}
+
+func (f *karmaGetFunction) AllowedInPrivateMessages() bool {
+	return false
+}
+
+func (f *karmaGetFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
+}
+
+func (f *karmaGetFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
-	log.Logger().Infof(e, "⚡ [%s/%s] getKarma %s", e.From, e.ReplyTarget(), nick)
+	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), nick)
 
 	fs := firestore.Get()
 	u, err := fs.User(f.ctx, e.ReplyTarget(), nick)

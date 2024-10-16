@@ -10,27 +10,42 @@ import (
 const wakeFunctionName = "wake"
 
 type wakeFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewWakeFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, wakeFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewWakeFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &wakeFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *wakeFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *wakeFunction) Name() string {
+	return wakeFunctionName
+}
+
+func (f *wakeFunction) Description() string {
+	return "Wakes the bot, enabling it across all channels."
+}
+
+func (f *wakeFunction) Triggers() []string {
+	return []string{"wake"}
+}
+
+func (f *wakeFunction) Usages() []string {
+	return []string{"%s"}
+}
+
+func (f *wakeFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *wakeFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *wakeFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] wake", e.From, e.ReplyTarget())
+	logger.Infof(e, "⚡ %s [%s/%s]", f.Name(), e.From, e.ReplyTarget())
 
 	if f.ctx.Session().IsAwake {
 		logger.Warningf(e, "already awake")

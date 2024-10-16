@@ -11,22 +11,37 @@ import (
 const joinFunctionName = "join"
 
 type joinFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewJoinFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, joinFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewJoinFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &joinFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *joinFunction) MayExecute(e *irc.Event) bool {
-	if !e.IsPrivateMessage() || !f.isValid(e, 1) {
+func (f *joinFunction) Name() string {
+	return joinFunctionName
+}
+
+func (f *joinFunction) Description() string {
+	return "Invites to join the specified channel(s)."
+}
+
+func (f *joinFunction) Triggers() []string {
+	return []string{"join"}
+}
+
+func (f *joinFunction) Usages() []string {
+	return []string{"%s <channel1> [<channel2> ...]"}
+}
+
+func (f *joinFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *joinFunction) CanExecute(e *irc.Event) bool {
+	if !e.IsPrivateMessage() || !f.isFunctionEventValid(f, e, 1) {
 		return false
 	}
 
@@ -39,7 +54,7 @@ func (f *joinFunction) Execute(e *irc.Event) {
 	channels := tokens[1:]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] join %s", e.From, e.ReplyTarget(), strings.Join(channels, ", "))
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), strings.Join(channels, ", "))
 
 	for _, channel := range channels {
 		if !irc.IsChannel(channel) {

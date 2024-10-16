@@ -11,22 +11,37 @@ import (
 const sayFunctionName = "say"
 
 type sayFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewSayFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, sayFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSayFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &sayFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *sayFunction) MayExecute(e *irc.Event) bool {
-	if !f.isValid(e, 3) {
+func (f *sayFunction) Name() string {
+	return sayFunctionName
+}
+
+func (f *sayFunction) Description() string {
+	return "Sends a message to the specified channel."
+}
+
+func (f *sayFunction) Triggers() []string {
+	return []string{"say"}
+}
+
+func (f *sayFunction) Usages() []string {
+	return []string{"%s <channel> <message>"}
+}
+
+func (f *sayFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *sayFunction) CanExecute(e *irc.Event) bool {
+	if !f.isFunctionEventValid(f, e, 3) {
 		return false
 	}
 
@@ -40,7 +55,7 @@ func (f *sayFunction) Execute(e *irc.Event) {
 	message := strings.Join(tokens[2:], " ")
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] say %s %s", e.From, e.ReplyTarget(), channel, message)
+	logger.Infof(e, "⚡ %s [%s/%s] %s %s", f.Name(), e.From, e.ReplyTarget(), channel, message)
 
 	f.SendMessage(e, channel, message)
 }

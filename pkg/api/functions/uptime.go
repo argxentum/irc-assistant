@@ -13,27 +13,42 @@ import (
 const uptimeFunctionName = "uptime"
 
 type uptimeFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, uptimeFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewUptimeFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &uptimeFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
+	}
 }
 
-func (f *uptimeFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *uptimeFunction) Name() string {
+	return uptimeFunctionName
+}
+
+func (f *uptimeFunction) Description() string {
+	return "Displays uptime information."
+}
+
+func (f *uptimeFunction) Triggers() []string {
+	return []string{"uptime"}
+}
+
+func (f *uptimeFunction) Usages() []string {
+	return []string{"%s"}
+}
+
+func (f *uptimeFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *uptimeFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *uptimeFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] uptime", e.From, e.ReplyTarget())
+	logger.Infof(e, "⚡ %s [%s/%s]", f.Name(), e.From, e.ReplyTarget())
 
 	startedAt := f.ctx.Session().StartedAt
 	elapsed := time.Since(startedAt)

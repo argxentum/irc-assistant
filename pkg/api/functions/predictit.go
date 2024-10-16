@@ -19,22 +19,37 @@ const predictItSearchBaseURL = "https://www.predictit.org/api/Browse/Search"
 const predictItMarketDetailURL = "https://www.predictit.org/markets/detail/%d"
 
 type predictItFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewPredictItFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, predictItFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewPredictItFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &predictItFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
+	}
 }
 
-func (f *predictItFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *predictItFunction) Name() string {
+	return predictItFunctionName
+}
+
+func (f *predictItFunction) Description() string {
+	return "Displays the latest PredictIt betting data for the market matching the query."
+}
+
+func (f *predictItFunction) Triggers() []string {
+	return []string{"predictit", "betting"}
+}
+
+func (f *predictItFunction) Usages() []string {
+	return []string{"%s <query>"}
+}
+
+func (f *predictItFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *predictItFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 type predictItSearchResult struct {
@@ -56,7 +71,7 @@ func (f *predictItFunction) Execute(e *irc.Event) {
 
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
-	logger.Infof(e, "⚡ [%s/%s] predictIt %s", e.From, e.ReplyTarget(), input)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), input)
 
 	baseURL, err := url.Parse(predictItSearchBaseURL)
 	if err != nil {

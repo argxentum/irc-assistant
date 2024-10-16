@@ -11,27 +11,42 @@ import (
 const echoFunctionName = "echo"
 
 type echoFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewEchoFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, echoFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewEchoFunction(ctx context.Context, cfg *config.Config, ircSvc irc.IRC) Function {
 	return &echoFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircSvc, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *echoFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *echoFunction) Name() string {
+	return echoFunctionName
+}
+
+func (f *echoFunction) Description() string {
+	return "Echoes the given message."
+}
+
+func (f *echoFunction) Triggers() []string {
+	return []string{"echo"}
+}
+
+func (f *echoFunction) Usages() []string {
+	return []string{"echo <message>"}
+}
+
+func (f *echoFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *echoFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 func (f *echoFunction) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], " ")
-	log.Logger().Infof(e, "⚡ [%s/%s] echo %s", e.From, e.ReplyTarget(), message)
+	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), message)
 	f.SendMessage(e, e.ReplyTarget(), message)
 }

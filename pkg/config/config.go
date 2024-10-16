@@ -75,17 +75,7 @@ type CurrencyConfig struct {
 }
 
 type FunctionsConfig struct {
-	Prefix           string
-	EnabledFunctions map[string]FunctionConfig `yaml:"enabled"`
-}
-
-type FunctionConfig struct {
-	Role                string
-	ChannelStatus       string `yaml:"channel_status"`
-	DenyPrivateMessages bool   `yaml:"deny_private_messages"`
-	Triggers            []string
-	Description         string
-	Usages              []string
+	Prefix string
 }
 
 type IgnoreConfig struct {

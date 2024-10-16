@@ -19,29 +19,44 @@ const pollsFunctionName = "polls"
 const pollsURL = "https://www.270towin.com/%d-presidential-election-polls/%s"
 
 type pollsFunction struct {
-	FunctionStub
+	*functionStub
 	retriever retriever.DocumentRetriever
 }
 
-func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, pollsFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewPollsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &pollsFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *pollsFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *pollsFunction) Name() string {
+	return pollsFunctionName
+}
+
+func (f *pollsFunction) Description() string {
+	return "Displays the latest polling data from 270toWin."
+}
+
+func (f *pollsFunction) Triggers() []string {
+	return []string{"polls"}
+}
+
+func (f *pollsFunction) Usages() []string {
+	return []string{"%s", "%s <poll>"}
+}
+
+func (f *pollsFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *pollsFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *pollsFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] polls", e.From, e.ReplyTarget())
+	logger.Infof(e, "⚡ %s [%s/%s]", f.Name(), e.From, e.ReplyTarget())
 
 	tokens := Tokens(e.Message())
 	year := time.Now().Year()

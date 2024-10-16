@@ -15,24 +15,39 @@ import (
 const stockFunctionName = "stock"
 
 type stockFunction struct {
-	FunctionStub
+	*functionStub
 	retriever retriever.DocumentRetriever
 }
 
-func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, stockFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewStockFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &stockFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *stockFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *stockFunction) Name() string {
+	return stockFunctionName
+}
+
+func (f *stockFunction) Description() string {
+	return "Displays the current price of the given stock symbol or company name."
+}
+
+func (f *stockFunction) Triggers() []string {
+	return []string{"stock"}
+}
+
+func (f *stockFunction) Usages() []string {
+	return []string{"%s <symbol>"}
+}
+
+func (f *stockFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *stockFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 func (f *stockFunction) Execute(e *irc.Event) {
@@ -40,7 +55,7 @@ func (f *stockFunction) Execute(e *irc.Event) {
 	symbol := tokens[1]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] stock %s", e.From, e.ReplyTarget(), symbol)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), symbol)
 
 	message := f.retrieveStockPriceMessage(e, symbol)
 	if len(message) == 0 {

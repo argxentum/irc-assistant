@@ -18,26 +18,47 @@ import (
 )
 
 type redditFunction struct {
-	FunctionStub
-	subreddit string
-	retriever retriever.DocumentRetriever
+	*functionStub
+	subreddit   string
+	description string
+	triggers    []string
+	usages      []string
+	retriever   retriever.DocumentRetriever
 }
 
-func NewRedditFunction(subreddit string, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("r/%s", subreddit))
-	if err != nil {
-		return nil, err
-	}
-
+func NewRedditFunction(ctx context.Context, cfg *config.Config, irc irc.IRC, subreddit, description string, triggers, usages []string) Function {
 	return &redditFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 		subreddit:    subreddit,
+		description:  description,
+		triggers:     triggers,
+		usages:       usages,
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *redditFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *redditFunction) Name() string {
+	return fmt.Sprintf("r/%s", f.subreddit)
+}
+
+func (f *redditFunction) Description() string {
+	return f.description
+}
+
+func (f *redditFunction) Triggers() []string {
+	return f.triggers
+}
+
+func (f *redditFunction) Usages() []string {
+	return f.usages
+}
+
+func (f *redditFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *redditFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 func (f *redditFunction) Execute(e *irc.Event) {
@@ -45,7 +66,7 @@ func (f *redditFunction) Execute(e *irc.Event) {
 	query := strings.Join(tokens[1:], " ")
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] r/%s %s", e.From, e.ReplyTarget(), f.subreddit, query)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), query)
 
 	if reddit.IsJWTExpired(f.ctx.Session().Reddit.JWT) {
 		logger.Debug(e, "reddit JWT token expired, logging in")

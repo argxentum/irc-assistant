@@ -16,22 +16,37 @@ import (
 const tempBanFunctionName = "tempban"
 
 type tempBanFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewTempBanFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, tempBanFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTempBanFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &tempBanFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
+	}
 }
 
-func (f *tempBanFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 2)
+func (f *tempBanFunction) Name() string {
+	return tempBanFunctionName
+}
+
+func (f *tempBanFunction) Description() string {
+	return "Temporarily bans the specified user from the channel for the specified duration."
+}
+
+func (f *tempBanFunction) Triggers() []string {
+	return []string{"tempban", "tb"}
+}
+
+func (f *tempBanFunction) Usages() []string {
+	return []string{"%s <duration> <mask>"}
+}
+
+func (f *tempBanFunction) AllowedInPrivateMessages() bool {
+	return false
+}
+
+func (f *tempBanFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 2)
 }
 
 func (f *tempBanFunction) Execute(e *irc.Event) {
@@ -42,16 +57,16 @@ func (f *tempBanFunction) Execute(e *irc.Event) {
 	mask := tokens[2]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] tempban %s %s", e.From, e.ReplyTarget(), channel, mask)
+	logger.Infof(e, "⚡ %s [%s/%s] %s %s", f.Name(), e.From, e.ReplyTarget(), channel, mask)
 
 	seconds, err := elapse.ParseDuration(duration)
 	if err != nil {
 		logger.Errorf(e, "error parsing duration, %s", err)
-		f.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, f.cfg.Functions.EnabledFunctions[tempBanFunctionName].Triggers[0])))
+		f.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, registry.Function(tempBanFunctionName).Triggers()[0])))
 		return
 	}
 
-	f.isBotAuthorizedByChannelStatus(channel, irc.HalfOperator, func(authorized bool) {
+	f.isBotAuthorizedByChannelStatus(channel, irc.ChannelStatusHalfOperator, func(authorized bool) {
 		if !authorized {
 			f.Replyf(e, "Missing required permissions to temporarily ban users in this channel. Did you forget /mode %s +h %s?", channel, f.cfg.IRC.Nick)
 			return

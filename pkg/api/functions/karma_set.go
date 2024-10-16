@@ -12,31 +12,46 @@ import (
 	"strings"
 )
 
-const setKarmaFunctionName = "setKarma"
+const karmaSetFunctionName = "karmaSet"
 const maxKarmaReasonLength = 128
 
-type setKarmaFunction struct {
-	FunctionStub
+type karmaSetFunction struct {
+	*functionStub
 }
 
-func NewSetKarmaFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, setKarmaFunctionName)
-	if err != nil {
-		return nil, err
+func NewKarmaSetFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
+	return &karmaSetFunction{
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 	}
-
-	return &setKarmaFunction{
-		FunctionStub: stub,
-	}, nil
 }
 
-func (f *setKarmaFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0) && (strings.Contains(e.Message(), "++") || strings.Contains(e.Message(), "--"))
+func (f *karmaSetFunction) Name() string {
+	return karmaSetFunctionName
+}
+
+func (f *karmaSetFunction) Description() string {
+	return "Updates the karma value for the given user."
+}
+
+func (f *karmaSetFunction) Triggers() []string {
+	return []string{}
+}
+
+func (f *karmaSetFunction) Usages() []string {
+	return []string{"<user>++ [<reason>]", "<user>-- [<reason>]"}
+}
+
+func (f *karmaSetFunction) AllowedInPrivateMessages() bool {
+	return false
+}
+
+func (f *karmaSetFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0) && (strings.Contains(e.Message(), "++") || strings.Contains(e.Message(), "--"))
 }
 
 var karmaRegex = regexp.MustCompile(`(?i)(.*?)\s*(\+\+|--)(?:\s*,?\s+(.*))?`)
 
-func (f *setKarmaFunction) Execute(e *irc.Event) {
+func (f *karmaSetFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
 
 	matches := karmaRegex.FindStringSubmatch(e.Message())
@@ -57,7 +72,7 @@ func (f *setKarmaFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	f.userStatus(e.ReplyTarget(), to, func(user *irc.User) {
+	f.authorizer.UserStatus(e.ReplyTarget(), to, func(user *irc.User) {
 		if user == nil {
 			logger.Debugf(e, "ignoring invalid karma target: %s", to)
 			return
@@ -77,7 +92,7 @@ func (f *setKarmaFunction) Execute(e *irc.Event) {
 			reason = reason[:maxKarmaReasonLength]
 		}
 
-		log.Logger().Infof(e, "⚡ [%s/%s] setKarma %s %s %s", e.From, e.ReplyTarget(), to, op, reason)
+		log.Logger().Infof(e, "⚡ %s [%s/%s] %s %s %s", f.Name(), e.From, e.ReplyTarget(), to, op, reason)
 
 		fs := firestore.Get()
 		karma, err := fs.AddKarmaHistory(f.ctx, e.ReplyTarget(), e.From, to, op, reason)

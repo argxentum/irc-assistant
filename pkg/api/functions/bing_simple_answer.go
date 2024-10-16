@@ -13,39 +13,60 @@ import (
 )
 
 type bingSimpleAnswerFunction struct {
-	FunctionStub
-	subject   string
-	query     string
-	reply     string
-	footnote  string
-	minTokens int
-	retriever retriever.DocumentRetriever
+	*functionStub
+	triggers    []string
+	usages      []string
+	description string
+	subject     string
+	query       string
+	reply       string
+	footnote    string
+	minTokens   int
+	retriever   retriever.DocumentRetriever
 }
 
-func NewBingSimpleAnswerFunction(subject, query, reply, footnote string, minTokens int, ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, fmt.Sprintf("bing/simple/%s", subject))
-	if err != nil {
-		return nil, err
-	}
-
+func NewBingSimpleAnswerFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC, triggers []string, usages []string, description, subject, query, reply, footnote string, minTokens int) Function {
 	return &bingSimpleAnswerFunction{
-		FunctionStub: stub,
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNormal),
+		triggers:     triggers,
+		usages:       usages,
+		description:  description,
 		subject:      subject,
 		query:        query,
 		reply:        reply,
 		footnote:     footnote,
 		minTokens:    minTokens,
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *bingSimpleAnswerFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, f.minTokens)
+func (f *bingSimpleAnswerFunction) Name() string {
+	return fmt.Sprintf("bing/simple/%s", f.subject)
+}
+
+func (f *bingSimpleAnswerFunction) Description() string {
+	return f.description
+}
+
+func (f *bingSimpleAnswerFunction) Triggers() []string {
+	return f.triggers
+}
+
+func (f *bingSimpleAnswerFunction) Usages() []string {
+	return f.usages
+}
+
+func (f *bingSimpleAnswerFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *bingSimpleAnswerFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, f.minTokens)
 }
 
 func (f *bingSimpleAnswerFunction) Execute(e *irc.Event) {
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] bing/simple/%s", e.From, e.ReplyTarget(), f.subject)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), f.subject)
 
 	tokens := Tokens(e.Message())
 	input := ""

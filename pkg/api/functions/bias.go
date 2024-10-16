@@ -19,24 +19,39 @@ import (
 const biasFunctionName = "bias"
 
 type biasFunction struct {
-	FunctionStub
+	*functionStub
 	retriever retriever.DocumentRetriever
 }
 
-func NewBiasFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, biasFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewBiasFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &biasFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, ircs),
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *biasFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *biasFunction) Name() string {
+	return biasFunctionName
+}
+
+func (f *biasFunction) Description() string {
+	return "Displays source bias and credibility information based on Media Bias Fact Check."
+}
+
+func (f *biasFunction) Triggers() []string {
+	return []string{"bias"}
+}
+
+func (f *biasFunction) Usages() []string {
+	return []string{"%s <source>"}
+}
+
+func (f *biasFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *biasFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 var biasRatingRegexp = regexp.MustCompile(`(?m)(?i)bias rating:([^\n]+)`)
@@ -49,7 +64,7 @@ func (f *biasFunction) Execute(e *irc.Event) {
 	headers := retriever.RandomHeaderSet()
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] bias %s", e.From, e.ReplyTarget(), input)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), input)
 
 	sc := colly.NewCollector(
 		colly.UserAgent(headers["User-Agent"]),

@@ -36,26 +36,41 @@ func (s *summary) addMessage(message string) {
 }
 
 type summaryFunction struct {
-	FunctionStub
+	*functionStub
 	bodyRetriever retriever.BodyRetriever
 	docRetriever  retriever.DocumentRetriever
 }
 
-func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, summaryFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSummaryFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &summaryFunction{
-		FunctionStub:  stub,
+		functionStub:  defaultFunctionStub(ctx, cfg, irc),
 		bodyRetriever: retriever.NewBodyRetriever(),
 		docRetriever:  retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *summaryFunction) MayExecute(e *irc.Event) bool {
-	if !f.isValid(e, 0) {
+func (f *summaryFunction) Name() string {
+	return summaryFunctionName
+}
+
+func (f *summaryFunction) Description() string {
+	return "Displays a summary of the content at the given URL."
+}
+
+func (f *summaryFunction) Triggers() []string {
+	return []string{}
+}
+
+func (f *summaryFunction) Usages() []string {
+	return []string{"<url>"}
+}
+
+func (f *summaryFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *summaryFunction) CanExecute(e *irc.Event) bool {
+	if !f.isFunctionEventValid(f, e, 0) {
 		return false
 	}
 
@@ -72,7 +87,7 @@ func (f *summaryFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	logger.Infof(e, "⚡ [%s/%s] summary %s", e.From, e.ReplyTarget(), url)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), url)
 
 	if f.isRootDomainIn(url, f.cfg.Ignore.Domains) {
 		logger.Debugf(e, "root domain denied %s", url)

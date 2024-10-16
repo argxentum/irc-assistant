@@ -14,50 +14,31 @@ import (
 )
 
 type Handler interface {
-	ReloadFunctions()
-	AddFunction(f functions.Function)
 	FindMatchingFunction(e *irc.Event) functions.Function
 	Handle(e *irc.Event)
 }
 
 type handler struct {
-	ctx context.Context
-	cfg *config.Config
-	irc irc.IRC
-	fn  []functions.Function
+	ctx      context.Context
+	cfg      *config.Config
+	irc      irc.IRC
+	registry functions.FunctionRegistry
 }
 
 func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
 	eh := &handler{
-		ctx: ctx,
-		cfg: cfg,
-		irc: irc,
-		fn:  make([]functions.Function, 0),
+		ctx:      ctx,
+		cfg:      cfg,
+		irc:      irc,
+		registry: functions.LoadFunctionRegistry(ctx, cfg, irc),
 	}
 
-	eh.ReloadFunctions()
 	return eh
 }
 
-func (eh *handler) ReloadFunctions() {
-	eh.fn = make([]functions.Function, 0)
-	for name := range eh.cfg.Functions.EnabledFunctions {
-		f, err := functions.Route(eh.ctx, eh.cfg, eh.irc, name)
-		if err != nil {
-			fmt.Printf("error loading function: %s\n", name)
-			continue
-		}
-		eh.fn = append(eh.fn, f)
-	}
-}
-
-func (eh *handler) AddFunction(f functions.Function) {
-	eh.fn = append(eh.fn, f)
-}
-
 func (eh *handler) FindMatchingFunction(e *irc.Event) functions.Function {
-	for _, f := range eh.fn {
-		if f.MayExecute(e) {
+	for _, f := range eh.registry.FunctionsSortedForProcessing() {
+		if f.CanExecute(e) {
 			return f
 		}
 	}
@@ -97,7 +78,7 @@ func (eh *handler) Handle(e *irc.Event) {
 		}
 
 		if f := eh.FindMatchingFunction(e); f != nil {
-			f.IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
+			f.Authorizer().IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
 				if !authorized {
 					logger.Warningf(e, "unauthorized attempt by %s to use %s", e.From, tokens[0])
 

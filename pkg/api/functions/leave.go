@@ -11,27 +11,42 @@ import (
 const leaveFunctionName = "leave"
 
 type leaveFunction struct {
-	FunctionStub
+	*functionStub
 }
 
-func NewLeaveFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, leaveFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewLeaveFunction(ctx context.Context, cfg *config.Config, ircs irc.IRC) Function {
 	return &leaveFunction{
-		FunctionStub: stub,
-	}, nil
+		functionStub: newFunctionStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+	}
 }
 
-func (f *leaveFunction) MayExecute(e *irc.Event) bool {
+func (f *leaveFunction) Name() string {
+	return leaveFunctionName
+}
+
+func (f *leaveFunction) Description() string {
+	return "Leaves the specified channel(s)."
+}
+
+func (f *leaveFunction) Triggers() []string {
+	return []string{"leave", "part"}
+}
+
+func (f *leaveFunction) Usages() []string {
+	return []string{"%s [<channel1> [<channel2> ...]]"}
+}
+
+func (f *leaveFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *leaveFunction) CanExecute(e *irc.Event) bool {
 	tokens := Tokens(e.Message())
 	if e.IsPrivateMessage() {
-		return f.isValid(e, 1) && irc.IsChannel(tokens[1])
+		return f.isFunctionEventValid(f, e, 1) && irc.IsChannel(tokens[1])
 	}
 
-	return f.isValid(e, 0)
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *leaveFunction) Execute(e *irc.Event) {
@@ -39,7 +54,7 @@ func (f *leaveFunction) Execute(e *irc.Event) {
 	channels := tokens[1:]
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] leave %s", e.From, e.ReplyTarget(), strings.Join(channels, ", "))
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), strings.Join(channels, ", "))
 
 	if len(tokens) == 1 && !e.IsPrivateMessage() {
 		f.irc.Part(e.ReplyTarget())

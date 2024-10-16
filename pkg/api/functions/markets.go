@@ -17,24 +17,39 @@ import (
 const marketsFunctionName = "markets"
 
 type marketsFunction struct {
-	FunctionStub
+	*functionStub
 	retriever retriever.DocumentRetriever
 }
 
-func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, marketsFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewMarketsFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &marketsFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *marketsFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 0)
+func (f *marketsFunction) Name() string {
+	return marketsFunctionName
+}
+
+func (f *marketsFunction) Description() string {
+	return "Displays current stock market data for the given region. Defaults to US."
+}
+
+func (f *marketsFunction) Triggers() []string {
+	return []string{"markets", "market"}
+}
+
+func (f *marketsFunction) Usages() []string {
+	return []string{"%s", "%s <region>"}
+}
+
+func (f *marketsFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *marketsFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 0)
 }
 
 func (f *marketsFunction) Execute(e *irc.Event) {
@@ -45,7 +60,7 @@ func (f *marketsFunction) Execute(e *irc.Event) {
 	}
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] markets %s", e.From, e.ReplyTarget(), region)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), region)
 
 	message := f.retrieveMarketSummaryMessage(e, region)
 	if len(message) == 0 {

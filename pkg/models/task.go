@@ -15,7 +15,7 @@ const (
 )
 
 const (
-	TaskStatusActive   = "active"
+	TaskStatusPending  = "pending"
 	TaskStatusComplete = "complete"
 )
 
@@ -54,7 +54,7 @@ func NewActiveTask(id, path string, dueAt time.Time) *ActiveTask {
 }
 
 func NewReminderTask(dueAt time.Time, user, destination, content string) *Task {
-	return newTask(TaskTypeReminder, dueAt, ReminderTaskData{
+	return newPendingTask(TaskTypeReminder, dueAt, ReminderTaskData{
 		User:        user,
 		Destination: destination,
 		Content:     content,
@@ -62,19 +62,19 @@ func NewReminderTask(dueAt time.Time, user, destination, content string) *Task {
 }
 
 func NewBanRemovalTask(dueAt time.Time, mask, channel string) *Task {
-	return newTask(TaskTypeBanRemoval, dueAt, BanRemovalTaskData{
+	return newPendingTask(TaskTypeBanRemoval, dueAt, BanRemovalTaskData{
 		Mask:    mask,
 		Channel: channel,
 	})
 }
 
-func newTask(taskType string, due time.Time, payload any) *Task {
+func newPendingTask(taskType string, due time.Time, payload any) *Task {
 	return &Task{
 		ID:        fmt.Sprintf("%s-%s", taskIDPrefix, uuid.NewString()),
 		Type:      taskType,
 		CreatedAt: time.Now(),
 		DueAt:     due,
-		Status:    TaskStatusActive,
+		Status:    TaskStatusPending,
 		Data:      payload,
 	}
 }

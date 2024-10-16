@@ -22,24 +22,39 @@ const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
 
 type searchFunction struct {
-	FunctionStub
+	*functionStub
 	retriever retriever.DocumentRetriever
 }
 
-func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) (Function, error) {
-	stub, err := newFunctionStub(ctx, cfg, irc, searchFunctionName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewSearchFunction(ctx context.Context, cfg *config.Config, irc irc.IRC) Function {
 	return &searchFunction{
-		FunctionStub: stub,
+		functionStub: defaultFunctionStub(ctx, cfg, irc),
 		retriever:    retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-	}, nil
+	}
 }
 
-func (f *searchFunction) MayExecute(e *irc.Event) bool {
-	return f.isValid(e, 1)
+func (f *searchFunction) Name() string {
+	return searchFunctionName
+}
+
+func (f *searchFunction) Description() string {
+	return "Searches the web for the given query."
+}
+
+func (f *searchFunction) Triggers() []string {
+	return []string{"search"}
+}
+
+func (f *searchFunction) Usages() []string {
+	return []string{"%s <query>"}
+}
+
+func (f *searchFunction) AllowedInPrivateMessages() bool {
+	return true
+}
+
+func (f *searchFunction) CanExecute(e *irc.Event) bool {
+	return f.isFunctionEventValid(f, e, 1)
 }
 
 func (f *searchFunction) Execute(e *irc.Event) {
@@ -47,7 +62,7 @@ func (f *searchFunction) Execute(e *irc.Event) {
 	input := strings.Join(tokens[1:], " ")
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ [%s/%s] search %s", e.From, e.ReplyTarget(), input)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", f.Name(), e.From, e.ReplyTarget(), input)
 
 	for _, search := range f.searchChain() {
 		s, err := search(e, input)
