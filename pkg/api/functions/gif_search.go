@@ -26,11 +26,11 @@ func (f *gifSearchFunction) Name() string {
 }
 
 func (f *gifSearchFunction) Description() string {
-	return "Searches for the specified gif."
+	return "Searches for a gif on Giphy."
 }
 
 func (f *gifSearchFunction) Triggers() []string {
-	return []string{"gif"}
+	return []string{"gif", "gifs", "giphy"}
 }
 
 func (f *gifSearchFunction) Usages() []string {
