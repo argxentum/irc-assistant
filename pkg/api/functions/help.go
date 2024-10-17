@@ -118,15 +118,33 @@ func (f *helpFunction) Execute(e *irc.Event) {
 		return
 	}
 
-	reply := make([]string, 0)
-	reply = append(reply, fmt.Sprintf("%s: %s", style.Bold(style.Underline(trigger)), fn.Description()))
-
-	slices.SortFunc(fn.Triggers(), func(a, b string) int {
+	extraTriggers := make([]string, 0)
+	for _, t := range fn.Triggers() {
+		if t != trigger {
+			extraTriggers = append(extraTriggers, t)
+		}
+	}
+	slices.SortFunc(extraTriggers, func(a, b string) int {
 		if len(a) != len(b) {
 			return len(a) - len(b)
 		}
 		return strings.Compare(a, b)
 	})
+
+	extra := ""
+	for _, t := range extraTriggers {
+		if len(extra) > 0 {
+			extra += ", "
+		}
+		extra += style.Bold(style.Underline(t))
+	}
+
+	if len(extraTriggers) > 0 {
+		extra = fmt.Sprintf(" (or %s)", extra)
+	}
+
+	reply := make([]string, 0)
+	reply = append(reply, fmt.Sprintf("%s%s: %s", style.Bold(style.Underline(trigger)), extra, fn.Description()))
 
 	if len(fn.Usages()) > 0 {
 		usages := ""
@@ -135,7 +153,7 @@ func (f *helpFunction) Execute(e *irc.Event) {
 				if len(usages) > 0 {
 					usages += ", "
 				}
-				usages += fmt.Sprintf(u, fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, fn.Triggers()[0]))
+				usages += fmt.Sprintf(u, fmt.Sprintf("%s%s", f.cfg.Functions.Prefix, trigger))
 			}
 		}
 
