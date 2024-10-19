@@ -90,41 +90,51 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 
 	polls := doc.Find("table#polls").First()
 
-	averages := make([]string, 0)
+	averages := make([]float64, 0)
 	average := polls.Find("td.poll_avg").First()
 	for range candidates {
 		average = average.Next()
 		value := strings.TrimSpace(average.Text())
 		if len(value) > 0 {
-			averages = append(averages, value)
+			v, err := strconv.ParseFloat(strings.Replace(value, "%", "", -1), 64)
+			if err != nil {
+				logger.Warningf(e, "unable to parse polling average: %s", value)
+				continue
+			}
+			averages = append(averages, v)
 		}
 	}
 
 	if len(averages) == 0 {
 		average = polls.Find("td.poll_data").First()
 		for range candidates {
-			averages = append(averages, strings.TrimSpace(average.Text()))
+			v, err := strconv.ParseFloat(strings.Replace(strings.TrimSpace(average.Text()), "%", "", -1), 64)
+			if err != nil {
+				logger.Warningf(e, "unable to parse polling average: %s", average.Text())
+				continue
+			}
+			averages = append(averages, v)
 			average = average.Next()
 		}
 	}
 
 	if len(candidates) != len(averages) || len(candidates) == 0 {
-		logger.Warningf(e, "unable to parse polling data, candidates: [%s], averages: [%s]", strings.Join(candidates, ", "), strings.Join(averages, ", "))
+		averageSummary := ""
+		for i, a := range averages {
+			if len(averageSummary) > 0 {
+				averageSummary += ", "
+			}
+			averageSummary += fmt.Sprintf("%s: %.1f", candidates[i], a)
+		}
+		logger.Warningf(e, "unable to parse polling data, %s", averageSummary)
 		f.Replyf(e, "Unable to parse %s polling data", style.Bold(pollInput))
 		return
 	}
 
 	winningAvg := 0.0
-	winningCandidateIndex := 0
-	for i, a := range averages {
-		avg, err := strconv.ParseFloat(strings.Replace(a, "%", "", -1), 32)
-		if err != nil {
-			logger.Warningf(e, "unable to parse polling average for %s: %s", candidates[i], a)
-			continue
-		}
-		if avg > winningAvg {
-			winningAvg = avg
-			winningCandidateIndex = i
+	for _, a := range averages {
+		if a > winningAvg {
+			winningAvg = a
 		}
 	}
 
@@ -133,10 +143,10 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 		if len(message) > 0 {
 			message += ", "
 		}
-		if i == winningCandidateIndex {
-			message += style.ColorForeground(fmt.Sprintf("%s: %s", style.Underline(c), averages[i]), style.ColorGreen)
+		if averages[i] == winningAvg {
+			message += style.ColorForeground(fmt.Sprintf("%s: %.1f", style.Underline(c), averages[i]), style.ColorGreen)
 		} else {
-			message += fmt.Sprintf("%s: %s", style.Underline(c), averages[i])
+			message += fmt.Sprintf("%s: %.1f", style.Underline(c), averages[i])
 		}
 	}
 	message = fmt.Sprintf("%s – %s", style.Bold(title), message)
