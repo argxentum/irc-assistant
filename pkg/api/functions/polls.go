@@ -144,9 +144,9 @@ func (f *pollsFunction) Execute(e *irc.Event) {
 			message += ", "
 		}
 		if averages[i] == winningAvg {
-			message += style.ColorForeground(fmt.Sprintf("%s: %.1f", style.Underline(c), averages[i]), style.ColorGreen)
+			message += style.ColorForeground(fmt.Sprintf("%s: %.1f%%", style.Underline(c), averages[i]), style.ColorGreen)
 		} else {
-			message += fmt.Sprintf("%s: %.1f", style.Underline(c), averages[i])
+			message += fmt.Sprintf("%s: %.1f%%", style.Underline(c), averages[i])
 		}
 	}
 	message = fmt.Sprintf("%s – %s", style.Bold(title), message)
