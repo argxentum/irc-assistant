@@ -12,7 +12,7 @@ type Config struct {
 	Reddit      RedditConfig
 	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
 	Currency    CurrencyConfig
-	Functions   FunctionsConfig
+	Commands    CommandsConfig
 	Ignore      IgnoreConfig
 	Giphy       GiphyConfig
 }
@@ -74,7 +74,7 @@ type CurrencyConfig struct {
 	APIKey string `yaml:"api_key"`
 }
 
-type FunctionsConfig struct {
+type CommandsConfig struct {
 	Prefix string
 }
 
