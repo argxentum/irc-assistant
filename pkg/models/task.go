@@ -15,11 +15,12 @@ const (
 )
 
 const (
-	TaskStatusPending  = "pending"
-	TaskStatusComplete = "complete"
+	TaskStatusPending   = "pending"
+	TaskStatusComplete  = "complete"
+	TaskStatusCancelled = "cancelled"
 )
 
-type ActiveTask struct {
+type PendingTask struct {
 	ID    string
 	DueAt time.Time `firestore:"due_at" json:"due_at"`
 	Path  string
@@ -45,8 +46,8 @@ type BanRemovalTaskData struct {
 	Channel string `firestore:"channel" json:"channel"`
 }
 
-func NewActiveTask(id, path string, dueAt time.Time) *ActiveTask {
-	return &ActiveTask{
+func NewPendingTask(id, path string, dueAt time.Time) *PendingTask {
+	return &PendingTask{
 		ID:    id,
 		DueAt: dueAt,
 		Path:  path,

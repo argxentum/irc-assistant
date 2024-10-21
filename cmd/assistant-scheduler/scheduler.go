@@ -45,7 +45,7 @@ func publishDueTasks(tasks []*models.Task) {
 			continue
 		}
 
-		if err := fs.RemoveTask(task.ID); err != nil {
+		if err := fs.RemoveTask(task.ID, models.TaskStatusComplete); err != nil {
 			logger.Errorf(nil, "error completing %s, %s", task.ID, err)
 		}
 	}

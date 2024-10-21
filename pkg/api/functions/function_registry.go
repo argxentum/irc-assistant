@@ -79,6 +79,7 @@ func (fr *functionRegistry) RegisterFunctions() {
 	fr.functions[karmaSetFunctionName] = NewKarmaSetFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[karmaGetFunctionName] = NewKarmaGetFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[reminderFunctionName] = NewReminderFunction(fr.ctx, fr.cfg, fr.irc)
+	fr.functions[remindersFunctionName] = NewRemindersFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[animatedTextFunctionName] = NewAnimatedTextFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[gifSearchFunctionName] = NewGifSearchFunction(fr.ctx, fr.cfg, fr.irc)
 
@@ -137,6 +138,7 @@ func (fr *functionRegistry) RegisterFunctions() {
 		0,
 	)
 
+	// functions requiring authorization
 	fr.functions[echoFunctionName] = NewEchoFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[sayFunctionName] = NewSayFunction(fr.ctx, fr.cfg, fr.irc)
 	fr.functions[joinFunctionName] = NewJoinFunction(fr.ctx, fr.cfg, fr.irc)
