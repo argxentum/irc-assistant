@@ -148,7 +148,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 }
 
 func parseURLFromMessage(message string) string {
-	urlRegex := regexp.MustCompile(`(?i)(https?://\S+)\b`)
+	urlRegex := regexp.MustCompile(`(?i)(https?://\S+)`)
 	urlMatches := urlRegex.FindStringSubmatch(message)
 	if len(urlMatches) > 0 {
 		return urlMatches[0]
