@@ -72,7 +72,7 @@ func (c *karmaSetCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	c.authorizer.UserStatus(e.ReplyTarget(), to, func(user *irc.User) {
+	c.authorizer.GetUser(e.ReplyTarget(), to, func(user *irc.User) {
 		if user == nil {
 			logger.Debugf(e, "ignoring invalid karma target: %s", to)
 			return

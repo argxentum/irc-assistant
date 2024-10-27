@@ -10,6 +10,7 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -38,7 +39,7 @@ func (c *tempBanCommand) Triggers() []string {
 }
 
 func (c *tempBanCommand) Usages() []string {
-	return []string{"%s <duration> <mask>"}
+	return []string{"%s <duration> <nick> [<reason>]"}
 }
 
 func (c *tempBanCommand) AllowedInPrivateMessages() bool {
@@ -53,11 +54,16 @@ func (c *tempBanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 
-	duration := tokens[1]
-	mask := tokens[2]
+	duration := strings.Replace(tokens[1], "+", "", 1)
+	nick := tokens[2]
+
+	reason := ""
+	if len(tokens) > 3 {
+		reason = strings.Join(tokens[3:], " ")
+	}
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, mask)
+	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
 
 	seconds, err := elapse.ParseDuration(duration)
 	if err != nil {
@@ -72,15 +78,32 @@ func (c *tempBanCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		c.irc.Ban(channel, mask)
+		c.authorizer.GetUser(e.From, nick, func(user *irc.User) {
+			if user == nil {
+				c.Replyf(e, "User %s not found", style.Bold(nick))
+				return
+			}
 
-		task := models.NewBanRemovalTask(time.Now().Add(seconds), mask, channel)
-		err = firestore.Get().AddTask(task)
-		if err != nil {
-			logger.Errorf(e, "error adding task, %s", err)
-			return
-		}
+			if len(reason) == 0 {
+				reason = fmt.Sprintf("temporarily banned for %s", duration)
+			} else {
+				reason = fmt.Sprintf("%s (temporarily banned for %s)", reason, duration)
+			}
 
-		logger.Infof(e, "temporarily banned %s from %s for %s", mask, channel, duration)
+			go func() {
+				c.irc.Ban(channel, user.Mask.NickWildcardString())
+				time.Sleep(100 * time.Millisecond)
+				c.irc.Kick(channel, user.Mask.Nick, reason)
+
+				task := models.NewBanRemovalTask(time.Now().Add(seconds), user.Mask.NickWildcardString(), channel)
+				err = firestore.Get().AddTask(task)
+				if err != nil {
+					logger.Errorf(e, "error adding task, %s", err)
+					return
+				}
+
+				logger.Infof(e, "temporarily banned %s from %s for %s", nick, channel, duration)
+			}()
+		})
 	})
 }

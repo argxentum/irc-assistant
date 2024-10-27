@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"strings"
@@ -64,12 +65,19 @@ func (c *kickBanCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		go func() {
-			c.irc.Kick(channel, nick, reason)
-			time.Sleep(100 * time.Millisecond)
-			c.irc.Ban(channel, nick)
-		}()
+		c.authorizer.GetUser(e.From, nick, func(user *irc.User) {
+			if user == nil {
+				c.Replyf(e, "User %s not found", style.Bold(nick))
+				return
+			}
 
-		logger.Infof(e, "kickBanned %s in %s", nick, channel)
+			go func() {
+				c.irc.Ban(channel, user.Mask.NickWildcardString())
+				time.Sleep(100 * time.Millisecond)
+				c.irc.Kick(channel, nick, reason)
+
+				logger.Infof(e, "kickBanned %s in %s", nick, channel)
+			}()
+		})
 	})
 }

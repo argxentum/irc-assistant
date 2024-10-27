@@ -126,12 +126,14 @@ func (cs *commandStub) isCommandEventValid(c Command, e *irc.Event, minBodyToken
 
 // isBotAuthorizedByChannelStatus checks if the bot is authorized based on channel status
 func (cs *commandStub) isBotAuthorizedByChannelStatus(channel string, status irc.ChannelStatus, callback func(bool)) {
-	cs.authorizer.UserStatus(channel, cs.cfg.IRC.Nick, func(user *irc.User) {
-		if user != nil {
-			callback(irc.IsStatusAtLeast(user.Status, status))
-		} else {
-			callback(false)
+	cs.authorizer.ListUsers(channel, func(users []*irc.User) {
+		for _, user := range users {
+			if user.Mask.Nick == cs.cfg.IRC.Nick {
+				callback(irc.IsStatusAtLeast(user.Status, status))
+				return
+			}
 		}
+		callback(false)
 	})
 }
 

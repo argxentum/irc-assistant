@@ -3,6 +3,7 @@ package irc
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"crypto/tls"
 	"fmt"
 	irce "github.com/thoj/go-ircevent"
@@ -21,8 +22,20 @@ const (
 )
 
 type User struct {
-	Nick   string
+	Mask   *Mask
 	Status ChannelStatus
+}
+
+func UserByTrimmingStatusPrefix(u string) *User {
+	if strings.HasPrefix(u, string(ChannelStatusOperator)) {
+		return &User{Mask: &Mask{Nick: strings.TrimPrefix(u, string(ChannelStatusOperator))}, Status: ChannelStatusOperator}
+	} else if strings.HasPrefix(u, string(ChannelStatusHalfOperator)) {
+		return &User{Mask: &Mask{Nick: strings.TrimPrefix(u, string(ChannelStatusHalfOperator))}, Status: ChannelStatusHalfOperator}
+	} else if strings.HasPrefix(u, string(ChannelStatusVoice)) {
+		return &User{Mask: &Mask{Nick: strings.TrimPrefix(u, string(ChannelStatusVoice))}, Status: ChannelStatusVoice}
+	} else {
+		return &User{Mask: &Mask{Nick: u}, Status: ChannelStatusNormal}
+	}
 }
 
 func StatusName(status ChannelStatus) string {
@@ -59,7 +72,7 @@ type IRC interface {
 	SendMessage(target, message string)
 	SendMessages(target string, messages []string)
 	GetUser(channel, nick string, callback func(user *User))
-	GetUsers(channel string, callback func(users []User))
+	ListUsers(channel string, callback func(users []*User))
 	Up(channel, nick string)
 	Down(channel, nick string)
 	Kick(channel, nick, reason string)
@@ -223,27 +236,17 @@ func (s *service) SendMessages(target string, messages []string) {
 	}()
 }
 
-func (s *service) GetUsers(channel string, callback func(users []User)) {
+func (s *service) ListUsers(channel string, callback func(users []*User)) {
 	s.conn.SendRawf("NAMES %s", channel)
 
-	allUsers := make([]User, 0)
+	allUsers := make([]*User, 0)
 
 	s.respondUntil(CodeNamesReply, CodeEndOfNames, func(e *irce.Event) {
-		users := make([]User, 0)
-
+		users := make([]*User, 0)
 		results := strings.Split(e.Message(), " ")
 		for _, u := range results {
-			if strings.HasPrefix(u, string(ChannelStatusOperator)) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusOperator)), Status: ChannelStatusOperator})
-			} else if strings.HasPrefix(u, string(ChannelStatusHalfOperator)) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusHalfOperator)), Status: ChannelStatusHalfOperator})
-			} else if strings.HasPrefix(u, string(ChannelStatusVoice)) {
-				users = append(users, User{Nick: strings.TrimPrefix(u, string(ChannelStatusVoice)), Status: ChannelStatusVoice})
-			} else {
-				users = append(users, User{Nick: u, Status: ChannelStatusNormal})
-			}
+			users = append(users, UserByTrimmingStatusPrefix(u))
 		}
-
 		allUsers = append(allUsers, users...)
 	}, func(e *irce.Event) {
 		callback(allUsers)
@@ -251,14 +254,31 @@ func (s *service) GetUsers(channel string, callback func(users []User)) {
 }
 
 func (s *service) GetUser(channel, nick string, callback func(user *User)) {
-	s.GetUsers(channel, func(users []User) {
-		for _, u := range users {
-			if u.Nick == nick {
-				callback(&u)
-				return
-			}
+	s.conn.SendRawf("WHOIS %s", nick)
+
+	var user *User
+
+	s.respondUntil(CodeWhoIsReply, CodeEndOfWhoIs, func(e *irce.Event) {
+		if len(e.Arguments) < 4 {
+			log.Logger().Errorf(nil, "invalid WHOIS reply: %s", e.Raw)
+			return
 		}
-		callback(nil)
+
+		id := e.Arguments[2]
+		host := e.Arguments[3]
+		user = &User{Mask: &Mask{Nick: nick, UserID: id, Host: host}}
+	}, func(e *irce.Event) {
+		s.ListUsers(channel, func(users []*User) {
+			for _, u := range users {
+				if u.Mask.Nick == nick {
+					user.Status = u.Status
+					callback(user)
+					return
+				}
+			}
+			user.Status = ChannelStatusNormal
+			callback(user)
+		})
 	})
 }
 
@@ -271,11 +291,7 @@ func (s *service) Down(channel, nick string) {
 }
 
 func (s *service) Kick(channel, nick, reason string) {
-	s.GetUser(channel, s.cfg.IRC.Nick, func(status *User) {
-		if status != nil && (status.Status == ChannelStatusOperator || status.Status == ChannelStatusHalfOperator) {
-			s.conn.Kick(nick, channel, reason)
-		}
-	})
+	s.conn.Kick(nick, channel, reason)
 }
 
 func (s *service) Ban(channel, mask string) {

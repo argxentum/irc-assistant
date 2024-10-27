@@ -12,8 +12,8 @@ type CommandAuthorizer interface {
 	IsAuthorized(e *irc.Event, channel string, callback func(bool))
 	IsUserAuthorizedByRole(nick string, role Role) bool
 	IsUserAuthorizedByChannelStatus(e *irc.Event, channel string, status irc.ChannelStatus, callback func(bool))
-	UserStatus(channel, nick string, callback func(user *irc.User))
-	UserStatuses(channel string, callback func([]irc.User))
+	GetUser(channel, nick string, callback func(user *irc.User))
+	ListUsers(channel string, callback func([]*irc.User))
 }
 
 type commandAuthorizer struct {
@@ -61,25 +61,27 @@ func (c *commandAuthorizer) IsUserAuthorizedByRole(nick string, role Role) bool 
 	return true
 }
 
-// UserStatus retrieves the user's status in the channel (e.g., operator, half-operator, etc.)
-func (c *commandAuthorizer) UserStatus(channel, nick string, callback func(user *irc.User)) {
+// GetUser retrieves a user in the channel by nick
+func (c *commandAuthorizer) GetUser(channel, nick string, callback func(user *irc.User)) {
 	c.irc.GetUser(channel, nick, callback)
 }
 
-func (c *commandAuthorizer) UserStatuses(channel string, callback func([]irc.User)) {
-	c.irc.GetUsers(channel, callback)
+func (c *commandAuthorizer) ListUsers(channel string, callback func([]*irc.User)) {
+	c.irc.ListUsers(channel, callback)
 }
 
 // IsUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status
 func (c *commandAuthorizer) IsUserAuthorizedByChannelStatus(e *irc.Event, channel string, status irc.ChannelStatus, callback func(bool)) {
 	nick, _ := e.Sender()
 
-	c.UserStatus(channel, nick, func(user *irc.User) {
-		if user != nil && !irc.IsStatusAtLeast(user.Status, status) {
-			callback(false)
-			return
+	c.ListUsers(channel, func(users []*irc.User) {
+		for _, user := range users {
+			if user.Mask.Nick == nick && irc.IsStatusAtLeast(user.Status, status) {
+				callback(true)
+				return
+			}
 		}
-		callback(true)
+		callback(false)
 	})
 }
 
