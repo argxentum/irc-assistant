@@ -27,7 +27,7 @@ func (c *summaryCommand) nuggetizeRequest(e *irc.Event, url string) (*summary, e
 
 	title := strings.TrimSpace(doc.Find("span.title").First().Text())
 
-	if isRejectedTitle(title) {
+	if c.isRejectedTitle(title) {
 		logger.Debugf(e, "rejected title: %s", title)
 		return nil, rejectedTitleError
 	}

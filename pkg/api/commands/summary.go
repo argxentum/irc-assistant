@@ -156,16 +156,6 @@ func parseURLFromMessage(message string) string {
 	return ""
 }
 
-var rejectedTitlePrefixes = []string{
-	"just a moment",
-	"sorry, you have been blocked",
-	"access to this page has been denied",
-	"please verify you are a human",
-	"you are being redirected",
-	"whoa there, pardner",
-	"page not found",
-}
-
 var domainDenylist = []string{
 	"i.redd.it",
 }
@@ -180,8 +170,8 @@ func (c *summaryCommand) isDomainIn(url string, domains []string) bool {
 	return slices.Contains(domains, domain)
 }
 
-func isRejectedTitle(title string) bool {
-	for _, prefix := range rejectedTitlePrefixes {
+func (c *summaryCommand) isRejectedTitle(title string) bool {
+	for _, prefix := range c.cfg.Ignore.TitlePrefixes {
 		if strings.HasPrefix(strings.ToLower(title), prefix) {
 			return true
 		}

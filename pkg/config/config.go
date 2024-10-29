@@ -79,8 +79,9 @@ type CommandsConfig struct {
 }
 
 type IgnoreConfig struct {
-	Users   []string
-	Domains []string
+	Users         []string
+	Domains       []string
+	TitlePrefixes []string `yaml:"title_prefixes"`
 }
 
 type GiphyConfig struct {

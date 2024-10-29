@@ -45,7 +45,7 @@ func (c *summaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 		title = h1
 	}
 
-	if isRejectedTitle(title) {
+	if c.isRejectedTitle(title) {
 		return nil, rejectedTitleError
 	}
 

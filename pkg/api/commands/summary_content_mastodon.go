@@ -27,7 +27,7 @@ func (c *summaryCommand) parseMastodon(e *irc.Event, url string) (*summary, erro
 		title = strings.TrimSpace(doc.Find("title").First().Text())
 	}
 
-	if isRejectedTitle(title) {
+	if c.isRejectedTitle(title) {
 		return nil, fmt.Errorf("rejected title: %s", title)
 	}
 
