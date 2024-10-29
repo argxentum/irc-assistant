@@ -268,6 +268,11 @@ func (s *service) GetUser(channel, nick string, callback func(user *User)) {
 		host := e.Arguments[3]
 		user = &User{Mask: &Mask{Nick: nick, UserID: id, Host: host}}
 	}, func(e *irce.Event) {
+		if user == nil {
+			callback(nil)
+			return
+		}
+
 		s.ListUsers(channel, func(users []*User) {
 			for _, u := range users {
 				if u.Mask.Nick == nick {
@@ -276,8 +281,7 @@ func (s *service) GetUser(channel, nick string, callback func(user *User)) {
 					return
 				}
 			}
-			user.Status = ChannelStatusNormal
-			callback(user)
+			callback(nil)
 		})
 	})
 }
