@@ -254,19 +254,21 @@ func (s *service) ListUsers(channel string, callback func(users []*User)) {
 }
 
 func (s *service) GetUser(channel, nick string, callback func(user *User)) {
+	logger := log.Logger()
 	s.conn.SendRawf("WHOIS %s", nick)
 
 	var user *User
 
 	s.respondUntil(CodeWhoIsReply, CodeEndOfWhoIs, func(e *irce.Event) {
 		if len(e.Arguments) < 4 {
-			log.Logger().Errorf(nil, "invalid WHOIS reply: %s", e.Raw)
+			logger.Errorf(nil, "invalid WHOIS reply: %s", e.Raw)
 			return
 		}
 
 		id := e.Arguments[2]
 		host := e.Arguments[3]
 		user = &User{Mask: &Mask{Nick: nick, UserID: id, Host: host}}
+		logger.Debugf(nil, "WHOIS(%s,%s): %s", channel, nick, user.Mask.String())
 	}, func(e *irce.Event) {
 		if user == nil {
 			callback(nil)

@@ -65,7 +65,7 @@ func (c *kickBanCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		c.authorizer.GetUser(e.From, nick, func(user *irc.User) {
+		c.authorizer.GetUser(e.ReplyTarget(), nick, func(user *irc.User) {
 			if user == nil {
 				c.Replyf(e, "User %s not found", style.Bold(nick))
 				return

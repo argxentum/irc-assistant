@@ -21,9 +21,9 @@ const (
 )
 
 type PendingTask struct {
-	ID    string
+	ID    string    `firestore:"id" json:"id"`
 	DueAt time.Time `firestore:"due_at" json:"due_at"`
-	Path  string
+	Path  string    `firestore:"path" json:"path"`
 }
 
 type Task struct {
