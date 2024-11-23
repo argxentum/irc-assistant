@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"google.golang.org/api/iterator"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func count(ctx context.Context, client *firestore.Client, collectionPath string) int {
@@ -46,7 +48,9 @@ func get[T any](ctx context.Context, client *firestore.Client, documentPath stri
 	}
 
 	ds, err := dr.Get(ctx)
-	if err != nil {
+	if status.Code(err) == codes.NotFound {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 

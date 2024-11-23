@@ -9,8 +9,6 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"math/rand/v2"
 )
 
@@ -56,20 +54,20 @@ func (c *karmaGetCommand) Execute(e *irc.Event) {
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), nick)
 
 	fs := firestore.Get()
-	u, err := fs.User(c.ctx, e.ReplyTarget(), nick)
-	if err != nil && status.Code(err) != codes.NotFound {
+	u, err := fs.User(e.ReplyTarget(), nick)
+	if err != nil {
 		log.Logger().Errorf(e, "error getting user, %s", err)
 		c.Replyf(e, "unable to get karma for %s.", style.Bold(nick))
 		return
 	}
 
-	if u == nil || status.Code(err) == codes.NotFound {
+	if u == nil {
 		log.Logger().Infof(e, "user not found")
 		c.Replyf(e, "no karma found for %s.", style.Bold(nick))
 		return
 	}
 
-	history, err := fs.KarmaHistory(c.ctx, e.ReplyTarget(), u.Nick)
+	history, err := fs.KarmaHistory(e.ReplyTarget(), u.Nick)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting karma history, %s", err)
 		c.Replyf(e, "unable to get karma for %s.", style.Bold(nick))

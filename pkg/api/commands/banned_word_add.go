@@ -83,7 +83,7 @@ func (c *bannedWordAddCommand) Execute(e *irc.Event) {
 
 	store := firestore.Get()
 	for _, word := range words {
-		err := store.AddBannedWord(c.ctx, channel, word)
+		err := store.AddBannedWord(channel, word)
 		if err != nil {
 			logger.Errorf(e, "error adding banned word: %s", err)
 			return

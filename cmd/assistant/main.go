@@ -36,11 +36,11 @@ func main() {
 	defer queue.Get().Close()
 
 	svc := irc.NewIRC(ctx)
-	err = svc.Connect(cfg, processTasks, func(channel, nick string) {
+	err = svc.Connect(cfg, initializeAssistant, func(channel, nick string) {
 		if nick != cfg.IRC.Nick {
 			return
 		}
-		initializeChannel(ctx, channel)
+		initializeChannel(ctx, cfg, channel)
 	})
 	if err != nil {
 		panic(err)

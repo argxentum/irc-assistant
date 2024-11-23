@@ -18,19 +18,19 @@ type Config struct {
 }
 
 type IRCConfig struct {
-	Owner             string
-	Admins            []string
-	Server            string
-	ServerName        string `yaml:"server_name"`
-	Port              int
-	TLS               bool
-	Nick              string
-	Username          string            `yaml:"user_name"`
-	RealName          string            `yaml:"real_name"`
-	NickServ          NickServConfig    `yaml:"nickserv"`
-	ChanServ          ChanServConfig    `yaml:"chanserv"`
-	PostConnect       PostConnectConfig `yaml:"post_connect"`
-	NamesResponseCode string            `yaml:"names_response_code"`
+	Owner       string
+	Admins      []string
+	Server      string
+	ServerName  string `yaml:"server_name"`
+	Port        int
+	TLS         bool
+	Nick        string
+	Username    string            `yaml:"user_name"`
+	RealName    string            `yaml:"real_name"`
+	NickServ    NickServConfig    `yaml:"nickserv"`
+	ChanServ    ChanServConfig    `yaml:"chanserv"`
+	PostConnect PostConnectConfig `yaml:"post_connect"`
+	Inactivity  InactivityConfig  `yaml:"inactivity"`
 }
 
 type WebConfig struct {
@@ -57,6 +57,10 @@ type PostConnectConfig struct {
 	Code     string
 	Commands []string
 	AutoJoin []string `yaml:"auto_join"`
+}
+
+type InactivityConfig struct {
+	DefaultDuration string `yaml:"default_duration"`
 }
 
 type RedditConfig struct {

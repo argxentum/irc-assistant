@@ -10,8 +10,9 @@ import (
 const taskIDPrefix = "task"
 
 const (
-	TaskTypeReminder   = "reminder"
-	TaskTypeBanRemoval = "ban_removal"
+	TaskTypeReminder          = "reminder"
+	TaskTypeBanRemoval        = "ban_removal"
+	TaskTypePersistentChannel = "persistent_channel"
 )
 
 const (
@@ -20,56 +21,19 @@ const (
 	TaskStatusCancelled = "cancelled"
 )
 
-type PendingTask struct {
-	ID    string    `firestore:"id" json:"id"`
-	DueAt time.Time `firestore:"due_at" json:"due_at"`
-	Path  string    `firestore:"path" json:"path"`
-}
+const ScheduledTaskMaxRuns = 3
 
 type Task struct {
-	ID        string    `firestore:"id" json:"id"`
+	ID        string    `firestore:"id,omitempty" json:"id,omitempty"`
 	Type      string    `firestore:"type" json:"type"`
-	CreatedAt time.Time `firestore:"created_at" json:"created_at"`
+	Runs      int       `firestore:"runs,omitempty" json:"runs,omitempty"`
+	CreatedAt time.Time `firestore:"created_at,omitempty" json:"created_at,omitempty"`
 	DueAt     time.Time `firestore:"due_at" json:"due_at"`
-	Status    string    `firestore:"status" json:"status"`
-	Data      any       `firestore:"data" json:"data"`
+	Status    string    `firestore:"status,omitempty" json:"status,omitempty"`
+	Data      any       `firestore:"data,omitempty" json:"data,omitempty"`
 }
 
-type ReminderTaskData struct {
-	User        string `firestore:"user" json:"user"`
-	Destination string `firestore:"destination" json:"destination"`
-	Content     string `firestore:"content" json:"content"`
-}
-
-type BanRemovalTaskData struct {
-	Mask    string `firestore:"mask" json:"mask"`
-	Channel string `firestore:"channel" json:"channel"`
-}
-
-func NewPendingTask(id, path string, dueAt time.Time) *PendingTask {
-	return &PendingTask{
-		ID:    id,
-		DueAt: dueAt,
-		Path:  path,
-	}
-}
-
-func NewReminderTask(dueAt time.Time, user, destination, content string) *Task {
-	return newPendingTask(TaskTypeReminder, dueAt, ReminderTaskData{
-		User:        user,
-		Destination: destination,
-		Content:     content,
-	})
-}
-
-func NewBanRemovalTask(dueAt time.Time, mask, channel string) *Task {
-	return newPendingTask(TaskTypeBanRemoval, dueAt, BanRemovalTaskData{
-		Mask:    mask,
-		Channel: channel,
-	})
-}
-
-func newPendingTask(taskType string, due time.Time, payload any) *Task {
+func newTask(taskType string, due time.Time, payload any) *Task {
 	return &Task{
 		ID:        fmt.Sprintf("%s-%s", taskIDPrefix, uuid.NewString()),
 		Type:      taskType,
@@ -94,24 +58,32 @@ func DeserializeTask(data []byte) (*Task, error) {
 
 	switch task.Type {
 	case TaskTypeReminder:
-		var payload ReminderTaskData
-		err = json.Unmarshal(d, &payload)
-		if err != nil {
+		if task.Data, err = deserializeTaskData[ReminderTaskData](d); err != nil {
 			return nil, err
 		}
-		task.Data = payload
 	case TaskTypeBanRemoval:
-		var payload BanRemovalTaskData
-		err = json.Unmarshal(d, &payload)
-		if err != nil {
+		if task.Data, err = deserializeTaskData[BanRemovalTaskData](d); err != nil {
 			return nil, err
 		}
-		task.Data = payload
+	case TaskTypePersistentChannel:
+		if task.Data, err = deserializeTaskData[PersistentTaskData](d); err != nil {
+			return nil, err
+		}
 	}
 
 	return &task, nil
 }
 
+func deserializeTaskData[T any](data []byte) (T, error) {
+	var payload T
+	err := json.Unmarshal(data, &payload)
+	return payload, err
+}
+
 func (t *Task) Serialize() ([]byte, error) {
 	return json.Marshal(t)
+}
+
+func (t *Task) IsDue() bool {
+	return time.Now().After(t.DueAt)
 }

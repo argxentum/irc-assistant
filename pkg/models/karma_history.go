@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const PrefixKarma = "karma"
+
 type KarmaHistory struct {
 	ID        string    `firestore:"id"`
 	CreatedAt time.Time `firestore:"created_at"`

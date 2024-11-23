@@ -65,7 +65,7 @@ func IsStatusAtLeast(status, required ChannelStatus) bool {
 }
 
 type IRC interface {
-	Connect(cfg *config.Config, connectCallback func(i IRC), joinCallback func(channel, nick string)) error
+	Connect(cfg *config.Config, connectCallback func(ctx context.Context, cfg *config.Config, i IRC), joinChannelCallback func(channel, nick string)) error
 	Listen(ech chan *Event)
 	Join(channel string)
 	Part(channel string)
@@ -96,7 +96,7 @@ type service struct {
 	ech  chan *Event
 }
 
-func (s *service) Connect(cfg *config.Config, connectCallback func(irc IRC), joinCallback func(channel, nick string)) error {
+func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.Context, cfg *config.Config, irc IRC), joinChannelCallback func(channel, nick string)) error {
 	s.cfg = cfg
 
 	s.conn = irce.IRC(cfg.IRC.Nick, cfg.IRC.Username)
@@ -127,14 +127,14 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(irc IRC), joi
 			for _, channel := range cfg.IRC.PostConnect.AutoJoin {
 				s.conn.Join(channel)
 			}
-			connectCallback(s)
+			connectCallback(s.ctx, s.cfg, s)
 			return true
 		})
 	}
 
-	if joinCallback != nil {
+	if joinChannelCallback != nil {
 		s.conn.AddCallback(CodeJoin, func(e *irce.Event) {
-			joinCallback(e.Message(), e.Nick)
+			joinChannelCallback(e.Message(), e.Nick)
 		})
 	}
 

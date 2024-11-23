@@ -1,9 +1,13 @@
 package reddit
 
 import (
+	"assistant/pkg/api/context"
 	"assistant/pkg/api/retriever"
+	"assistant/pkg/config"
+	"assistant/pkg/log"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"net/url"
@@ -29,11 +33,31 @@ type Listing struct {
 type Post struct {
 	Title       string  `json:"title"`
 	URL         string  `json:"url"`
+	Permalink   string  `json:"permalink"`
 	Created     float64 `json:"created_utc"`
 	Subreddit   string  `json:"subreddit"`
 	Author      string  `json:"author"`
 	Score       int     `json:"score"`
 	NumComments int     `json:"num_comments"`
+	Stickied    bool    `json:"stickied"`
+}
+
+type PostDetail []struct {
+	Data struct {
+		Children []struct {
+			Data Comment
+		}
+	}
+}
+
+type PostWithTopComment struct {
+	Post    Post
+	Comment *Comment
+}
+
+type Comment struct {
+	Body   string `json:"body"`
+	Author string `json:"author"`
 }
 
 func IsJWTExpired(tok string) bool {
@@ -41,7 +65,7 @@ func IsJWTExpired(tok string) bool {
 		return true
 	}
 
-	token, _ := jwt.Parse(tok, func(token *jwt.Token) (interface{}, error) {
+	token, _ := jwt.Parse(tok, func(token *jwt.Token) (any, error) {
 		return token, nil
 	})
 
@@ -108,4 +132,154 @@ func Login(username, password string) (*LoginResult, error) {
 	result.URL = u
 	result.Cookies = resp.Cookies()
 	return result, nil
+}
+
+func loginIfNeeded(ctx context.Context, cfg *config.Config) error {
+	logger := log.Logger()
+
+	if IsJWTExpired(ctx.Session().Reddit.JWT) {
+		logger.Debug(nil, "reddit JWT token expired, logging in")
+
+		result, err := Login(cfg.Reddit.Username, cfg.Reddit.Password)
+		if err != nil {
+			return fmt.Errorf("error logging into reddit, %s", err)
+		}
+
+		if result == nil {
+			return errors.New("unable to login to reddit")
+		}
+
+		ctx.Session().Reddit.JWT = result.JWT
+		ctx.Session().Reddit.Modhash = result.Modhash
+		ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
+	}
+
+	return nil
+}
+
+const redditBaseURL = "https://api.reddit.com"
+const searchRedditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
+const risingRedditPosts = "%s/r/%s/rising.json?limit=%d"
+const defaultRedditPosts = 3
+const maxRedditPosts = 5
+
+func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]Post, error) {
+	if err := loginIfNeeded(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	t := url.QueryEscape(topic)
+	query := fmt.Sprintf(searchRedditPosts, redditBaseURL, subreddit, t)
+
+	req, err := http.NewRequest(http.MethodGet, query, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var listing Listing
+	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+		return nil, err
+	}
+
+	posts := make([]Post, 0)
+	for _, child := range listing.Data.Children {
+		posts = append(posts, child.Data)
+	}
+
+	return posts, nil
+}
+
+func RisingSubredditPosts(ctx context.Context, cfg *config.Config, subreddit string, n int) ([]PostWithTopComment, error) {
+	if err := loginIfNeeded(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	if n == 0 {
+		n = defaultRedditPosts
+	} else if n > maxRedditPosts {
+		n = maxRedditPosts
+	}
+
+	query := fmt.Sprintf(risingRedditPosts, redditBaseURL, subreddit, n)
+	req, err := http.NewRequest(http.MethodGet, query, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var listing Listing
+	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+		return nil, err
+	}
+
+	posts := make([]PostWithTopComment, 0)
+
+	for _, child := range listing.Data.Children {
+		if len(posts) >= n {
+			break
+		}
+
+		post := child.Data
+
+		if post.Stickied {
+			continue
+		}
+
+		permalink := fmt.Sprintf("%s%s", redditBaseURL, post.Permalink)
+		req, err = http.NewRequest(http.MethodGet, permalink, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err = client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		var detail PostDetail
+		if err = json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+			return nil, err
+		}
+
+		if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && detail[1].Data.Children[0].Data.Author == "AutoModerator") {
+			posts = append(posts, PostWithTopComment{Post: post, Comment: nil})
+			continue
+		}
+
+		for _, comment := range detail[1].Data.Children {
+			if comment.Data.Author != "AutoModerator" && len(comment.Data.Body) > 0 {
+				posts = append(posts, PostWithTopComment{post, &comment.Data})
+				break
+			}
+		}
+
+		resp.Body.Close()
+	}
+
+	return posts, nil
 }

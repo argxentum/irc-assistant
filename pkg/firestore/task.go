@@ -10,12 +10,20 @@ import (
 	"time"
 )
 
+func (fs *Firestore) Task(path string) (*models.Task, error) {
+	return get[models.Task](fs.ctx, fs.client, path)
+}
+
+func (fs *Firestore) SetTask(task *models.Task) error {
+	return set(fs.ctx, fs.client, fs.taskPath(task), task)
+}
+
 func (fs *Firestore) DueTasks() ([]*models.Task, error) {
 	logger := log.Logger()
 
-	activeTasksPath := fmt.Sprintf("%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks)
+	scheduledTasksPath := fmt.Sprintf("%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks)
 	criteria := QueryCriteria{
-		Path: activeTasksPath,
+		Path: scheduledTasksPath,
 		Filter: firestore.PropertyFilter{
 			Path:     "due_at",
 			Operator: LessThanOrEqual,
@@ -29,23 +37,23 @@ func (fs *Firestore) DueTasks() ([]*models.Task, error) {
 		},
 	}
 
-	activeTasks, err := query[models.PendingTask](fs.ctx, fs.client, criteria)
+	scheduledTasks, err := query[models.ScheduledTask](fs.ctx, fs.client, criteria)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(activeTasks) == 0 {
+	if len(scheduledTasks) == 0 {
 		return nil, nil
 	}
 
-	logger.Debugf(nil, "tasks due: %d", len(activeTasks))
+	logger.Debugf(nil, "tasks due: %d", len(scheduledTasks))
 
 	tasks := make([]*models.Task, 0)
 
-	for _, activeTask := range activeTasks {
-		logger.Debugf(nil, "task due: %s", activeTask.Path)
+	for _, scheduledTask := range scheduledTasks {
+		logger.Debugf(nil, "task due: %s", scheduledTask.Path)
 
-		task, err := get[models.Task](fs.ctx, fs.client, activeTask.Path)
+		task, err := get[models.Task](fs.ctx, fs.client, scheduledTask.Path)
 		if err != nil {
 			logger.Warningf(nil, "error getting task, %s", err)
 			continue
@@ -65,6 +73,9 @@ func (fs *Firestore) taskPath(task *models.Task) string {
 	case models.TaskTypeBanRemoval:
 		data := task.Data.(models.BanRemovalTaskData)
 		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
+	case models.TaskTypePersistentChannel:
+		data := task.Data.(models.PersistentTaskData)
+		return fs.PersistentChannelTaskPath(data.Channel, task.ID)
 	}
 	return "unknown"
 }
@@ -88,9 +99,9 @@ func (fs *Firestore) AddTask(task *models.Task) error {
 	logger := log.Logger()
 
 	path := fs.taskPath(task)
-	pendingTask := models.NewPendingTask(task.ID, path, task.DueAt)
-	pendingTaskPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, pendingTask.ID)
-	if err := create[models.PendingTask](fs.ctx, fs.client, pendingTaskPath, pendingTask); err != nil {
+	scheduled := models.NewScheduledTask(task.ID, path, task.DueAt)
+	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, scheduled.ID)
+	if err := create[models.ScheduledTask](fs.ctx, fs.client, scheduledPath, scheduled); err != nil {
 		logger.Warningf(nil, "error creating task, %s", err)
 		return err
 	}
@@ -98,25 +109,29 @@ func (fs *Firestore) AddTask(task *models.Task) error {
 	return create(fs.ctx, fs.client, path, task)
 }
 
-func (fs *Firestore) RemoveTask(id, status string) error {
+func (fs *Firestore) RemoveScheduledTaskAndUpdateTask(task *models.Task) error {
 	logger := log.Logger()
 
-	pendingTaskPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, id)
-	pendingTask, err := get[models.PendingTask](fs.ctx, fs.client, pendingTaskPath)
+	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, task.ID)
+	scheduled, err := get[models.ScheduledTask](fs.ctx, fs.client, scheduledPath)
 	if err != nil {
-		logger.Warningf(nil, "error getting active task, %s", err)
+		logger.Warningf(nil, "error getting scheduled task, %s", err)
 		return err
 	}
 
-	if err = remove(fs.ctx, fs.client, pendingTaskPath); err != nil {
-		logger.Warningf(nil, "error removing active task, %s", err)
+	if scheduled == nil {
+		return nil
+	}
+
+	if err = remove(fs.ctx, fs.client, scheduledPath); err != nil {
+		logger.Warningf(nil, "error removing scheduled task, %s", err)
 		return err
 	}
 
-	return update(fs.ctx, fs.client, pendingTask.Path, map[string]interface{}{"status": status})
+	return update(fs.ctx, fs.client, scheduled.Path, map[string]interface{}{"status": task.Status, "runs": task.Runs})
 }
 
-func (fs *Firestore) GetPendingStatusTasks(user, destination, taskType string) ([]*models.Task, error) {
+func (fs *Firestore) GetPendingTasks(user, destination, taskType string) ([]*models.Task, error) {
 	path := fs.tasksPath(user, destination, taskType)
 
 	criteria := QueryCriteria{

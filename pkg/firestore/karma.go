@@ -1,12 +1,9 @@
 package firestore
 
 import (
-	"assistant/pkg/api/context"
 	"assistant/pkg/models"
 	"cloud.google.com/go/firestore"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -16,7 +13,7 @@ const (
 	OpDecrement = "--"
 )
 
-func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]*models.KarmaHistory, error) {
+func (fs *Firestore) KarmaHistory(channel, nick string) ([]*models.KarmaHistory, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, nick, pathKarmaHistory)
 	criteria := QueryCriteria{
 		Path: path,
@@ -28,14 +25,14 @@ func (fs *Firestore) KarmaHistory(ctx context.Context, channel, nick string) ([]
 		},
 	}
 
-	return query[models.KarmaHistory](ctx, fs.client, criteria)
+	return query[models.KarmaHistory](fs.ctx, fs.client, criteria)
 }
 
-func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, operation, reason string) (int, error) {
-	u, err := fs.User(ctx, channel, to)
-	if status.Code(err) == codes.NotFound || u == nil {
+func (fs *Firestore) AddKarmaHistory(channel, from, to, operation, reason string) (int, error) {
+	u, err := fs.User(channel, to)
+	if u == nil {
 		u = models.NewUser(to)
-		err = fs.CreateUser(ctx, channel, u)
+		err = fs.CreateUser(channel, u)
 		if err != nil {
 			return 0, err
 		}
@@ -53,11 +50,11 @@ func (fs *Firestore) AddKarmaHistory(ctx context.Context, channel, from, to, ope
 		return 0, fmt.Errorf("invalid operation, %s", operation)
 	}
 
-	if err = fs.UpdateUser(ctx, channel, u); err != nil {
+	if err = fs.UpdateUser(channel, u); err != nil {
 		return 0, err
 	}
 
 	karmaHistory := models.NewKarmaHistory(from, op, 1, reason)
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, u.Nick, pathKarmaHistory, karmaHistory.ID)
-	return u.Karma, create(ctx, fs.client, path, karmaHistory)
+	return u.Karma, create(fs.ctx, fs.client, path, karmaHistory)
 }

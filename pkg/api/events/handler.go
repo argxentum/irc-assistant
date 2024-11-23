@@ -3,10 +3,13 @@ package events
 import (
 	"assistant/pkg/api/commands"
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"fmt"
 	"slices"
 	"strings"
@@ -61,6 +64,8 @@ func (eh *handler) Handle(e *irc.Event) {
 		tokens := commands.Tokens(e.Message())
 
 		if !e.IsPrivateMessage() {
+			eh.resetChannelInactivityTimeout(e)
+
 			bannedWords := eh.bannedWordsInMessage(e, tokens)
 			if len(bannedWords) > 0 {
 				label := "word"
@@ -93,6 +98,27 @@ func (eh *handler) Handle(e *irc.Event) {
 				go f.Execute(e)
 			})
 		}
+	}
+}
+
+func (eh *handler) resetChannelInactivityTimeout(e *irc.Event) {
+	fs := firestore.Get()
+	logger := log.Logger()
+
+	channel, err := fs.Channel(e.ReplyTarget())
+	if err != nil {
+		logger.Errorf(e, "error retrieving channel, %s", err)
+		return
+	}
+
+	duration, err := elapse.ParseDuration(channel.InactivityDuration)
+	if err != nil {
+		logger.Errorf(e, "error parsing default inactivity duration, %s", err)
+	}
+
+	err = fs.SetPersistentChannelTaskDue(e.ReplyTarget(), models.ChannelInactivityTaskID, duration)
+	if err != nil {
+		logger.Errorf(e, "error updating persistent channel task, %s", err)
 	}
 }
 

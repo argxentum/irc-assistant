@@ -83,7 +83,7 @@ func (c *remindersCommand) Execute(e *irc.Event) {
 func (c *remindersCommand) showReminders(e *irc.Event) {
 	fs := firestore.Get()
 
-	reminders, err := fs.GetPendingStatusTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
+	reminders, err := fs.GetPendingTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting reminders, %s", err)
 		return
@@ -106,7 +106,7 @@ func (c *remindersCommand) showReminders(e *irc.Event) {
 
 func (c *remindersCommand) cancelReminder(e *irc.Event, number int) {
 	fs := firestore.Get()
-	reminders, err := fs.GetPendingStatusTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
+	reminders, err := fs.GetPendingTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting reminders, %s", err)
 		return
@@ -127,7 +127,8 @@ func (c *remindersCommand) cancelReminder(e *irc.Event, number int) {
 	}
 
 	reminder := reminders[number-1]
-	if err := fs.RemoveTask(reminder.ID, models.TaskStatusCancelled); err != nil {
+	reminder.Status = models.TaskStatusCancelled
+	if err := fs.RemoveScheduledTaskAndUpdateTask(reminder); err != nil {
 		log.Logger().Errorf(e, "error cancelling reminder, %s", err)
 		return
 	}

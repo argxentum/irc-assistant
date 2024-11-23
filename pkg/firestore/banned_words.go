@@ -1,7 +1,6 @@
 package firestore
 
 import (
-	"assistant/pkg/api/context"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
@@ -9,18 +8,18 @@ import (
 	"strings"
 )
 
-func (fs *Firestore) BannedWords(ctx context.Context, channel string) ([]*models.BannedWord, error) {
+func (fs *Firestore) BannedWords(channel string) ([]*models.BannedWord, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords)
-	return list[models.BannedWord](ctx, fs.client, path)
+	return list[models.BannedWord](fs.ctx, fs.client, path)
 }
 
-func (fs *Firestore) AddBannedWord(ctx context.Context, channel, word string) error {
+func (fs *Firestore) AddBannedWord(channel, word string) error {
 	id := fmt.Sprintf("%s-%s", models.PrefixBannedWord, uuid.NewString())
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords, id)
-	return create(ctx, fs.client, path, &models.BannedWord{ID: id, Word: strings.ToLower(word)})
+	return create(fs.ctx, fs.client, path, &models.BannedWord{ID: id, Word: strings.ToLower(word)})
 }
 
-func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string) error {
+func (fs *Firestore) RemoveBannedWord(channel, word string) error {
 	logger := log.Logger()
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords)
 
@@ -29,7 +28,7 @@ func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string)
 		Filter: createPropertyFilter("word", Equal, strings.ToLower(word)),
 	}
 
-	bannedWords, err := query[models.BannedWord](ctx, fs.client, criteria)
+	bannedWords, err := query[models.BannedWord](fs.ctx, fs.client, criteria)
 	if err != nil {
 		logger.Rawf(log.Warning, "error querying banned words, %s", err)
 		return err
@@ -43,10 +42,10 @@ func (fs *Firestore) RemoveBannedWord(ctx context.Context, channel, word string)
 	logger.Rawf(log.Debug, "removing %s", bannedWords[0].ID)
 
 	path = fmt.Sprintf("%s/%s", path, bannedWords[0].ID)
-	return remove(ctx, fs.client, path)
+	return remove(fs.ctx, fs.client, path)
 }
 
-func (fs *Firestore) IsBannedWord(ctx context.Context, channel, word string) (bool, error) {
+func (fs *Firestore) IsBannedWord(channel, word string) (bool, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords)
 
 	criteria := QueryCriteria{
@@ -54,6 +53,6 @@ func (fs *Firestore) IsBannedWord(ctx context.Context, channel, word string) (bo
 		Filter: createPropertyFilter("word", Equal, strings.ToLower(word)),
 	}
 
-	ok, err := exists[models.BannedWord](ctx, fs.client, criteria)
+	ok, err := exists[models.BannedWord](fs.ctx, fs.client, criteria)
 	return ok, err
 }

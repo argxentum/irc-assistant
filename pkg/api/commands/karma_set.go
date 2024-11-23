@@ -95,7 +95,7 @@ func (c *karmaSetCommand) Execute(e *irc.Event) {
 		log.Logger().Infof(e, "⚡ %s [%s/%s] %s %s %s", c.Name(), e.From, e.ReplyTarget(), to, op, reason)
 
 		fs := firestore.Get()
-		karma, err := fs.AddKarmaHistory(c.ctx, e.ReplyTarget(), e.From, to, op, reason)
+		karma, err := fs.AddKarmaHistory(e.ReplyTarget(), e.From, to, op, reason)
 		if err != nil {
 			logger.Errorf(e, "error updating karma: %s", err)
 			return

@@ -82,7 +82,7 @@ func (c *bannedWordDeleteCommand) Execute(e *irc.Event) {
 
 	store := firestore.Get()
 	for _, word := range words {
-		err := store.RemoveBannedWord(c.ctx, channel, word)
+		err := store.RemoveBannedWord(channel, word)
 		if err != nil {
 			logger.Errorf(e, "error removing banned word: %s", err)
 			return

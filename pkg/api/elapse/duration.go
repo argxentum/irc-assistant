@@ -45,3 +45,42 @@ func ParseDuration(offset string) (time.Duration, error) {
 
 	return time.Second * time.Duration(math.Round(quantity)), nil
 }
+
+func ParseDurationIntoPlainEnglish(offset string) string {
+	matches := timeOffsetRegexp.FindStringSubmatch(offset)
+	if len(matches) != 3 {
+		return "invalid duration"
+	}
+
+	quantity, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return "invalid quantity"
+	}
+
+	unit := strings.ToLower(matches[2])
+
+	switch unit {
+	case "s", "sec", "secs", "second", "seconds":
+		unit = "second"
+	case "m", "min", "mins", "minute", "minutes":
+		unit = "minute"
+	case "h", "hr", "hrs", "hour", "hours":
+		unit = "hour"
+	case "d", "day", "days":
+		unit = "day"
+	case "w", "week", "weeks":
+		unit = "week"
+	case "mo", "mos", "month", "months":
+		unit = "month"
+	case "y", "yr", "yrs", "year", "years":
+		unit = "year"
+	default:
+		return "invalid unit"
+	}
+
+	if quantity == 1 {
+		return fmt.Sprintf("%g %s", quantity, unit)
+	}
+
+	return fmt.Sprintf("%g %ss", quantity, unit)
+}

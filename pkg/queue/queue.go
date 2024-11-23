@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/api/option"
+	"time"
 )
 
 var instance Queue
@@ -15,6 +16,7 @@ var instance Queue
 type Queue interface {
 	Publish(task *models.Task) error
 	Receive(callback func(*models.Task)) error
+	Clear() error
 	Close() error
 }
 
@@ -93,6 +95,7 @@ func (q *queue) Receive(callback func(*models.Task)) error {
 	logger := log.Logger()
 
 	return q.subscription.Receive(q.ctx, func(ctx context.Context, msg *pubsub.Message) {
+		msg.Ack()
 		logger.Debugf(nil, "received: %s", string(msg.Data))
 
 		task, err := models.DeserializeTask(msg.Data)
@@ -101,7 +104,10 @@ func (q *queue) Receive(callback func(*models.Task)) error {
 			return
 		}
 
-		msg.Ack()
 		callback(task)
 	})
+}
+
+func (q *queue) Clear() error {
+	return q.subscription.SeekToTime(q.ctx, time.Now())
 }

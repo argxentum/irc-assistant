@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -17,25 +18,41 @@ type scheduler struct {
 
 func (s *scheduler) start() {
 	logger := log.Logger()
+	fs := firestore.Get()
 	logger.Debug(nil, "starting scheduler")
 
-	for {
-		tasks, err := firestore.Get().DueTasks()
+	err := queue.Get().Clear()
+	if err != nil {
+		panic(fmt.Errorf("error clearing queue, %s", err))
+	}
 
+	for {
+		tasks := make([]*models.Task, 0)
+
+		scheduled, err := fs.DueTasks()
 		if err != nil {
 			logger.Errorf(nil, "error getting due tasks, %s", err)
-		} else if len(tasks) > 0 {
-			publishDueTasks(tasks)
 		}
+		tasks = append(tasks, scheduled...)
 
-		time.Sleep(1 * time.Second)
+		persistent, err := fs.PersistentTasks(models.ChannelInactivityTaskID)
+		if err != nil {
+			logger.Errorf(nil, "error getting persistent tasks, %s", err)
+		}
+		tasks = append(tasks, persistent...)
+
+		publishTasks(tasks)
+		time.Sleep(15 * time.Second)
 	}
 }
 
-func publishDueTasks(tasks []*models.Task) {
+func publishTasks(tasks []*models.Task) {
+	if len(tasks) == 0 {
+		return
+	}
+
 	logger := log.Logger()
 	q := queue.Get()
-	fs := firestore.Get()
 
 	for _, task := range tasks {
 		logger.Debugf(nil, "publishing %s: %s", task.ID, task.Type)
@@ -43,10 +60,6 @@ func publishDueTasks(tasks []*models.Task) {
 		if err := q.Publish(task); err != nil {
 			logger.Errorf(nil, "error publishing %s, %s", task.ID, err)
 			continue
-		}
-
-		if err := fs.RemoveTask(task.ID, models.TaskStatusComplete); err != nil {
-			logger.Errorf(nil, "error completing %s, %s", task.ID, err)
 		}
 	}
 }
