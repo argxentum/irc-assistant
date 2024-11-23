@@ -145,6 +145,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[leaveCommandName] = NewLeaveCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[kickCommandName] = NewKickCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[banCommandName] = NewBanCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[unbanCommandName] = NewUnbanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[kickBanCommandName] = NewKickBanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[tempBanCommandName] = NewTempBanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[bannedWordAddCommandName] = NewBannedWordAddCommand(cr.ctx, cr.cfg, cr.irc)
