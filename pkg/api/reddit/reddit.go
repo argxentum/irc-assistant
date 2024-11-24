@@ -158,8 +158,8 @@ func loginIfNeeded(ctx context.Context, cfg *config.Config) error {
 }
 
 const redditBaseURL = "https://api.reddit.com"
-const searchRedditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
-const risingRedditPosts = "%s/r/%s/rising.json?limit=%d"
+const searchSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
+const subredditCategoryPosts = "%s/r/%s/%s.json?limit=%d"
 const defaultRedditPosts = 3
 const maxRedditPosts = 5
 
@@ -169,7 +169,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	}
 
 	t := url.QueryEscape(topic)
-	query := fmt.Sprintf(searchRedditPosts, redditBaseURL, subreddit, t)
+	query := fmt.Sprintf(searchSubredditPosts, redditBaseURL, subreddit, t)
 
 	req, err := http.NewRequest(http.MethodGet, query, nil)
 	if err != nil {
@@ -202,7 +202,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	return posts, nil
 }
 
-func RisingSubredditPosts(ctx context.Context, cfg *config.Config, subreddit string, n int) ([]PostWithTopComment, error) {
+func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Config, subreddit, category string, n int) ([]PostWithTopComment, error) {
 	if err := loginIfNeeded(ctx, cfg); err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func RisingSubredditPosts(ctx context.Context, cfg *config.Config, subreddit str
 		n = maxRedditPosts
 	}
 
-	query := fmt.Sprintf(risingRedditPosts, redditBaseURL, subreddit, n)
+	query := fmt.Sprintf(subredditCategoryPosts, redditBaseURL, subreddit, category, n)
 	req, err := http.NewRequest(http.MethodGet, query, nil)
 	if err != nil {
 		return nil, err
@@ -250,7 +250,7 @@ func RisingSubredditPosts(ctx context.Context, cfg *config.Config, subreddit str
 			continue
 		}
 
-		permalink := fmt.Sprintf("%s%s", redditBaseURL, post.Permalink)
+		permalink := redditBaseURL + post.Permalink
 		req, err = http.NewRequest(http.MethodGet, permalink, nil)
 		if err != nil {
 			return nil, err

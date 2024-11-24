@@ -112,8 +112,6 @@ func processBanRemoval(irc irc.IRC, task *models.Task) error {
 	return nil
 }
 
-const inactivityPosts = 1
-
 func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
 	fs := firestore.Get()
@@ -121,7 +119,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 
 	switch task.ID {
 	case models.ChannelInactivityTaskID:
-		posts, err := reddit.RisingSubredditPosts(ctx, cfg, "politics", inactivityPosts)
+		posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts)
 		if err != nil {
 			logger.Errorf(nil, "error getting top subreddit posts, %s", err)
 			return err
@@ -137,15 +135,15 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			logger.Errorf(nil, "error getting channel, %s", err)
 		}
 
-		message := fmt.Sprintf("%s of inactivity detected, sharing top rising post in r/politics...", elapse.ParseDurationIntoPlainEnglish(channel.InactivityDuration))
+		message := fmt.Sprintf("%s of inactivity detected, sharing first %s post in r/%s...", elapse.ParseDurationIntoPlainEnglish(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		if len(posts) > 1 {
-			message = fmt.Sprintf("%s of inactivity detected, sharing top %d rising posts in r/politics...", elapse.ParseDurationIntoPlainEnglish(channel.InactivityDuration), inactivityPosts)
+			message = fmt.Sprintf("%s of inactivity detected, sharing first %d %s posts in r/%s...", elapse.ParseDurationIntoPlainEnglish(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		}
 		irc.SendMessage(channelName, message)
 
 		time.Sleep(5 * time.Second)
 
-		for _, post := range posts {
+		for i, post := range posts {
 			messages := make([]string, 0)
 			messages = append(messages, style.Bold(post.Post.Title))
 			messages = append(messages, post.Post.URL)
@@ -157,8 +155,11 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			}
 
 			irc.SendMessages(channelName, messages)
+			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
 
-			time.Sleep(3 * time.Second)
+			if i < len(posts)-1 {
+				time.Sleep(3 * time.Second)
+			}
 		}
 	default:
 		return fmt.Errorf("unknown persistent channel task, %s", task.ID)

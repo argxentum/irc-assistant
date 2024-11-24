@@ -61,6 +61,9 @@ type PostConnectConfig struct {
 
 type InactivityConfig struct {
 	DefaultDuration string `yaml:"default_duration"`
+	Subreddit       string `yaml:"subreddit"`
+	Category        string `yaml:"category"`
+	Posts           int    `yaml:"posts"`
 }
 
 type RedditConfig struct {
