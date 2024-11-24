@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -230,12 +231,12 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-
 	var listing Listing
 	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
 		return nil, err
 	}
+
+	defer resp.Body.Close()
 
 	posts := make([]PostWithTopComment, 0)
 
@@ -245,6 +246,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 		}
 
 		post := child.Data
+		post.URL = html.UnescapeString(post.URL)
 
 		if post.Stickied {
 			continue
@@ -256,7 +258,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 			return nil, err
 		}
 
-		resp, err = client.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -268,6 +270,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 		if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && detail[1].Data.Children[0].Data.Author == "AutoModerator") {
 			posts = append(posts, PostWithTopComment{Post: post, Comment: nil})
+			resp.Body.Close()
 			continue
 		}
 
