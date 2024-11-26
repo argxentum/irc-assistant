@@ -135,9 +135,9 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			logger.Errorf(nil, "error getting channel, %s", err)
 		}
 
-		message := fmt.Sprintf("%s of inactivity detected, sharing first %s post in r/%s...", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+		message := fmt.Sprintf("%s of inactivity detected, sharing %s post from r/%s...", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		if len(posts) > 1 {
-			message = fmt.Sprintf("%s of inactivity detected, sharing first %d %s posts in r/%s...", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+			message = fmt.Sprintf("%s of inactivity detected, sharing %d %s posts from r/%s...", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		}
 		irc.SendMessage(channelName, message)
 
@@ -145,7 +145,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 
 		for i, post := range posts {
 			messages := make([]string, 0)
-			messages = append(messages, style.Bold(post.Post.Title))
+			messages = append(messages, fmt.Sprintf("%s (r/%s, %s)", style.Bold(post.Post.Title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
 			messages = append(messages, post.Post.URL)
 
 			if post.Comment != nil {

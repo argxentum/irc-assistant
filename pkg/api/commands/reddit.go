@@ -92,7 +92,8 @@ func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 		content = append(content, post.Post.URL)
 
 		if post.Comment != nil {
-			content = append(content, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(post.Comment.Body)))
+			comment := text.Sanitize(post.Comment.Body)
+			content = append(content, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(comment)))
 		}
 
 		if i < len(posts)-1 {
