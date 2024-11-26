@@ -15,6 +15,7 @@ var rsf []func(e *irc.Event, url string) (*summary, error)
 func (c *summaryCommand) requestChain() []func(e *irc.Event, url string) (*summary, error) {
 	if rsf == nil {
 		rsf = []func(e *irc.Event, url string) (*summary, error){
+			c.redditRequest,
 			c.directRequest,
 			c.impersonatedRequest,
 			c.nuggetizeRequest,

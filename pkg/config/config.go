@@ -67,9 +67,10 @@ type InactivityConfig struct {
 }
 
 type RedditConfig struct {
-	UserAgent string `yaml:"user_agent"`
-	Username  string
-	Password  string
+	UserAgent               string `yaml:"user_agent"`
+	Username                string
+	Password                string
+	SummarizationSubreddits []string `yaml:"summarization_subreddits"`
 }
 
 type GoogleCloudConfig struct {

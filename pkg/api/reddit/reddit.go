@@ -12,6 +12,7 @@ import (
 	"html"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
@@ -160,6 +161,7 @@ func loginIfNeeded(ctx context.Context, cfg *config.Config) error {
 
 const redditBaseURL = "https://api.reddit.com"
 const searchSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
+const searchPostsForURL = "%s/search.json?limit=10&restrict_sr=on&q=url:%s"
 const subredditCategoryPosts = "%s/r/%s/%s.json?limit=%d"
 const defaultRedditPosts = 3
 const maxRedditPosts = 5
@@ -199,6 +201,63 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	posts := make([]PostWithTopComment, 0)
 	for _, child := range listing.Data.Children {
 		post := child.Data
+		comment, err := getTopComment(ctx, post.Permalink)
+		if err != nil {
+			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
+		}
+		posts = append(posts, PostWithTopComment{Post: post, Comment: comment})
+	}
+
+	return posts, nil
+}
+
+func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) ([]PostWithTopComment, error) {
+	logger := log.Logger()
+	if err := loginIfNeeded(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	t := url.QueryEscape(bodyURL)
+	query := fmt.Sprintf(searchPostsForURL, redditBaseURL, t)
+
+	req, err := http.NewRequest(http.MethodGet, query, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	var listing Listing
+	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+		return nil, err
+	}
+
+	if len(listing.Data.Children) == 0 {
+		return nil, errors.New("no posts found")
+	}
+
+	posts := make([]PostWithTopComment, 0)
+	for _, child := range listing.Data.Children {
+		post := child.Data
+
+		if !slices.ContainsFunc(cfg.Reddit.SummarizationSubreddits, func(s string) bool {
+			return strings.ToLower(s) == strings.ToLower(post.Subreddit)
+		}) {
+			logger.Debugf(nil, "skipping post from %s", post.Subreddit)
+			continue
+		}
+
 		comment, err := getTopComment(ctx, post.Permalink)
 		if err != nil {
 			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
