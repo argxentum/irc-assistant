@@ -88,7 +88,7 @@ func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 			continue
 		}
 
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), c.subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
 		content = append(content, post.Post.URL)
 
 		if post.Comment != nil {

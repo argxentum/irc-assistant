@@ -8,10 +8,8 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -53,46 +51,28 @@ func (c *summaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	domain := match[1]
 	url = strings.Replace(url, domain, "api.reddit.com", 1)
 
-	logger.Debugf(e, "fetching reddit API URL %s", url)
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	post, err := reddit.GetPostWithTopComment(c.ctx, c.cfg, url)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
-
-	client := &http.Client{
-		Jar: c.ctx.Session().Reddit.CookieJar,
+	if post == nil {
+		return nil, errors.New("post not found")
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
+	title := text.Sanitize(post.Post.Title)
+	if len(title) == 0 {
+		return nil, nil
 	}
 
-	if resp == nil {
-		return nil, errors.New("no response")
+	messages := make([]string, 0)
+	messages = append(messages, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+
+	if post.Comment != nil {
+		messages = append(messages, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(post.Comment.Body)))
 	}
 
-	defer resp.Body.Close()
-
-	var listings []reddit.Listing
-	if err := json.NewDecoder(resp.Body).Decode(&listings); err != nil {
-		return nil, err
-	}
-
-	if len(listings) == 0 {
-		return nil, fmt.Errorf("no reddit parent found")
-	}
-
-	if len(listings[0].Data.Children) == 0 {
-		return nil, fmt.Errorf("no posts found in reddit listing")
-	}
-
-	post := listings[0].Data.Children[0].Data
-	createdAt := time.Unix(int64(post.Created), 0)
-	return createSummary(fmt.Sprintf("%s (Posted %s in r/%s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(post.Title)), elapse.TimeDescription(createdAt), post.Subreddit, post.Author, text.DecorateNumberWithCommas(post.Score), text.DecorateNumberWithCommas(post.NumComments))), nil
+	return createSummary(messages...), nil
 }
 
 func (c *summaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summary, error) {

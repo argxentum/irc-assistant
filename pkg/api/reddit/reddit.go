@@ -269,6 +269,58 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 	return posts, nil
 }
 
+func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL string) (*PostWithTopComment, error) {
+	if err := loginIfNeeded(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	logger := log.Logger()
+	logger.Debugf(nil, "fetching reddit API URL %s", apiURL)
+
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, errors.New("no response")
+	}
+
+	defer resp.Body.Close()
+
+	var listings []Listing
+	if err := json.NewDecoder(resp.Body).Decode(&listings); err != nil {
+		return nil, err
+	}
+
+	if len(listings) == 0 {
+		return nil, fmt.Errorf("no reddit parent found")
+	}
+
+	if len(listings[0].Data.Children) == 0 {
+		return nil, fmt.Errorf("no posts found in reddit listing")
+	}
+
+	post := listings[0].Data.Children[0].Data
+	comment, err := getTopComment(ctx, post.Permalink)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PostWithTopComment{Post: post, Comment: comment}, nil
+}
+
 func getTopComment(ctx context.Context, permalink string) (*Comment, error) {
 	client := &http.Client{
 		Jar: ctx.Session().Reddit.CookieJar,

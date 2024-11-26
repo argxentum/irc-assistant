@@ -85,9 +85,9 @@ func (c *tempBanCommand) Execute(e *irc.Event) {
 			}
 
 			if len(reason) == 0 {
-				reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationIntoPlainEnglish(duration))
+				reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationDescription(duration))
 			} else {
-				reason = fmt.Sprintf("%s - temporarily banned for %s", reason, elapse.ParseDurationIntoPlainEnglish(duration))
+				reason = fmt.Sprintf("%s - temporarily banned for %s", reason, elapse.ParseDurationDescription(duration))
 			}
 
 			go func() {
@@ -102,7 +102,7 @@ func (c *tempBanCommand) Execute(e *irc.Event) {
 					return
 				}
 
-				logger.Infof(e, "temporarily banned %s from %s for %s", nick, channel, elapse.ParseDurationIntoPlainEnglish(duration))
+				logger.Infof(e, "temporarily banned %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
 			}()
 		})
 	})

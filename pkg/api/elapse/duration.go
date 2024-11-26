@@ -46,7 +46,7 @@ func ParseDuration(offset string) (time.Duration, error) {
 	return time.Second * time.Duration(math.Round(quantity)), nil
 }
 
-func ParseDurationIntoPlainEnglish(offset string) string {
+func ParseDurationDescription(offset string) string {
 	matches := timeOffsetRegexp.FindStringSubmatch(offset)
 	if len(matches) != 3 {
 		return "invalid duration"
