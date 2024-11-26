@@ -115,3 +115,32 @@ func SanitizeToMaxLength(s string, maxLength int) string {
 	}
 	return s
 }
+
+func MostlyContains(a, b string, strength float32) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return false
+	}
+
+	a = strings.ToLower(a)
+	b = strings.ToLower(b)
+
+	if len(a) > len(b) {
+		return MostlyContains(b, a, strength)
+	}
+
+	trim := int(float32(len(a)) * (1.0 - strength) * 0.5)
+	start := trim
+	end := len(a) - trim
+
+	if start == end {
+		return strings.Contains(b, a)
+	}
+
+	trimmed := strings.TrimSpace(a[start:end])
+
+	if float32(len(trimmed))/float32(len(a)) < strength*0.75 {
+		return false
+	}
+
+	return strings.Contains(b, trimmed)
+}

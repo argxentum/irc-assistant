@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"errors"
@@ -120,7 +121,7 @@ func (c *searchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 	s := createSummary()
 
 	if len(title) > 0 && len(site) > 0 {
-		if strings.Contains(title, site) || strings.Contains(site, title) {
+		if text.MostlyContains(title, site, 0.9) {
 			if len(title) > len(site) {
 				s.addMessage(style.Bold(title))
 			} else {

@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"fmt"
 	"strings"
@@ -56,7 +57,7 @@ func (c *summaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 	logger.Debugf(e, "title: %s, description: %s", title, description)
 
 	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
-		if strings.Contains(description, title) || strings.Contains(title, description) {
+		if text.MostlyContains(title, description, 0.9) {
 			if len(description) > len(title) {
 				return createSummary(style.Bold(description)), nil
 			}
