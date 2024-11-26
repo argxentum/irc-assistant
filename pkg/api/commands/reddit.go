@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
@@ -79,20 +80,21 @@ func (c *redditCommand) Execute(e *irc.Event) {
 	c.sendPostMessages(e, posts)
 }
 
-const postsTitleMaxLength = 256
-
-func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.Post) {
+func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTopComment) {
 	content := make([]string, 0)
 	for i, post := range posts {
-		title := post.Title
+		title := text.Sanitize(post.Post.Title)
 		if len(title) == 0 {
 			continue
 		}
-		if len(title) > postsTitleMaxLength {
-			title = title[:postsTitleMaxLength] + "..."
+
+		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), c.subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+		content = append(content, post.Post.URL)
+
+		if post.Comment != nil {
+			content = append(content, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(post.Comment.Body)))
 		}
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), c.subreddit, elapse.TimeDescription(time.Unix(int64(post.Created), 0))))
-		content = append(content, post.URL)
+
 		if i < len(posts)-1 {
 			content = append(content, " ")
 		}

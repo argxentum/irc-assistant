@@ -164,7 +164,8 @@ const subredditCategoryPosts = "%s/r/%s/%s.json?limit=%d"
 const defaultRedditPosts = 3
 const maxRedditPosts = 5
 
-func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]Post, error) {
+func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]PostWithTopComment, error) {
+	logger := log.Logger()
 	if err := loginIfNeeded(ctx, cfg); err != nil {
 		return nil, err
 	}
@@ -195,9 +196,15 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 		return nil, err
 	}
 
-	posts := make([]Post, 0)
+	posts := make([]PostWithTopComment, 0)
 	for _, child := range listing.Data.Children {
-		posts = append(posts, child.Data)
+		post := child.Data
+		comment, err := getTopComment(ctx, post.Permalink)
+		if err != nil {
+			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
+			continue
+		}
+		posts = append(posts, PostWithTopComment{Post: post, Comment: comment})
 	}
 
 	return posts, nil
@@ -246,43 +253,54 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 		}
 
 		post := child.Data
-		post.URL = html.UnescapeString(post.URL)
 
 		if post.Stickied {
 			continue
 		}
 
-		permalink := redditBaseURL + post.Permalink
-		req, err = http.NewRequest(http.MethodGet, permalink, nil)
+		comment, err := getTopComment(ctx, post.Permalink)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		var detail PostDetail
-		if err = json.NewDecoder(resp.Body).Decode(&detail); err != nil {
-			return nil, err
-		}
-
-		if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && detail[1].Data.Children[0].Data.Author == "AutoModerator") {
-			posts = append(posts, PostWithTopComment{Post: post, Comment: nil})
-			resp.Body.Close()
-			continue
-		}
-
-		for _, comment := range detail[1].Data.Children {
-			if comment.Data.Author != "AutoModerator" && len(comment.Data.Body) > 0 {
-				posts = append(posts, PostWithTopComment{post, &comment.Data})
-				break
-			}
-		}
-
-		resp.Body.Close()
+		posts = append(posts, PostWithTopComment{Post: post, Comment: comment})
 	}
 
 	return posts, nil
+}
+
+func getTopComment(ctx context.Context, permalink string) (*Comment, error) {
+	client := &http.Client{
+		Jar: ctx.Session().Reddit.CookieJar,
+	}
+
+	u := redditBaseURL + html.UnescapeString(permalink)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var detail PostDetail
+	if err = json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && detail[1].Data.Children[0].Data.Author == "AutoModerator") {
+		return nil, nil
+	}
+
+	for _, comment := range detail[1].Data.Children {
+		if comment.Data.Author != "AutoModerator" && len(comment.Data.Body) > 0 {
+			return &comment.Data, nil
+		}
+	}
+
+	return nil, nil
 }

@@ -6,13 +6,13 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -148,9 +148,8 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			messages = append(messages, style.Bold(post.Post.Title))
 			messages = append(messages, post.Post.URL)
 
-			comment := sanitize(post.Comment.Body)
-
 			if post.Comment != nil {
+				comment := text.Sanitize(post.Comment.Body)
 				messages = append(messages, fmt.Sprintf("Top comment (u/%s): %s", post.Comment.Author, style.Italics(comment)))
 			}
 
@@ -166,23 +165,4 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 	}
 
 	return nil
-}
-
-const commentMaxLength = 256
-
-func sanitize(s string) string {
-	// replace newlines with spaces
-	s = strings.ReplaceAll(s, "\n", " ")
-
-	// collapse multiple spaces
-	s = strings.Join(strings.Fields(s), " ")
-
-	// trim leading and trailing spaces
-	s = strings.TrimSpace(s)
-
-	// truncate to max length
-	if len(s) > commentMaxLength {
-		s = s[:commentMaxLength] + "..."
-	}
-	return s
 }

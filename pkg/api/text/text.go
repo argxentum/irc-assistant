@@ -88,3 +88,30 @@ func mustBeCapitalized(s string) bool {
 
 	return false
 }
+
+const defaultMaxLength = 256
+
+func Sanitize(s string) string {
+	return SanitizeToMaxLength(s, defaultMaxLength)
+}
+
+func SanitizeToMaxLength(s string, maxLength int) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	// replace newlines with spaces
+	s = strings.ReplaceAll(s, "\n", " ")
+
+	// collapse multiple spaces
+	s = strings.Join(strings.Fields(s), " ")
+
+	// trim leading and trailing spaces
+	s = strings.TrimSpace(s)
+
+	// truncate to max length
+	if len(s) > maxLength {
+		s = s[:maxLength] + "..."
+	}
+	return s
+}

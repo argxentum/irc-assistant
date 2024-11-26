@@ -177,18 +177,9 @@ func (cs *commandStub) UnauthorizedReply(e *irc.Event) {
 	cs.Replyf(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)))
 }
 
-// sanitize cleans the input string
-func sanitize(input string) string {
-	sanitized := strings.TrimSpace(input)
-	if len(sanitized) > inputMaxLength {
-		return sanitized[:inputMaxLength]
-	}
-	return sanitized
-}
-
 // Tokens splits the input string into sanitized Tokens
 func Tokens(input string) []string {
-	return strings.Split(sanitize(input), " ")
+	return strings.Split(text.SanitizeToMaxLength(input, 512), " ")
 }
 
 func coalesce(strings ...string) string {
