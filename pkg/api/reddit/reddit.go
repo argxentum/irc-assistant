@@ -58,8 +58,13 @@ type PostWithTopComment struct {
 }
 
 type Comment struct {
-	Body   string `json:"body"`
-	Author string `json:"author"`
+	Body          string `json:"body"`
+	Author        string `json:"author"`
+	Distinguished string `json:"distinguished"`
+}
+
+func (c *Comment) IsFromModerator() bool {
+	return strings.ToLower(c.Distinguished) == "moderator"
 }
 
 func IsJWTExpired(tok string) bool {
@@ -409,7 +414,7 @@ func getTopComment(ctx context.Context, permalink string) (*Comment, error) {
 	}
 
 	for _, comment := range detail[1].Data.Children {
-		if comment.Data.Author != "AutoModerator" && len(comment.Data.Body) > 0 {
+		if comment.Data.Author != "AutoModerator" && !comment.Data.IsFromModerator() && len(comment.Data.Body) > 0 {
 			return &comment.Data, nil
 		}
 	}
