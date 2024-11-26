@@ -121,7 +121,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 	case models.ChannelInactivityTaskID:
 		posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts)
 		if err != nil {
-			logger.Errorf(nil, "error getting top subreddit posts, %s", err)
+			logger.Errorf(nil, "error getting subreddit category posts, %s", err)
 			return err
 		}
 

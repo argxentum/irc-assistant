@@ -202,7 +202,6 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 		comment, err := getTopComment(ctx, post.Permalink)
 		if err != nil {
 			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
-			continue
 		}
 		posts = append(posts, PostWithTopComment{Post: post, Comment: comment})
 	}
@@ -211,6 +210,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 }
 
 func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Config, subreddit, category string, n int) ([]PostWithTopComment, error) {
+	logger := log.Logger()
 	if err := loginIfNeeded(ctx, cfg); err != nil {
 		return nil, err
 	}
@@ -235,6 +235,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	resp, err := client.Do(req)
 	if err != nil {
+		logger.Errorf(nil, "error fetching reddit posts, %s", err)
 		return nil, err
 	}
 
@@ -260,7 +261,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 		comment, err := getTopComment(ctx, post.Permalink)
 		if err != nil {
-			return nil, err
+			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 		}
 
 		posts = append(posts, PostWithTopComment{Post: post, Comment: comment})
@@ -315,7 +316,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 	post := listings[0].Data.Children[0].Data
 	comment, err := getTopComment(ctx, post.Permalink)
 	if err != nil {
-		return nil, err
+		logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 	}
 
 	return &PostWithTopComment{Post: post, Comment: comment}, nil
