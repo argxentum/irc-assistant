@@ -2,6 +2,7 @@ package reddit
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/marshaling"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -166,7 +167,7 @@ func loginIfNeeded(ctx context.Context, cfg *config.Config) error {
 
 const redditBaseURL = "https://api.reddit.com"
 const searchSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
-const searchPostsForURL = "%s/search.json?limit=10&restrict_sr=on&q=url:%s"
+const searchPostsForURL = "%s/search.json?limit=1&restrict_sr=on&q=url:%s"
 const subredditCategoryPosts = "%s/r/%s/%s.json?limit=%d"
 const defaultRedditPosts = 3
 const maxRedditPosts = 5
@@ -199,7 +200,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	defer resp.Body.Close()
 
 	var listing Listing
-	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+	if err := marshaling.Unmarshal(resp.Body, &listing); err != nil {
 		return nil, err
 	}
 
@@ -244,7 +245,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 	defer resp.Body.Close()
 
 	var listing Listing
-	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+	if err := marshaling.Unmarshal(resp.Body, &listing); err != nil {
 		return nil, err
 	}
 
@@ -304,8 +305,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 	}
 
 	var listing Listing
-	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
-		logger.Debugf(nil, "error decoding reddit response, %s", err)
+	if err := marshaling.Unmarshal(resp.Body, &listing); err != nil {
 		return nil, err
 	}
 
@@ -369,7 +369,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 	defer resp.Body.Close()
 
 	var listings []Listing
-	if err := json.NewDecoder(resp.Body).Decode(&listings); err != nil {
+	if err := marshaling.Unmarshal(resp.Body, &listings); err != nil {
 		return nil, err
 	}
 
@@ -407,7 +407,7 @@ func getTopComment(ctx context.Context, permalink string) (*Comment, error) {
 	}
 
 	var detail PostDetail
-	if err = json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+	if err := marshaling.Unmarshal(resp.Body, &detail); err != nil {
 		return nil, err
 	}
 
