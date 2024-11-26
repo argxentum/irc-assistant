@@ -305,6 +305,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	var listing Listing
 	if err := json.NewDecoder(resp.Body).Decode(&listing); err != nil {
+		logger.Debugf(nil, "error decoding reddit response, %s", err)
 		return nil, err
 	}
 
@@ -314,12 +315,14 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	for _, child := range listing.Data.Children {
 		if len(posts) >= n {
+			logger.Debugf(nil, "reached max reddit posts")
 			break
 		}
 
 		post := child.Data
 
 		if post.Stickied {
+			logger.Debugf(nil, "skipping stickied post %s", post.Title)
 			continue
 		}
 
@@ -355,6 +358,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 
 	resp, err := client.Do(req)
 	if err != nil {
+		logger.Debugf(nil, "error fetching %s, %s", apiURL, err)
 		return nil, err
 	}
 
