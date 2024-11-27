@@ -157,7 +157,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	} else {
 		if channel.Summarization.IsPossibleDisinformation(url) {
 			logger.Debugf(e, "URL is possible disinformation: %s", url)
-			s.messages = append(s.messages, "⚠️ Flagged as possible disinformation, use caution.")
+			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
 		c.SendMessages(e, e.ReplyTarget(), s.messages)
 	}
