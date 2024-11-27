@@ -115,7 +115,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
-			if channel.Summarization.IsPossibleDisinformation(url) {
+			if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
 				logger.Debugf(e, "URL is possible disinformation: %s", url)
 				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
 			}
@@ -155,7 +155,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
-		if channel.Summarization.IsPossibleDisinformation(url) {
+		if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
 			logger.Debugf(e, "URL is possible disinformation: %s", url)
 			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
