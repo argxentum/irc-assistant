@@ -150,6 +150,8 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[tempBanCommandName] = NewTempBanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[bannedWordAddCommandName] = NewBannedWordAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[bannedWordDeleteCommandName] = NewBannedWordDeleteCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[disinfoWarningAddCommandName] = NewDisinfoWarningAddCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[disinfoWarningDeleteCommandName] = NewDisinfoWarningDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[sleepCommandName] = NewSleepCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[wakeCommandName] = NewWakeCommand(cr.ctx, cr.cfg, cr.irc)
 }

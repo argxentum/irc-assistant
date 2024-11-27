@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"errors"
 	"regexp"
@@ -80,6 +81,13 @@ func (c *summaryCommand) CanExecute(e *irc.Event) bool {
 
 func (c *summaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
+	fs := firestore.Get()
+
+	channel, err := fs.Channel(e.ReplyTarget())
+	if err != nil {
+		logger.Errorf(e, "error retrieving channel, %s", err)
+		return
+	}
 
 	url := parseURLFromMessage(e.Message())
 	if len(url) == 0 {
@@ -107,6 +115,10 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
+			if channel.Summarization.IsPossibleDisinformation(url) {
+				logger.Debugf(e, "URL is possible disinformation: %s", url)
+				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
+			}
 			c.SendMessages(e, e.ReplyTarget(), ds.messages)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
@@ -143,6 +155,10 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
+		if channel.Summarization.IsPossibleDisinformation(url) {
+			logger.Debugf(e, "URL is possible disinformation: %s", url)
+			s.messages = append(s.messages, "⚠️ Flagged as possible disinformation, use caution.")
+		}
 		c.SendMessages(e, e.ReplyTarget(), s.messages)
 	}
 }
