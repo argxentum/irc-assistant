@@ -6,7 +6,6 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -145,12 +144,11 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 
 		for i, post := range posts {
 			messages := make([]string, 0)
-			messages = append(messages, fmt.Sprintf("%s (r/%s, %s)", style.Bold(post.Post.Title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+			messages = append(messages, post.Post.FormattedTitle())
 			messages = append(messages, post.Post.URL)
 
 			if post.Comment != nil {
-				comment := text.Sanitize(post.Comment.Body)
-				messages = append(messages, fmt.Sprintf("Top comment (u/%s): %s", post.Comment.Author, style.Italics(comment)))
+				messages = append(messages, post.Comment.FormattedBody())
 			}
 
 			irc.SendMessages(channelName, messages)

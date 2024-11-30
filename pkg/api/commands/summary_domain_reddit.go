@@ -66,11 +66,10 @@ func (c *summaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	}
 
 	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+	messages = append(messages, post.Post.FormattedTitle())
 
 	if post.Comment != nil {
-		comment := text.Sanitize(post.Comment.Body)
-		messages = append(messages, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(comment)))
+		messages = append(messages, post.Comment.FormattedBody())
 	}
 
 	return createSummary(messages...), nil

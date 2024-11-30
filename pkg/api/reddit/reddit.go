@@ -2,8 +2,11 @@ package reddit
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/marshaling"
 	"assistant/pkg/api/retriever"
+	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"encoding/json"
@@ -45,6 +48,10 @@ type Post struct {
 	Stickied    bool    `json:"stickied"`
 }
 
+func (p Post) FormattedTitle() string {
+	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(p.Title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
+}
+
 type PostDetail []struct {
 	Data struct {
 		Children []struct {
@@ -66,6 +73,16 @@ type Comment struct {
 
 func (c *Comment) IsFromModerator() bool {
 	return strings.ToLower(c.Distinguished) == "moderator"
+}
+
+func (c *Comment) FormattedBody() string {
+	comment := html.UnescapeString(text.Sanitize(c.Body))
+
+	if c.Author == "[deleted]" {
+		return fmt.Sprintf("Top comment: %s", style.Italics(text.Sanitize(comment)))
+	} else {
+		return fmt.Sprintf("Top comment (by u/%s): %s", c.Author, style.Italics(text.Sanitize(comment)))
+	}
 }
 
 func IsJWTExpired(tok string) bool {

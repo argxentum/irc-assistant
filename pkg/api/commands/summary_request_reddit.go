@@ -1,15 +1,11 @@
 package commands
 
 import (
-	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
-	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"errors"
-	"fmt"
-	"time"
 )
 
 func (c *summaryCommand) redditRequest(e *irc.Event, url string) (*summary, error) {
@@ -31,11 +27,10 @@ func (c *summaryCommand) redditRequest(e *irc.Event, url string) (*summary, erro
 	}
 
 	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), posts[0].Post.Subreddit, elapse.TimeDescription(time.Unix(int64(posts[0].Post.Created), 0))))
+	messages = append(messages, posts[0].Post.FormattedTitle())
 
 	if posts[0].Comment != nil {
-		comment := text.Sanitize(posts[0].Comment.Body)
-		messages = append(messages, fmt.Sprintf("Top comment (by u/%s): %s", posts[0].Comment.Author, style.Italics(comment)))
+		messages = append(messages, posts[0].Comment.FormattedBody())
 	}
 
 	return createSummary(messages...), nil

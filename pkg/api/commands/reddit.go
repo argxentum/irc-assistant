@@ -2,7 +2,6 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
-	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/retriever"
@@ -12,7 +11,6 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"strings"
-	"time"
 )
 
 type redditCommand struct {
@@ -88,12 +86,11 @@ func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 			continue
 		}
 
-		content = append(content, fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), post.Post.Subreddit, elapse.TimeDescription(time.Unix(int64(post.Post.Created), 0))))
+		content = append(content, post.Post.FormattedTitle())
 		content = append(content, post.Post.URL)
 
 		if post.Comment != nil {
-			comment := text.Sanitize(post.Comment.Body)
-			content = append(content, fmt.Sprintf("Top comment (by u/%s): %s", post.Comment.Author, style.Italics(comment)))
+			content = append(content, post.Comment.FormattedBody())
 		}
 
 		if i < len(posts)-1 {
