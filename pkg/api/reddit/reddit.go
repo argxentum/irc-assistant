@@ -81,7 +81,7 @@ func (c *Comment) FormattedBody() string {
 	if c.Author == "[deleted]" {
 		return fmt.Sprintf("Top comment: %s", style.Italics(text.Sanitize(comment)))
 	} else {
-		return fmt.Sprintf("Top comment (by u/%s): %s", c.Author, style.Italics(text.Sanitize(comment)))
+		return fmt.Sprintf("Top comment, by u/%s: %s", c.Author, style.Italics(text.Sanitize(comment)))
 	}
 }
 
