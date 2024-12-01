@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -87,7 +88,20 @@ func (c *disinfoWarningAddCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channelName, strings.Join(urlPrefixes, ", "))
 
-	channel.Summarization.DisinformationWarnings = append(channel.Summarization.DisinformationWarnings, urlPrefixes...)
+	newEntries := make([]string, 0)
+
+	for _, urlPrefix := range urlPrefixes {
+		if slices.Contains(channel.Summarization.DisinformationWarnings, urlPrefix) {
+			continue
+		}
+		newEntries = append(newEntries, urlPrefix)
+	}
+
+	if len(newEntries) == 0 {
+		return
+	}
+
+	channel.Summarization.DisinformationWarnings = append(channel.Summarization.DisinformationWarnings, newEntries...)
 	if err := store.UpdateChannel(channelName, map[string]any{"summarization": channel.Summarization}); err != nil {
 		logger.Errorf(e, "error updating channel summarization: %s", err)
 		return
