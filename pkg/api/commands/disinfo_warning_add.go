@@ -72,15 +72,23 @@ func (c *disinfoWarningAddCommand) Execute(e *irc.Event) {
 	}
 
 	channelName := e.ReplyTarget()
+	if e.IsPrivateMessage() {
+		channelName = tokens[1]
+	}
+
 	channel, err := store.Channel(channelName)
 	if err != nil {
 		logger.Errorf(e, "error retrieving channel: %s", err)
 		return
 	}
 
+	if channel == nil {
+		c.Replyf(e, "Channel %s not found.", style.Bold(channelName))
+		return
+	}
+
 	var urlPrefixes []string
-	if len(tokens) > 2 {
-		channelName = tokens[1]
+	if e.IsPrivateMessage() {
 		urlPrefixes = tokens[2:]
 	} else {
 		urlPrefixes = tokens[1:]
