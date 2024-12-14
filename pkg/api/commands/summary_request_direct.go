@@ -54,6 +54,10 @@ func (c *summaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 		return nil, summaryTooShortError
 	}
 
+	if len(title) > maximumTitleLength {
+		title = title[:maximumTitleLength] + "..."
+	}
+
 	logger.Debugf(e, "title: %s, description: %s", title, description)
 
 	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumDescriptionLength || len(title) < minimumPreferredTitleLength) {

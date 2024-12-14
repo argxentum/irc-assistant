@@ -28,7 +28,7 @@ func (c *summaryCommand) requestChain() []func(e *irc.Event, url string) (*summa
 	return rsf
 }
 
-func (c *summaryCommand) requestSummary(e *irc.Event, url string) (*summary, error) {
+func (c *summaryCommand) summarize(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 
 	for _, cmd := range c.requestChain() {

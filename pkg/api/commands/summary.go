@@ -16,6 +16,7 @@ import (
 const summaryCommandName = "summary"
 
 const minimumTitleLength = 16
+const maximumTitleLength = 256
 const minimumPreferredTitleLength = 64
 const maximumDescriptionLength = 300
 
@@ -147,7 +148,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	s, err := c.requestSummary(e, url)
+	s, err := c.summarize(e, url)
 	if err != nil {
 		logger.Debugf(e, "unable to summarize %s: %s", url, err)
 	}
