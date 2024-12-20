@@ -49,7 +49,8 @@ type Post struct {
 }
 
 func (p Post) FormattedTitle() string {
-	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(p.Title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
+	title := html.UnescapeString(text.Sanitize(p.Title))
+	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
 }
 
 type PostDetail []struct {

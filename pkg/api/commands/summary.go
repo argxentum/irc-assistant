@@ -2,15 +2,18 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"errors"
+	"math"
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
 
 const summaryCommandName = "summary"
@@ -19,9 +22,21 @@ const minimumTitleLength = 16
 const maximumTitleLength = 256
 const minimumPreferredTitleLength = 64
 const maximumDescriptionLength = 300
+const startRateLimitTimeoutSeconds = 15
+const maxRateLimitTimeoutSeconds = 300
+const rateLimitSummaryMultiplier = 1.25
+const rateLimitDisinfoMultiplier = 1.75
 
 type summary struct {
 	messages []string
+}
+
+type userRateLimit struct {
+	username     string
+	channel      string
+	summaryCount int
+	disinfoCount int
+	timeoutAt    time.Time
 }
 
 func createSummary(message ...string) *summary {
@@ -39,15 +54,17 @@ func (s *summary) addMessage(message string) {
 
 type summaryCommand struct {
 	*commandStub
-	bodyRetriever retriever.BodyRetriever
-	docRetriever  retriever.DocumentRetriever
+	bodyRetriever  retriever.BodyRetriever
+	docRetriever   retriever.DocumentRetriever
+	userRateLimits map[string]*userRateLimit
 }
 
 func NewSummaryCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
 	return &summaryCommand{
-		commandStub:   defaultCommandStub(ctx, cfg, irc),
-		bodyRetriever: retriever.NewBodyRetriever(),
-		docRetriever:  retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
+		commandStub:    defaultCommandStub(ctx, cfg, irc),
+		bodyRetriever:  retriever.NewBodyRetriever(),
+		docRetriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
+		userRateLimits: make(map[string]*userRateLimit),
 	}
 }
 
@@ -83,6 +100,7 @@ func (c *summaryCommand) CanExecute(e *irc.Event) bool {
 func (c *summaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	fs := firestore.Get()
+	rl := c.userRateLimits[e.From+"@"+e.ReplyTarget()]
 
 	channel, err := fs.Channel(e.ReplyTarget())
 	if err != nil {
@@ -97,6 +115,22 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	}
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
+
+	if !e.IsPrivateMessage() && rl != nil {
+		if rl.timeoutAt.After(time.Now()) {
+			dis := channel != nil && channel.Summarization.IsPossibleDisinformation(url)
+			rl.summaryCount++
+			if dis {
+				rl.disinfoCount++
+			}
+			updateRateLimit(e, rl)
+			c.userRateLimits[e.From+"@"+e.ReplyTarget()] = rl
+			return
+		} else {
+			rl.summaryCount = 0
+			rl.disinfoCount = 0
+		}
+	}
 
 	if c.isRootDomainIn(url, c.cfg.Ignore.Domains) {
 		logger.Debugf(e, "root domain denied %s", url)
@@ -116,11 +150,14 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
+
+			dis := false
 			if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
+				dis = true
 				logger.Debugf(e, "URL is possible disinformation: %s", url)
 				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
 			}
-			c.SendMessages(e, e.ReplyTarget(), ds.messages)
+			c.completeSummary(e, e.ReplyTarget(), ds.messages, dis, rl)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
 		}
@@ -143,7 +180,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
 		}
 		if s != nil {
-			c.SendMessages(e, e.ReplyTarget(), s.messages)
+			c.completeSummary(e, e.ReplyTarget(), s.messages, false, rl)
 			return
 		}
 	}
@@ -156,12 +193,59 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
+		dis := false
 		if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
+			dis = true
 			logger.Debugf(e, "URL is possible disinformation: %s", url)
 			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
-		c.SendMessages(e, e.ReplyTarget(), s.messages)
+		c.completeSummary(e, e.ReplyTarget(), s.messages, dis, rl)
 	}
+}
+
+func (c *summaryCommand) completeSummary(e *irc.Event, target string, messages []string, dis bool, rl *userRateLimit) {
+	if !e.IsPrivateMessage() {
+		if rl == nil {
+			rl = &userRateLimit{
+				username: e.From,
+				channel:  target,
+			}
+		}
+		rl.summaryCount++
+		if dis {
+			rl.disinfoCount++
+		}
+		updateRateLimit(e, rl)
+		c.userRateLimits[e.From+"@"+target] = rl
+	}
+
+	c.SendMessages(e, target, messages)
+}
+
+func updateRateLimit(e *irc.Event, rl *userRateLimit) {
+	logger := log.Logger()
+	sp := 0.0
+	if rl.summaryCount > 0 {
+		sp = math.Pow(rateLimitSummaryMultiplier, float64(rl.summaryCount))
+	}
+
+	dp := 0.0
+	if rl.disinfoCount > 0 {
+		dp = math.Pow(rateLimitDisinfoMultiplier, float64(rl.disinfoCount))
+	}
+
+	if rl.timeoutAt.IsZero() {
+		rl.timeoutAt = time.Now()
+	}
+
+	tp := startRateLimitTimeoutSeconds * (sp + dp)
+	if tp < maxRateLimitTimeoutSeconds {
+		rl.timeoutAt = rl.timeoutAt.Add(time.Duration(tp) * time.Second)
+	} else {
+		rl.timeoutAt = rl.timeoutAt.Add(time.Duration(maxRateLimitTimeoutSeconds) * time.Second)
+	}
+
+	logger.Debugf(e, "rate limiting %s in %s until %s (summary: %d, disinfo: %d)", e.From, e.ReplyTarget(), elapse.TimeDescription(rl.timeoutAt), rl.summaryCount, rl.disinfoCount)
 }
 
 func parseURLFromMessage(message string) string {
