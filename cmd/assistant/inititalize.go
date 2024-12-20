@@ -115,6 +115,7 @@ func initializeChannel(ctx context.Context, cfg *config.Config, channel string) 
 
 func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel, nick string) {
 	reg := commands.LoadCommandRegistry(ctx, cfg, irc)
-	cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand)
-	cmd.InitializeUserRateLimit(channel, nick, 15*time.Second)
+	if cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand); cmd != nil {
+		cmd.InitializeUserRateLimit(channel, nick, 15*time.Second)
+	}
 }
