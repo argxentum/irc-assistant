@@ -118,6 +118,7 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 
 	if !e.IsPrivateMessage() && rl != nil {
 		if rl.timeoutAt.After(time.Now()) {
+			logger.Debugf(e, "ignoring rate limited request from %s in %s", e.From, e.ReplyTarget())
 			dis := channel != nil && channel.Summarization.IsPossibleDisinformation(url)
 			rl.summaryCount++
 			if dis {
@@ -127,6 +128,8 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 			c.userRateLimits[e.From+"@"+e.ReplyTarget()] = rl
 			return
 		} else {
+			logger.Debugf(e, "rate limit expired for %s in %s", e.From, e.ReplyTarget())
+			rl.timeoutAt = time.Time{}
 			rl.summaryCount = 0
 			rl.disinfoCount = 0
 		}
