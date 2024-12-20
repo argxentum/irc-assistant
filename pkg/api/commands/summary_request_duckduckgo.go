@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) duckduckgoRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "trying duckduckgo for %s", url)
 

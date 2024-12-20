@@ -7,43 +7,43 @@ import (
 	"assistant/pkg/log"
 )
 
-const unbanCommandName = "unban"
+const UnbanCommandName = "unban"
 
-type unbanCommand struct {
+type UnbanCommand struct {
 	*commandStub
 }
 
 func NewUnbanCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &unbanCommand{
+	return &UnbanCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *unbanCommand) Name() string {
-	return unbanCommandName
+func (c *UnbanCommand) Name() string {
+	return UnbanCommandName
 }
 
-func (c *unbanCommand) Description() string {
+func (c *UnbanCommand) Description() string {
 	return "Unbans the given user mask from the channel."
 }
 
-func (c *unbanCommand) Triggers() []string {
+func (c *UnbanCommand) Triggers() []string {
 	return []string{"unban", "ub"}
 }
 
-func (c *unbanCommand) Usages() []string {
+func (c *UnbanCommand) Usages() []string {
 	return []string{"%s <mask>"}
 }
 
-func (c *unbanCommand) AllowedInPrivateMessages() bool {
+func (c *UnbanCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *unbanCommand) CanExecute(e *irc.Event) bool {
+func (c *UnbanCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *unbanCommand) Execute(e *irc.Event) {
+func (c *UnbanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	mask := tokens[1]
 	channel := e.ReplyTarget()

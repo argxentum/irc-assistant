@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) directRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) directRequest(e *irc.Event, url string) (*summary, error) {
 	return c.request(e, url, false)
 }
 
-func (c *summaryCommand) request(e *irc.Event, url string, impersonated bool) (*summary, error) {
+func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "request for %s (impersonated: %t)", url, impersonated)
 

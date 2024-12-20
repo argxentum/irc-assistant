@@ -11,42 +11,42 @@ import (
 	"strings"
 )
 
-const bannedWordAddCommandName = "bannedWordAdd"
+const BannedWordAddCommandName = "bannedWordAdd"
 
-type bannedWordAddCommand struct {
+type BannedWordAddCommand struct {
 	*commandStub
 }
 
 func NewBannedWordAddCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &bannedWordAddCommand{
+	return &BannedWordAddCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *bannedWordAddCommand) Name() string {
-	return bannedWordAddCommandName
+func (c *BannedWordAddCommand) Name() string {
+	return BannedWordAddCommandName
 }
 
-func (c *bannedWordAddCommand) Description() string {
+func (c *BannedWordAddCommand) Description() string {
 	return "Adds a word to the channel's banned words list."
 }
 
-func (c *bannedWordAddCommand) Triggers() []string {
+func (c *BannedWordAddCommand) Triggers() []string {
 	return []string{"bwadd"}
 }
 
-func (c *bannedWordAddCommand) Usages() []string {
+func (c *BannedWordAddCommand) Usages() []string {
 	return []string{
 		"%s <word> (in a channel)",
 		"%s <channel> <word1> [<word2> ...] (outside a channel)",
 	}
 }
 
-func (c *bannedWordAddCommand) AllowedInPrivateMessages() bool {
+func (c *BannedWordAddCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *bannedWordAddCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
+func (c *BannedWordAddCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) > 2 {
@@ -56,15 +56,15 @@ func (c *bannedWordAddCommand) IsAuthorized(e *irc.Event, channel string, callba
 	}
 }
 
-func (c *bannedWordAddCommand) CanExecute(e *irc.Event) bool {
+func (c *BannedWordAddCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *bannedWordAddCommand) Execute(e *irc.Event) {
+func (c *BannedWordAddCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) < 3 {
-		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
+		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
 		return
 	}
 

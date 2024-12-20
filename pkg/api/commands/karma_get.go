@@ -12,43 +12,43 @@ import (
 	"math/rand/v2"
 )
 
-const karmaGetCommandName = "karmaGet"
+const KarmaGetCommandName = "karmaGet"
 
-type karmaGetCommand struct {
+type KarmaGetCommand struct {
 	*commandStub
 }
 
 func NewKarmaGetCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &karmaGetCommand{
+	return &KarmaGetCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *karmaGetCommand) Name() string {
-	return karmaGetCommandName
+func (c *KarmaGetCommand) Name() string {
+	return KarmaGetCommandName
 }
 
-func (c *karmaGetCommand) Description() string {
+func (c *KarmaGetCommand) Description() string {
 	return "Displays the given user's karma."
 }
 
-func (c *karmaGetCommand) Triggers() []string {
+func (c *KarmaGetCommand) Triggers() []string {
 	return []string{"karma"}
 }
 
-func (c *karmaGetCommand) Usages() []string {
+func (c *KarmaGetCommand) Usages() []string {
 	return []string{"%s <user>"}
 }
 
-func (c *karmaGetCommand) AllowedInPrivateMessages() bool {
+func (c *KarmaGetCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *karmaGetCommand) CanExecute(e *irc.Event) bool {
+func (c *KarmaGetCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *karmaGetCommand) Execute(e *irc.Event) {
+func (c *KarmaGetCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), nick)

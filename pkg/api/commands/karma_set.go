@@ -12,46 +12,47 @@ import (
 	"strings"
 )
 
-const karmaSetCommandName = "karmaSet"
+const KarmaSetCommandName = "karmaSet"
+
 const maxKarmaReasonLength = 128
 
-type karmaSetCommand struct {
+type KarmaSetCommand struct {
 	*commandStub
 }
 
 func NewKarmaSetCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &karmaSetCommand{
+	return &KarmaSetCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *karmaSetCommand) Name() string {
-	return karmaSetCommandName
+func (c *KarmaSetCommand) Name() string {
+	return KarmaSetCommandName
 }
 
-func (c *karmaSetCommand) Description() string {
+func (c *KarmaSetCommand) Description() string {
 	return "Updates the karma value for the given user."
 }
 
-func (c *karmaSetCommand) Triggers() []string {
+func (c *KarmaSetCommand) Triggers() []string {
 	return []string{}
 }
 
-func (c *karmaSetCommand) Usages() []string {
+func (c *KarmaSetCommand) Usages() []string {
 	return []string{"<user>++ [<reason>]", "<user>-- [<reason>]"}
 }
 
-func (c *karmaSetCommand) AllowedInPrivateMessages() bool {
+func (c *KarmaSetCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *karmaSetCommand) CanExecute(e *irc.Event) bool {
+func (c *KarmaSetCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0) && (strings.Contains(e.Message(), "++") || strings.Contains(e.Message(), "--"))
 }
 
 var karmaRegex = regexp.MustCompile(`(?i)(.*?)\s*(\+\+|--)(?:\s*,?\s+(.*))?`)
 
-func (c *karmaSetCommand) Execute(e *irc.Event) {
+func (c *KarmaSetCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 
 	matches := karmaRegex.FindStringSubmatch(e.Message())

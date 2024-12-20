@@ -9,49 +9,49 @@ import (
 	"fmt"
 )
 
-const sleepCommandName = "sleep"
+const SleepCommandName = "sleep"
 
-type sleepCommand struct {
+type SleepCommand struct {
 	*commandStub
 }
 
 func NewSleepCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &sleepCommand{
+	return &SleepCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
 	}
 }
 
-func (c *sleepCommand) Name() string {
-	return sleepCommandName
+func (c *SleepCommand) Name() string {
+	return SleepCommandName
 }
 
-func (c *sleepCommand) Description() string {
+func (c *SleepCommand) Description() string {
 	return "Puts the bot to sleep, disabling it across all channels until awakened."
 }
 
-func (c *sleepCommand) Triggers() []string {
+func (c *SleepCommand) Triggers() []string {
 	return []string{"sleep"}
 }
 
-func (c *sleepCommand) Usages() []string {
+func (c *SleepCommand) Usages() []string {
 	return []string{"%s"}
 }
 
-func (c *sleepCommand) AllowedInPrivateMessages() bool {
+func (c *SleepCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *sleepCommand) CanExecute(e *irc.Event) bool {
+func (c *SleepCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *sleepCommand) Execute(e *irc.Event) {
+func (c *SleepCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s]", c.Name(), e.From, e.ReplyTarget())
 
 	wakeTrigger := ""
 	for k, v := range registry.Commands() {
-		if k == wakeCommandName {
+		if k == WakeCommandName {
 			if len(v.Triggers()) > 0 {
 				wakeTrigger = fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, v.Triggers()[0])
 			}

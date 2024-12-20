@@ -14,7 +14,7 @@ import (
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 
-func (c *summaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
 	if strings.Contains(url, "/shorts/") {
 		return c.parseYouTubeShort(e, url)
 	} else {
@@ -22,7 +22,7 @@ func (c *summaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 	}
 }
 
-func (c *summaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, error) {
 	var ytData struct {
 		EngagementPanels []struct {
 			EngagementPanelSectionListRenderer struct {
@@ -96,7 +96,7 @@ func (c *summaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 	return nil, nil
 }
 
-func (c *summaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, error) {
 	var ytData struct {
 		Contents struct {
 			TwoColumnWatchNextResults struct {

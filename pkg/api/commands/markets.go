@@ -14,45 +14,45 @@ import (
 	"unicode"
 )
 
-const marketsCommandName = "markets"
+const MarketsCommandName = "markets"
 
-type marketsCommand struct {
+type MarketsCommand struct {
 	*commandStub
 	retriever retriever.DocumentRetriever
 }
 
 func NewMarketsCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &marketsCommand{
+	return &MarketsCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 		retriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}
 }
 
-func (c *marketsCommand) Name() string {
-	return marketsCommandName
+func (c *MarketsCommand) Name() string {
+	return MarketsCommandName
 }
 
-func (c *marketsCommand) Description() string {
+func (c *MarketsCommand) Description() string {
 	return "Displays current stock market data for the given region. Defaults to US."
 }
 
-func (c *marketsCommand) Triggers() []string {
+func (c *MarketsCommand) Triggers() []string {
 	return []string{"markets", "market"}
 }
 
-func (c *marketsCommand) Usages() []string {
+func (c *MarketsCommand) Usages() []string {
 	return []string{"%s", "%s <region>"}
 }
 
-func (c *marketsCommand) AllowedInPrivateMessages() bool {
+func (c *MarketsCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *marketsCommand) CanExecute(e *irc.Event) bool {
+func (c *MarketsCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *marketsCommand) Execute(e *irc.Event) {
+func (c *MarketsCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	region := "US"
 	if len(tokens) > 1 {
@@ -72,7 +72,7 @@ func (c *marketsCommand) Execute(e *irc.Event) {
 	c.SendMessage(e, e.ReplyTarget(), message)
 }
 
-func (c *marketsCommand) retrieveMarketSummaryMessage(e *irc.Event, region string) string {
+func (c *MarketsCommand) retrieveMarketSummaryMessage(e *irc.Event, region string) string {
 	logger := log.Logger()
 
 	query := url.QueryEscape(fmt.Sprintf("stock markets %s", region))

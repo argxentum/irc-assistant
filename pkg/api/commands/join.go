@@ -8,39 +8,39 @@ import (
 	"strings"
 )
 
-const joinCommandName = "join"
+const JoinCommandName = "join"
 
-type joinCommand struct {
+type JoinCommand struct {
 	*commandStub
 }
 
 func NewJoinCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &joinCommand{
+	return &JoinCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
 	}
 }
 
-func (c *joinCommand) Name() string {
-	return joinCommandName
+func (c *JoinCommand) Name() string {
+	return JoinCommandName
 }
 
-func (c *joinCommand) Description() string {
+func (c *JoinCommand) Description() string {
 	return "Invites to join the specified channel(s)."
 }
 
-func (c *joinCommand) Triggers() []string {
+func (c *JoinCommand) Triggers() []string {
 	return []string{"join"}
 }
 
-func (c *joinCommand) Usages() []string {
+func (c *JoinCommand) Usages() []string {
 	return []string{"%s <channel1> [<channel2> ...]"}
 }
 
-func (c *joinCommand) AllowedInPrivateMessages() bool {
+func (c *JoinCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *joinCommand) CanExecute(e *irc.Event) bool {
+func (c *JoinCommand) CanExecute(e *irc.Event) bool {
 	if !e.IsPrivateMessage() || !c.isCommandEventValid(c, e, 1) {
 		return false
 	}
@@ -49,7 +49,7 @@ func (c *joinCommand) CanExecute(e *irc.Event) bool {
 	return irc.IsChannel(tokens[1])
 }
 
-func (c *joinCommand) Execute(e *irc.Event) {
+func (c *JoinCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channels := tokens[1:]
 

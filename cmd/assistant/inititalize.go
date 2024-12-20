@@ -1,6 +1,7 @@
 package main
 
 import (
+	"assistant/pkg/api/commands"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
@@ -10,6 +11,7 @@ import (
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"fmt"
+	"time"
 )
 
 func initializeLogger(ctx context.Context, cfg *config.Config) {
@@ -109,4 +111,10 @@ func initializeChannel(ctx context.Context, cfg *config.Config, channel string) 
 		}
 		logger.Debugf(nil, "channel %s inactivity persistent task created", channel)
 	}
+}
+
+func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel, nick string) {
+	reg := commands.LoadCommandRegistry(ctx, cfg, irc)
+	cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand)
+	cmd.InitializeUserRateLimit(channel, nick, 15*time.Second)
 }

@@ -14,43 +14,43 @@ import (
 	"time"
 )
 
-const tempBanCommandName = "tempban"
+const TempBanCommandName = "tempban"
 
-type tempBanCommand struct {
+type TempBanCommand struct {
 	*commandStub
 }
 
 func NewTempBanCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &tempBanCommand{
+	return &TempBanCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *tempBanCommand) Name() string {
-	return tempBanCommandName
+func (c *TempBanCommand) Name() string {
+	return TempBanCommandName
 }
 
-func (c *tempBanCommand) Description() string {
+func (c *TempBanCommand) Description() string {
 	return "Temporarily bans the specified user from the channel for the specified duration."
 }
 
-func (c *tempBanCommand) Triggers() []string {
+func (c *TempBanCommand) Triggers() []string {
 	return []string{"tempban", "tb"}
 }
 
-func (c *tempBanCommand) Usages() []string {
+func (c *TempBanCommand) Usages() []string {
 	return []string{"%s <duration> <nick> [<reason>]"}
 }
 
-func (c *tempBanCommand) AllowedInPrivateMessages() bool {
+func (c *TempBanCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *tempBanCommand) CanExecute(e *irc.Event) bool {
+func (c *TempBanCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 2)
 }
 
-func (c *tempBanCommand) Execute(e *irc.Event) {
+func (c *TempBanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 
@@ -68,7 +68,7 @@ func (c *tempBanCommand) Execute(e *irc.Event) {
 	seconds, err := elapse.ParseDuration(duration)
 	if err != nil {
 		logger.Errorf(e, "error parsing duration, %s", err)
-		c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(tempBanCommandName).Triggers()[0])))
+		c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(TempBanCommandName).Triggers()[0])))
 		return
 	}
 

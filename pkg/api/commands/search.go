@@ -15,50 +15,51 @@ import (
 	"strings"
 )
 
-const searchCommandName = "search"
+const SearchCommandName = "search"
+
 const bingSearchURL = "https://www.bing.com/search?q=%s"
 const duckDuckGoSearchURL = "https://html.duckduckgo.com/html?q=%s"
 const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
 
-type searchCommand struct {
+type SearchCommand struct {
 	*commandStub
 	retriever retriever.DocumentRetriever
 }
 
 func NewSearchCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &searchCommand{
+	return &SearchCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 		retriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}
 }
 
-func (c *searchCommand) Name() string {
-	return searchCommandName
+func (c *SearchCommand) Name() string {
+	return SearchCommandName
 }
 
-func (c *searchCommand) Description() string {
+func (c *SearchCommand) Description() string {
 	return "Searches the web for the given query."
 }
 
-func (c *searchCommand) Triggers() []string {
+func (c *SearchCommand) Triggers() []string {
 	return []string{"search"}
 }
 
-func (c *searchCommand) Usages() []string {
+func (c *SearchCommand) Usages() []string {
 	return []string{"%s <query>"}
 }
 
-func (c *searchCommand) AllowedInPrivateMessages() bool {
+func (c *SearchCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *searchCommand) CanExecute(e *irc.Event) bool {
+func (c *SearchCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *searchCommand) Execute(e *irc.Event) {
+func (c *SearchCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 
@@ -80,7 +81,7 @@ func (c *searchCommand) Execute(e *irc.Event) {
 
 var ssf []func(e *irc.Event, input string) (*summary, error)
 
-func (c *searchCommand) searchChain() []func(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchChain() []func(e *irc.Event, input string) (*summary, error) {
 	if ssf == nil {
 		ssf = []func(e *irc.Event, input string) (*summary, error){
 			c.searchBing,
@@ -92,7 +93,7 @@ func (c *searchCommand) searchChain() []func(e *irc.Event, input string) (*summa
 	return ssf
 }
 
-func (c *searchCommand) searchBing(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error) {
 	logger := log.Logger()
 	logger.Debugf(e, "searching bing for %s", input)
 	query := url.QueryEscape(input)
@@ -149,7 +150,7 @@ func (c *searchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 
 var searchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
 
-func (c *searchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, error) {
 	logger := log.Logger()
 
 	logger.Infof(e, "searching duckduckgo for %s", input)
@@ -189,7 +190,7 @@ func (c *searchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 	return createSummary(style.Bold(title), link), nil
 }
 
-func (c *searchCommand) searchStartPage(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "searching startpage for %s", input)
 	query := url.QueryEscape(input)

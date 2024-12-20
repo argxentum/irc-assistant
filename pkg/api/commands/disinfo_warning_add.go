@@ -12,42 +12,42 @@ import (
 	"strings"
 )
 
-const disinfoWarningAddCommandName = "disinfoWarningAdd"
+const DisinfoWarningAddCommandName = "disinfoWarningAdd"
 
-type disinfoWarningAddCommand struct {
+type DisinfoWarningAddCommand struct {
 	*commandStub
 }
 
 func NewDisinfoWarningAddCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &disinfoWarningAddCommand{
+	return &DisinfoWarningAddCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *disinfoWarningAddCommand) Name() string {
-	return disinfoWarningAddCommandName
+func (c *DisinfoWarningAddCommand) Name() string {
+	return DisinfoWarningAddCommandName
 }
 
-func (c *disinfoWarningAddCommand) Description() string {
+func (c *DisinfoWarningAddCommand) Description() string {
 	return "Adds a URL prefix to the channel's disinformation warning list."
 }
 
-func (c *disinfoWarningAddCommand) Triggers() []string {
+func (c *DisinfoWarningAddCommand) Triggers() []string {
 	return []string{"dwadd"}
 }
 
-func (c *disinfoWarningAddCommand) Usages() []string {
+func (c *DisinfoWarningAddCommand) Usages() []string {
 	return []string{
 		"%s <word> (in a channel)",
 		"%s <channel> <word1> [<word2> ...] (outside a channel)",
 	}
 }
 
-func (c *disinfoWarningAddCommand) AllowedInPrivateMessages() bool {
+func (c *DisinfoWarningAddCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *disinfoWarningAddCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
+func (c *DisinfoWarningAddCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) > 2 {
@@ -57,17 +57,17 @@ func (c *disinfoWarningAddCommand) IsAuthorized(e *irc.Event, channel string, ca
 	}
 }
 
-func (c *disinfoWarningAddCommand) CanExecute(e *irc.Event) bool {
+func (c *DisinfoWarningAddCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *disinfoWarningAddCommand) Execute(e *irc.Event) {
+func (c *DisinfoWarningAddCommand) Execute(e *irc.Event) {
 	store := firestore.Get()
 	logger := log.Logger()
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) < 3 {
-		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
+		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
 		return
 	}
 

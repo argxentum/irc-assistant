@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const remindersCommandName = "reminders"
+const RemindersCommandName = "reminders"
 
 const (
 	actionCancel = "cancel"
@@ -23,41 +23,41 @@ const (
 	actionDelete = "delete"
 )
 
-type remindersCommand struct {
+type RemindersCommand struct {
 	*commandStub
 }
 
 func NewRemindersCommand(ctx context.Context, cfg *config.Config, ircSvc irc.IRC) Command {
-	return &remindersCommand{
+	return &RemindersCommand{
 		commandStub: defaultCommandStub(ctx, cfg, ircSvc),
 	}
 }
 
-func (c *remindersCommand) Name() string {
-	return remindersCommandName
+func (c *RemindersCommand) Name() string {
+	return RemindersCommandName
 }
 
-func (c *remindersCommand) Description() string {
+func (c *RemindersCommand) Description() string {
 	return "Show or cancel reminders."
 }
 
-func (c *remindersCommand) Triggers() []string {
+func (c *RemindersCommand) Triggers() []string {
 	return []string{"reminders"}
 }
 
-func (c *remindersCommand) Usages() []string {
+func (c *RemindersCommand) Usages() []string {
 	return []string{"reminders", "reminders cancel <number>"}
 }
 
-func (c *remindersCommand) AllowedInPrivateMessages() bool {
+func (c *RemindersCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *remindersCommand) CanExecute(e *irc.Event) bool {
+func (c *RemindersCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *remindersCommand) Execute(e *irc.Event) {
+func (c *RemindersCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), strings.Join(tokens, " "))
 
@@ -80,7 +80,7 @@ func (c *remindersCommand) Execute(e *irc.Event) {
 	}
 }
 
-func (c *remindersCommand) showReminders(e *irc.Event) {
+func (c *RemindersCommand) showReminders(e *irc.Event) {
 	fs := firestore.Get()
 
 	reminders, err := fs.GetPendingTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
@@ -104,7 +104,7 @@ func (c *remindersCommand) showReminders(e *irc.Event) {
 	}
 }
 
-func (c *remindersCommand) cancelReminder(e *irc.Event, number int) {
+func (c *RemindersCommand) cancelReminder(e *irc.Event, number int) {
 	fs := firestore.Get()
 	reminders, err := fs.GetPendingTasks(e.From, e.ReplyTarget(), models.TaskTypeReminder)
 	if err != nil {

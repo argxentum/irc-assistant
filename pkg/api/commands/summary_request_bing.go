@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) bingRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) bingRequest(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "bing request for %s", url)
 

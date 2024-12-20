@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type bingSimpleAnswerCommand struct {
+type BingSimpleAnswerCommand struct {
 	*commandStub
 	triggers    []string
 	usages      []string
@@ -26,7 +26,7 @@ type bingSimpleAnswerCommand struct {
 }
 
 func NewBingSimpleAnswerCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC, triggers []string, usages []string, description, subject, query, reply, footnote string, minTokens int) Command {
-	return &bingSimpleAnswerCommand{
+	return &BingSimpleAnswerCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNormal),
 		triggers:    triggers,
 		usages:      usages,
@@ -40,31 +40,31 @@ func NewBingSimpleAnswerCommand(ctx context.Context, cfg *config.Config, ircs ir
 	}
 }
 
-func (c *bingSimpleAnswerCommand) Name() string {
+func (c *BingSimpleAnswerCommand) Name() string {
 	return fmt.Sprintf("bing/simple/%s", c.subject)
 }
 
-func (c *bingSimpleAnswerCommand) Description() string {
+func (c *BingSimpleAnswerCommand) Description() string {
 	return c.description
 }
 
-func (c *bingSimpleAnswerCommand) Triggers() []string {
+func (c *BingSimpleAnswerCommand) Triggers() []string {
 	return c.triggers
 }
 
-func (c *bingSimpleAnswerCommand) Usages() []string {
+func (c *BingSimpleAnswerCommand) Usages() []string {
 	return c.usages
 }
 
-func (c *bingSimpleAnswerCommand) AllowedInPrivateMessages() bool {
+func (c *BingSimpleAnswerCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *bingSimpleAnswerCommand) CanExecute(e *irc.Event) bool {
+func (c *BingSimpleAnswerCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, c.minTokens)
 }
 
-func (c *bingSimpleAnswerCommand) Execute(e *irc.Event) {
+func (c *BingSimpleAnswerCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), c.subject)
 

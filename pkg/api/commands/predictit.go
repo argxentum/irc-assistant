@@ -14,41 +14,42 @@ import (
 	"strings"
 )
 
-const predictItCommandName = "predictIt"
+const PredictItCommandName = "predictIt"
+
 const predictItSearchBaseURL = "https://www.predictit.org/api/Browse/Search"
 const predictItMarketDetailURL = "https://www.predictit.org/markets/detail/%d"
 
-type predictItCommand struct {
+type PredictItCommand struct {
 	*commandStub
 }
 
 func NewPredictItCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &predictItCommand{
+	return &PredictItCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *predictItCommand) Name() string {
-	return predictItCommandName
+func (c *PredictItCommand) Name() string {
+	return PredictItCommandName
 }
 
-func (c *predictItCommand) Description() string {
+func (c *PredictItCommand) Description() string {
 	return "Displays the latest PredictIt betting data for the market matching the query."
 }
 
-func (c *predictItCommand) Triggers() []string {
+func (c *PredictItCommand) Triggers() []string {
 	return []string{"predictit", "betting"}
 }
 
-func (c *predictItCommand) Usages() []string {
+func (c *PredictItCommand) Usages() []string {
 	return []string{"%s <query>"}
 }
 
-func (c *predictItCommand) AllowedInPrivateMessages() bool {
+func (c *PredictItCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *predictItCommand) CanExecute(e *irc.Event) bool {
+func (c *PredictItCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
@@ -66,7 +67,7 @@ type predictItSearchResult struct {
 	}
 }
 
-func (c *predictItCommand) Execute(e *irc.Event) {
+func (c *PredictItCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 
 	tokens := Tokens(e.Message())

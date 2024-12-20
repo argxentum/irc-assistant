@@ -12,7 +12,7 @@ var noContentError = errors.New("no summary content")
 
 var rsf []func(e *irc.Event, url string) (*summary, error)
 
-func (c *summaryCommand) requestChain() []func(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) requestChain() []func(e *irc.Event, url string) (*summary, error) {
 	if rsf == nil {
 		rsf = []func(e *irc.Event, url string) (*summary, error){
 			c.redditRequest,
@@ -28,7 +28,7 @@ func (c *summaryCommand) requestChain() []func(e *irc.Event, url string) (*summa
 	return rsf
 }
 
-func (c *summaryCommand) summarize(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) summarize(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 
 	for _, cmd := range c.requestChain() {

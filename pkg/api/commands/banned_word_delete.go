@@ -11,42 +11,42 @@ import (
 	"strings"
 )
 
-const bannedWordDeleteCommandName = "bannedWordDelete"
+const BannedWordDeleteCommandName = "bannedWordDelete"
 
-type bannedWordDeleteCommand struct {
+type BannedWordDeleteCommand struct {
 	*commandStub
 }
 
 func NewBannedWordDeleteCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &bannedWordDeleteCommand{
+	return &BannedWordDeleteCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *bannedWordDeleteCommand) Name() string {
-	return bannedWordDeleteCommandName
+func (c *BannedWordDeleteCommand) Name() string {
+	return BannedWordDeleteCommandName
 }
 
-func (c *bannedWordDeleteCommand) Description() string {
+func (c *BannedWordDeleteCommand) Description() string {
 	return "Removes a word from the channel's banned words list."
 }
 
-func (c *bannedWordDeleteCommand) Triggers() []string {
+func (c *BannedWordDeleteCommand) Triggers() []string {
 	return []string{"bwdel"}
 }
 
-func (c *bannedWordDeleteCommand) Usages() []string {
+func (c *BannedWordDeleteCommand) Usages() []string {
 	return []string{
 		"%s <word> (in a channel)",
 		"%s <channel> <word1> [<word2> ...] (outside a channel)",
 	}
 }
 
-func (c *bannedWordDeleteCommand) AllowedInPrivateMessages() bool {
+func (c *BannedWordDeleteCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *bannedWordDeleteCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
+func (c *BannedWordDeleteCommand) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) > 2 {
@@ -55,15 +55,15 @@ func (c *bannedWordDeleteCommand) IsAuthorized(e *irc.Event, channel string, cal
 		c.Authorizer().IsAuthorized(e, channel, callback)
 	}
 }
-func (c *bannedWordDeleteCommand) CanExecute(e *irc.Event) bool {
+func (c *BannedWordDeleteCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *bannedWordDeleteCommand) Execute(e *irc.Event) {
+func (c *BannedWordDeleteCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 
 	if e.IsPrivateMessage() && len(tokens) < 3 {
-		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
+		c.Replyf(e, "Invalid usage. See %s for more information.", style.Italics(fmt.Sprintf("%s%s %s", c.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], c.cfg.Commands.Prefix))))
 		return
 	}
 

@@ -10,43 +10,43 @@ import (
 	"time"
 )
 
-const kickBanCommandName = "kickban"
+const KickBanCommandName = "kickban"
 
-type kickBanCommand struct {
+type KickBanCommand struct {
 	*commandStub
 }
 
 func NewKickBanCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &kickBanCommand{
+	return &KickBanCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *kickBanCommand) Name() string {
-	return kickBanCommandName
+func (c *KickBanCommand) Name() string {
+	return KickBanCommandName
 }
 
-func (c *kickBanCommand) Description() string {
+func (c *KickBanCommand) Description() string {
 	return "Kicks and bans the specified user from the channel."
 }
 
-func (c *kickBanCommand) Triggers() []string {
+func (c *KickBanCommand) Triggers() []string {
 	return []string{"kickban", "kb"}
 }
 
-func (c *kickBanCommand) Usages() []string {
+func (c *KickBanCommand) Usages() []string {
 	return []string{"%s <nick> [<reason>]"}
 }
 
-func (c *kickBanCommand) AllowedInPrivateMessages() bool {
+func (c *KickBanCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *kickBanCommand) CanExecute(e *irc.Event) bool {
+func (c *KickBanCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *kickBanCommand) Execute(e *irc.Event) {
+func (c *KickBanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 	nick := tokens[1]

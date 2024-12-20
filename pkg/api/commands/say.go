@@ -8,39 +8,39 @@ import (
 	"strings"
 )
 
-const sayCommandName = "say"
+const SayCommandName = "say"
 
-type sayCommand struct {
+type SayCommand struct {
 	*commandStub
 }
 
 func NewSayCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &sayCommand{
+	return &SayCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
 	}
 }
 
-func (c *sayCommand) Name() string {
-	return sayCommandName
+func (c *SayCommand) Name() string {
+	return SayCommandName
 }
 
-func (c *sayCommand) Description() string {
+func (c *SayCommand) Description() string {
 	return "Sends a message to the specified channel."
 }
 
-func (c *sayCommand) Triggers() []string {
+func (c *SayCommand) Triggers() []string {
 	return []string{"say"}
 }
 
-func (c *sayCommand) Usages() []string {
+func (c *SayCommand) Usages() []string {
 	return []string{"%s <channel> <message>"}
 }
 
-func (c *sayCommand) AllowedInPrivateMessages() bool {
+func (c *SayCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *sayCommand) CanExecute(e *irc.Event) bool {
+func (c *SayCommand) CanExecute(e *irc.Event) bool {
 	if !c.isCommandEventValid(c, e, 3) {
 		return false
 	}
@@ -49,7 +49,7 @@ func (c *sayCommand) CanExecute(e *irc.Event) bool {
 	return irc.IsChannel(tokens[1])
 }
 
-func (c *sayCommand) Execute(e *irc.Event) {
+func (c *SayCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := tokens[1]
 	message := strings.Join(tokens[2:], " ")

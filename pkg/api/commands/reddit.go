@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-type redditCommand struct {
+type RedditCommand struct {
 	*commandStub
 	subreddit   string
 	description string
@@ -23,7 +23,7 @@ type redditCommand struct {
 }
 
 func NewRedditCommand(ctx context.Context, cfg *config.Config, irc irc.IRC, subreddit, description string, triggers, usages []string) Command {
-	return &redditCommand{
+	return &RedditCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 		subreddit:   subreddit,
 		description: description,
@@ -33,31 +33,31 @@ func NewRedditCommand(ctx context.Context, cfg *config.Config, irc irc.IRC, subr
 	}
 }
 
-func (c *redditCommand) Name() string {
+func (c *RedditCommand) Name() string {
 	return fmt.Sprintf("r/%s", c.subreddit)
 }
 
-func (c *redditCommand) Description() string {
+func (c *RedditCommand) Description() string {
 	return c.description
 }
 
-func (c *redditCommand) Triggers() []string {
+func (c *RedditCommand) Triggers() []string {
 	return c.triggers
 }
 
-func (c *redditCommand) Usages() []string {
+func (c *RedditCommand) Usages() []string {
 	return c.usages
 }
 
-func (c *redditCommand) AllowedInPrivateMessages() bool {
+func (c *RedditCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *redditCommand) CanExecute(e *irc.Event) bool {
+func (c *RedditCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *redditCommand) Execute(e *irc.Event) {
+func (c *RedditCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	query := strings.Join(tokens[1:], " ")
 
@@ -78,7 +78,7 @@ func (c *redditCommand) Execute(e *irc.Event) {
 	c.sendPostMessages(e, posts)
 }
 
-func (c *redditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTopComment) {
+func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTopComment) {
 	content := make([]string, 0)
 	for i, post := range posts {
 		title := text.Sanitize(post.Post.Title)

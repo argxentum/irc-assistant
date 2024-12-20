@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const summaryCommandName = "summary"
+const SummaryCommandName = "summary"
 
 const minimumTitleLength = 16
 const maximumTitleLength = 256
@@ -31,9 +31,9 @@ type summary struct {
 	messages []string
 }
 
-type userRateLimit struct {
-	username     string
+type UserRateLimit struct {
 	channel      string
+	nick         string
 	summaryCount int
 	disinfoCount int
 	timeoutAt    time.Time
@@ -52,43 +52,43 @@ func (s *summary) addMessage(message string) {
 	s.messages = append(s.messages, message)
 }
 
-type summaryCommand struct {
+type SummaryCommand struct {
 	*commandStub
 	bodyRetriever  retriever.BodyRetriever
 	docRetriever   retriever.DocumentRetriever
-	userRateLimits map[string]*userRateLimit
+	userRateLimits map[string]*UserRateLimit
 }
 
 func NewSummaryCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &summaryCommand{
+	return &SummaryCommand{
 		commandStub:    defaultCommandStub(ctx, cfg, irc),
 		bodyRetriever:  retriever.NewBodyRetriever(),
 		docRetriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-		userRateLimits: make(map[string]*userRateLimit),
+		userRateLimits: make(map[string]*UserRateLimit),
 	}
 }
 
-func (c *summaryCommand) Name() string {
-	return summaryCommandName
+func (c *SummaryCommand) Name() string {
+	return SummaryCommandName
 }
 
-func (c *summaryCommand) Description() string {
+func (c *SummaryCommand) Description() string {
 	return "Displays a summary of the content at the given URL."
 }
 
-func (c *summaryCommand) Triggers() []string {
+func (c *SummaryCommand) Triggers() []string {
 	return []string{}
 }
 
-func (c *summaryCommand) Usages() []string {
+func (c *SummaryCommand) Usages() []string {
 	return []string{"<url>"}
 }
 
-func (c *summaryCommand) AllowedInPrivateMessages() bool {
+func (c *SummaryCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *summaryCommand) CanExecute(e *irc.Event) bool {
+func (c *SummaryCommand) CanExecute(e *irc.Event) bool {
 	if !c.isCommandEventValid(c, e, 0) {
 		return false
 	}
@@ -97,7 +97,7 @@ func (c *summaryCommand) CanExecute(e *irc.Event) bool {
 	return strings.Contains(message, "https://") || strings.Contains(message, "http://")
 }
 
-func (c *summaryCommand) Execute(e *irc.Event) {
+func (c *SummaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	fs := firestore.Get()
 	rl := c.userRateLimits[e.From+"@"+e.ReplyTarget()]
@@ -206,12 +206,31 @@ func (c *summaryCommand) Execute(e *irc.Event) {
 	}
 }
 
-func (c *summaryCommand) completeSummary(e *irc.Event, target string, messages []string, dis bool, rl *userRateLimit) {
+func (c *SummaryCommand) InitializeUserRateLimit(channel, nick string, duration time.Duration) *UserRateLimit {
+	logger := log.Logger()
+
+	rl := c.userRateLimits[nick+"@"+channel]
+	if rl == nil || rl.timeoutAt.Before(time.Now()) {
+		rl = &UserRateLimit{
+			channel:   channel,
+			nick:      nick,
+			timeoutAt: time.Now().Add(duration),
+		}
+		c.userRateLimits[nick+"@"+channel] = rl
+		logger.Debugf(nil, "join, rate limiting %s in %s until %s", nick, channel, elapse.TimeDescription(rl.timeoutAt))
+	} else {
+		logger.Debugf(nil, "join, rate limit already in effect for %s in %s until %s", nick, channel, elapse.TimeDescription(rl.timeoutAt))
+	}
+
+	return rl
+}
+
+func (c *SummaryCommand) completeSummary(e *irc.Event, target string, messages []string, dis bool, rl *UserRateLimit) {
 	if !e.IsPrivateMessage() {
 		if rl == nil {
-			rl = &userRateLimit{
-				username: e.From,
-				channel:  target,
+			rl = &UserRateLimit{
+				channel: target,
+				nick:    e.From,
 			}
 		}
 		rl.summaryCount++
@@ -225,7 +244,7 @@ func (c *summaryCommand) completeSummary(e *irc.Event, target string, messages [
 	c.SendMessages(e, target, messages)
 }
 
-func updateRateLimit(e *irc.Event, rl *userRateLimit) {
+func updateRateLimit(e *irc.Event, rl *UserRateLimit) {
 	logger := log.Logger()
 	sp := 0.0
 	if rl.summaryCount > 0 {
@@ -264,17 +283,17 @@ var domainDenylist = []string{
 	"i.redd.it",
 }
 
-func (c *summaryCommand) isRootDomainIn(url string, domains []string) bool {
+func (c *SummaryCommand) isRootDomainIn(url string, domains []string) bool {
 	root := retriever.RootDomain(url)
 	return slices.Contains(domains, root)
 }
 
-func (c *summaryCommand) isDomainIn(url string, domains []string) bool {
+func (c *SummaryCommand) isDomainIn(url string, domains []string) bool {
 	domain := retriever.Domain(url)
 	return slices.Contains(domains, domain)
 }
 
-func (c *summaryCommand) isRejectedTitle(title string) bool {
+func (c *SummaryCommand) isRejectedTitle(title string) bool {
 	for _, prefix := range c.cfg.Ignore.TitlePrefixes {
 		if strings.HasPrefix(strings.ToLower(title), prefix) {
 			return true

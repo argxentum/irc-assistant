@@ -18,7 +18,7 @@ import (
 
 var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
 
-func (c *summaryCommand) parseReddit(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error) {
 	if strings.Contains(url, "/s/") {
 		return c.parseRedditShortlink(e, url)
 	}
@@ -75,7 +75,7 @@ func (c *summaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	return createSummary(messages...), nil
 }
 
-func (c *summaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "reddit shortlink request for %s", url)
 

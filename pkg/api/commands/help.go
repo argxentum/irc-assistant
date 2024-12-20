@@ -11,43 +11,43 @@ import (
 	"strings"
 )
 
-const helpCommandName = "help"
+const HelpCommandName = "help"
 
-type helpCommand struct {
+type HelpCommand struct {
 	*commandStub
 }
 
 func NewHelpCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &helpCommand{
+	return &HelpCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *helpCommand) Name() string {
-	return helpCommandName
+func (c *HelpCommand) Name() string {
+	return HelpCommandName
 }
 
-func (c *helpCommand) Description() string {
+func (c *HelpCommand) Description() string {
 	return "Displays help for the given command."
 }
 
-func (c *helpCommand) Triggers() []string {
+func (c *HelpCommand) Triggers() []string {
 	return []string{"help"}
 }
 
-func (c *helpCommand) Usages() []string {
+func (c *HelpCommand) Usages() []string {
 	return []string{"%s", "%s <command>"}
 }
 
-func (c *helpCommand) AllowedInPrivateMessages() bool {
+func (c *HelpCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *helpCommand) CanExecute(e *irc.Event) bool {
+func (c *HelpCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *helpCommand) Execute(e *irc.Event) {
+func (c *HelpCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), e.Message())
@@ -110,7 +110,7 @@ func (c *helpCommand) Execute(e *irc.Event) {
 
 	if cmd == nil {
 		logger.Warningf(e, "command %s not found", trigger)
-		c.Replyf(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0])))
+		c.Replyf(e, "Command %s not found. See %s for a list of available commands.", style.Bold(trigger), style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0])))
 		return
 	}
 

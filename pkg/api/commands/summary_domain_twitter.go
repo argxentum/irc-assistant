@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error) {
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 

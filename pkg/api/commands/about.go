@@ -7,43 +7,43 @@ import (
 	"assistant/pkg/log"
 )
 
-const aboutCommandName = "about"
+const AboutCommandName = "about"
 
-type aboutCommand struct {
+type AboutCommand struct {
 	*commandStub
 }
 
 func NewAboutCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &aboutCommand{
+	return &AboutCommand{
 		commandStub: defaultCommandStub(ctx, cfg, ircs),
 	}
 }
 
-func (c *aboutCommand) Name() string {
-	return aboutCommandName
+func (c *AboutCommand) Name() string {
+	return AboutCommandName
 }
 
-func (c *aboutCommand) Description() string {
+func (c *AboutCommand) Description() string {
 	return "Shows information about the bot."
 }
 
-func (c *aboutCommand) Triggers() []string {
+func (c *AboutCommand) Triggers() []string {
 	return []string{"about"}
 }
 
-func (c *aboutCommand) Usages() []string {
+func (c *AboutCommand) Usages() []string {
 	return []string{"%s"}
 }
 
-func (c *aboutCommand) AllowedInPrivateMessages() bool {
+func (c *AboutCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *aboutCommand) CanExecute(e *irc.Event) bool {
+func (c *AboutCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *aboutCommand) Execute(e *irc.Event) {
+func (c *AboutCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] ", c.Name(), e.From, e.ReplyTarget())
 	message := "Version 0.1. Source: https://github.com/argxentum/irc-assistant."

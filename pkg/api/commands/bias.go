@@ -16,41 +16,41 @@ import (
 	"unicode"
 )
 
-const biasCommandName = "bias"
+const BiasCommandName = "bias"
 
-type biasCommand struct {
+type BiasCommand struct {
 	*commandStub
 	retriever retriever.DocumentRetriever
 }
 
 func NewBiasCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &biasCommand{
+	return &BiasCommand{
 		commandStub: defaultCommandStub(ctx, cfg, ircs),
 		retriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}
 }
 
-func (c *biasCommand) Name() string {
-	return biasCommandName
+func (c *BiasCommand) Name() string {
+	return BiasCommandName
 }
 
-func (c *biasCommand) Description() string {
+func (c *BiasCommand) Description() string {
 	return "Displays source bias and credibility information based on Media Bias Fact Check."
 }
 
-func (c *biasCommand) Triggers() []string {
+func (c *BiasCommand) Triggers() []string {
 	return []string{"bias"}
 }
 
-func (c *biasCommand) Usages() []string {
+func (c *BiasCommand) Usages() []string {
 	return []string{"%s <source>"}
 }
 
-func (c *biasCommand) AllowedInPrivateMessages() bool {
+func (c *BiasCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *biasCommand) CanExecute(e *irc.Event) bool {
+func (c *BiasCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
@@ -58,7 +58,7 @@ var biasRatingRegexp = regexp.MustCompile(`(?m)(?i)bias rating:([^\n]+)`)
 var factualReportingRegexp = regexp.MustCompile(`(?m)(?i)factual reporting:([^\n]+)`)
 var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]+)`)
 
-func (c *biasCommand) Execute(e *irc.Event) {
+func (c *BiasCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 	headers := retriever.RandomHeaderSet()

@@ -9,43 +9,43 @@ import (
 	"strings"
 )
 
-const animatedTextCommandName = "animatedText"
+const AnimatedTextCommandName = "animatedText"
 
-type animatedTextCommand struct {
+type AnimatedTextCommand struct {
 	*commandStub
 }
 
 func NewAnimatedTextCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &animatedTextCommand{
+	return &AnimatedTextCommand{
 		commandStub: defaultCommandStub(ctx, cfg, ircs),
 	}
 }
 
-func (c *animatedTextCommand) Name() string {
-	return animatedTextCommandName
+func (c *AnimatedTextCommand) Name() string {
+	return AnimatedTextCommandName
 }
 
-func (c *animatedTextCommand) Description() string {
+func (c *AnimatedTextCommand) Description() string {
 	return "Displays the given text as an animation."
 }
 
-func (c *animatedTextCommand) Triggers() []string {
+func (c *AnimatedTextCommand) Triggers() []string {
 	return []string{"animate", "animated", "text"}
 }
 
-func (c *animatedTextCommand) Usages() []string {
+func (c *AnimatedTextCommand) Usages() []string {
 	return []string{"%s <text>"}
 }
 
-func (c *animatedTextCommand) AllowedInPrivateMessages() bool {
+func (c *AnimatedTextCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *animatedTextCommand) CanExecute(e *irc.Event) bool {
+func (c *AnimatedTextCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *animatedTextCommand) Execute(e *irc.Event) {
+func (c *AnimatedTextCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], "_") + ".gif"
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), message)

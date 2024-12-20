@@ -14,47 +14,47 @@ import (
 	"time"
 )
 
-const pollsCommandName = "polls"
+const PollsCommandName = "polls"
 
 const pollsURL = "https://www.270towin.com/%d-presidential-election-polls/%s"
 
-type pollsCommand struct {
+type PollsCommand struct {
 	*commandStub
 	retriever retriever.DocumentRetriever
 }
 
 func NewPollsCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &pollsCommand{
+	return &PollsCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 		retriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}
 }
 
-func (c *pollsCommand) Name() string {
-	return pollsCommandName
+func (c *PollsCommand) Name() string {
+	return PollsCommandName
 }
 
-func (c *pollsCommand) Description() string {
+func (c *PollsCommand) Description() string {
 	return "Displays the latest polling data from 270toWin."
 }
 
-func (c *pollsCommand) Triggers() []string {
+func (c *PollsCommand) Triggers() []string {
 	return []string{"polls"}
 }
 
-func (c *pollsCommand) Usages() []string {
+func (c *PollsCommand) Usages() []string {
 	return []string{"%s", "%s <poll>"}
 }
 
-func (c *pollsCommand) AllowedInPrivateMessages() bool {
+func (c *PollsCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *pollsCommand) CanExecute(e *irc.Event) bool {
+func (c *PollsCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *pollsCommand) Execute(e *irc.Event) {
+func (c *PollsCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s]", c.Name(), e.From, e.ReplyTarget())
 

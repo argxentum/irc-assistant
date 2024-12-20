@@ -16,46 +16,47 @@ import (
 	"time"
 )
 
-const currencyCommandName = "currency"
+const CurrencyCommandName = "currency"
+
 const currencyConversionLatestURL = "https://api.freecurrencyapi.com/v1/latest?base_currency=%s&currencies=%s&apikey=%s"
 const currencyConversionHistoricalURL = "https://api.freecurrencyapi.com/v1/historical?date=%s&base_currency=%s&currencies=%s&apikey=%s"
 const currencyMetadataURL = "https://api.freecurrencyapi.com/v1/currencies?currencies=%s,%s&apikey=%s"
 
-type currencyCommand struct {
+type CurrencyCommand struct {
 	*commandStub
 }
 
 func NewCurrencyCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &currencyCommand{
+	return &CurrencyCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *currencyCommand) Name() string {
-	return currencyCommandName
+func (c *CurrencyCommand) Name() string {
+	return CurrencyCommandName
 }
 
-func (c *currencyCommand) Description() string {
+func (c *CurrencyCommand) Description() string {
 	return "Converts from one currency to another. Converts from USD if no <from> value is provided."
 }
 
-func (c *currencyCommand) Triggers() []string {
+func (c *CurrencyCommand) Triggers() []string {
 	return []string{"currency", "convert"}
 }
 
-func (c *currencyCommand) Usages() []string {
+func (c *CurrencyCommand) Usages() []string {
 	return []string{"%s <from> <to>", "%s <to>"}
 }
 
-func (c *currencyCommand) AllowedInPrivateMessages() bool {
+func (c *CurrencyCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *currencyCommand) CanExecute(e *irc.Event) bool {
+func (c *CurrencyCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *currencyCommand) Execute(e *irc.Event) {
+func (c *CurrencyCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	msg := e.Message()
 	msg = strings.ReplaceAll(msg, " to ", " ")
@@ -151,7 +152,7 @@ type currencyMetadata struct {
 	}
 }
 
-func (c *currencyCommand) latestConversion(from, to string) (latestConversion, error) {
+func (c *CurrencyCommand) latestConversion(from, to string) (latestConversion, error) {
 	resp, err := http.Get(fmt.Sprintf(currencyConversionLatestURL, from, to, c.cfg.Currency.APIKey))
 	if err != nil {
 		return latestConversion{}, err
@@ -168,7 +169,7 @@ func (c *currencyCommand) latestConversion(from, to string) (latestConversion, e
 	return conversion, err
 }
 
-func (c *currencyCommand) historicalConversion(date, from, to string) (historicalConversion, error) {
+func (c *CurrencyCommand) historicalConversion(date, from, to string) (historicalConversion, error) {
 	resp, err := http.Get(fmt.Sprintf(currencyConversionHistoricalURL, date, from, to, c.cfg.Currency.APIKey))
 	if err != nil {
 		return historicalConversion{}, err
@@ -185,7 +186,7 @@ func (c *currencyCommand) historicalConversion(date, from, to string) (historica
 	return conversion, err
 }
 
-func (c *currencyCommand) currencyMetadata(from, to string) (currencyMetadata, error) {
+func (c *CurrencyCommand) currencyMetadata(from, to string) (currencyMetadata, error) {
 	resp, err := http.Get(fmt.Sprintf(currencyMetadataURL, from, to, c.cfg.Currency.APIKey))
 	if err != nil {
 		return currencyMetadata{}, err

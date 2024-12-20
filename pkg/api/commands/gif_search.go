@@ -9,43 +9,43 @@ import (
 	"strings"
 )
 
-const gifSearchCommandName = "gifSearch"
+const GIFSearchCommandName = "gifSearch"
 
-type gifSearchCommand struct {
+type GIFSearchCommand struct {
 	*commandStub
 }
 
 func NewGifSearchCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &gifSearchCommand{
+	return &GIFSearchCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *gifSearchCommand) Name() string {
-	return gifSearchCommandName
+func (c *GIFSearchCommand) Name() string {
+	return GIFSearchCommandName
 }
 
-func (c *gifSearchCommand) Description() string {
+func (c *GIFSearchCommand) Description() string {
 	return "Searches for a gif on Giphy."
 }
 
-func (c *gifSearchCommand) Triggers() []string {
+func (c *GIFSearchCommand) Triggers() []string {
 	return []string{"gif", "gifs", "giphy"}
 }
 
-func (c *gifSearchCommand) Usages() []string {
+func (c *GIFSearchCommand) Usages() []string {
 	return []string{"%s <search>"}
 }
 
-func (c *gifSearchCommand) AllowedInPrivateMessages() bool {
+func (c *GIFSearchCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *gifSearchCommand) CanExecute(e *irc.Event) bool {
+func (c *GIFSearchCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *gifSearchCommand) Execute(e *irc.Event) {
+func (c *GIFSearchCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], "_") + ".gif"
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), message)

@@ -7,43 +7,43 @@ import (
 	"assistant/pkg/log"
 )
 
-const banCommandName = "ban"
+const BanCommandName = "ban"
 
-type banCommand struct {
+type BanCommand struct {
 	*commandStub
 }
 
 func NewBanCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &banCommand{
+	return &BanCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *banCommand) Name() string {
-	return banCommandName
+func (c *BanCommand) Name() string {
+	return BanCommandName
 }
 
-func (c *banCommand) Description() string {
+func (c *BanCommand) Description() string {
 	return "Bans the given user mask from the channel."
 }
 
-func (c *banCommand) Triggers() []string {
+func (c *BanCommand) Triggers() []string {
 	return []string{"ban", "b"}
 }
 
-func (c *banCommand) Usages() []string {
+func (c *BanCommand) Usages() []string {
 	return []string{"%s <mask>"}
 }
 
-func (c *banCommand) AllowedInPrivateMessages() bool {
+func (c *BanCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *banCommand) CanExecute(e *irc.Event) bool {
+func (c *BanCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *banCommand) Execute(e *irc.Event) {
+func (c *BanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	mask := tokens[1]
 	channel := e.ReplyTarget()

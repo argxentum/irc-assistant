@@ -8,39 +8,39 @@ import (
 	"strings"
 )
 
-const leaveCommandName = "leave"
+const LeaveCommandName = "leave"
 
-type leaveCommand struct {
+type LeaveCommand struct {
 	*commandStub
 }
 
 func NewLeaveCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &leaveCommand{
+	return &LeaveCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
 	}
 }
 
-func (c *leaveCommand) Name() string {
-	return leaveCommandName
+func (c *LeaveCommand) Name() string {
+	return LeaveCommandName
 }
 
-func (c *leaveCommand) Description() string {
+func (c *LeaveCommand) Description() string {
 	return "Leaves the specified channel(s)."
 }
 
-func (c *leaveCommand) Triggers() []string {
+func (c *LeaveCommand) Triggers() []string {
 	return []string{"leave", "part"}
 }
 
-func (c *leaveCommand) Usages() []string {
+func (c *LeaveCommand) Usages() []string {
 	return []string{"%s [<channel1> [<channel2> ...]]"}
 }
 
-func (c *leaveCommand) AllowedInPrivateMessages() bool {
+func (c *LeaveCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *leaveCommand) CanExecute(e *irc.Event) bool {
+func (c *LeaveCommand) CanExecute(e *irc.Event) bool {
 	tokens := Tokens(e.Message())
 	if e.IsPrivateMessage() {
 		return c.isCommandEventValid(c, e, 1) && irc.IsChannel(tokens[1])
@@ -49,7 +49,7 @@ func (c *leaveCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *leaveCommand) Execute(e *irc.Event) {
+func (c *LeaveCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channels := tokens[1:]
 

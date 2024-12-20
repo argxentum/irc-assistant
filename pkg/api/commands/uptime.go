@@ -10,43 +10,43 @@ import (
 	"time"
 )
 
-const uptimeCommandName = "uptime"
+const UptimeCommandName = "uptime"
 
-type uptimeCommand struct {
+type UptimeCommand struct {
 	*commandStub
 }
 
 func NewUptimeCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &uptimeCommand{
+	return &UptimeCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *uptimeCommand) Name() string {
-	return uptimeCommandName
+func (c *UptimeCommand) Name() string {
+	return UptimeCommandName
 }
 
-func (c *uptimeCommand) Description() string {
+func (c *UptimeCommand) Description() string {
 	return "Displays uptime information."
 }
 
-func (c *uptimeCommand) Triggers() []string {
+func (c *UptimeCommand) Triggers() []string {
 	return []string{"uptime"}
 }
 
-func (c *uptimeCommand) Usages() []string {
+func (c *UptimeCommand) Usages() []string {
 	return []string{"%s"}
 }
 
-func (c *uptimeCommand) AllowedInPrivateMessages() bool {
+func (c *UptimeCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *uptimeCommand) CanExecute(e *irc.Event) bool {
+func (c *UptimeCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *uptimeCommand) Execute(e *irc.Event) {
+func (c *UptimeCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s]", c.Name(), e.From, e.ReplyTarget())
 

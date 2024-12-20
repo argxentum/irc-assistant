@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) parseMastodon(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseMastodon(e *irc.Event, url string) (*summary, error) {
 	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), 500)
 	if err != nil {
 		return nil, err

@@ -8,43 +8,43 @@ import (
 	"strings"
 )
 
-const kickCommandName = "kick"
+const KickCommandName = "kick"
 
-type kickCommand struct {
+type KickCommand struct {
 	*commandStub
 }
 
 func NewKickCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &kickCommand{
+	return &KickCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *kickCommand) Name() string {
-	return kickCommandName
+func (c *KickCommand) Name() string {
+	return KickCommandName
 }
 
-func (c *kickCommand) Description() string {
+func (c *KickCommand) Description() string {
 	return "Kicks the specified user from the channel."
 }
 
-func (c *kickCommand) Triggers() []string {
+func (c *KickCommand) Triggers() []string {
 	return []string{"kick", "k"}
 }
 
-func (c *kickCommand) Usages() []string {
+func (c *KickCommand) Usages() []string {
 	return []string{"%s <nick> [<reason>]"}
 }
 
-func (c *kickCommand) AllowedInPrivateMessages() bool {
+func (c *KickCommand) AllowedInPrivateMessages() bool {
 	return false
 }
 
-func (c *kickCommand) CanExecute(e *irc.Event) bool {
+func (c *KickCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *kickCommand) Execute(e *irc.Event) {
+func (c *KickCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
 	channel := e.ReplyTarget()

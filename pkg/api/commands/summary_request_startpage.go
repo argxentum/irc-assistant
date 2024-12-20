@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func (c *summaryCommand) startPageRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) startPageRequest(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "trying startpage for %s", url)
 

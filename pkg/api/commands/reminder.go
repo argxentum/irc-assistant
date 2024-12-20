@@ -14,43 +14,43 @@ import (
 	"time"
 )
 
-const reminderCommandName = "reminder"
+const ReminderCommandName = "reminder"
 
-type reminderCommand struct {
+type ReminderCommand struct {
 	*commandStub
 }
 
 func NewReminderCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &reminderCommand{
+	return &ReminderCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 	}
 }
 
-func (c *reminderCommand) Name() string {
-	return reminderCommandName
+func (c *ReminderCommand) Name() string {
+	return ReminderCommandName
 }
 
-func (c *reminderCommand) Description() string {
+func (c *ReminderCommand) Description() string {
 	return "Creates a reminder message to be delivered after the given duration."
 }
 
-func (c *reminderCommand) Triggers() []string {
+func (c *ReminderCommand) Triggers() []string {
 	return []string{"reminder"}
 }
 
-func (c *reminderCommand) Usages() []string {
+func (c *ReminderCommand) Usages() []string {
 	return []string{"%s <duration> <message>"}
 }
 
-func (c *reminderCommand) AllowedInPrivateMessages() bool {
+func (c *ReminderCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *reminderCommand) CanExecute(e *irc.Event) bool {
+func (c *ReminderCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 2)
 }
 
-func (c *reminderCommand) Execute(e *irc.Event) {
+func (c *ReminderCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 
 	tokens := Tokens(e.Message())
@@ -61,7 +61,7 @@ func (c *reminderCommand) Execute(e *irc.Event) {
 	seconds, err := elapse.ParseDuration(duration)
 	if err != nil {
 		logger.Errorf(e, "error parsing duration, %s", err)
-		c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(reminderCommandName).Triggers()[0])))
+		c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(ReminderCommandName).Triggers()[0])))
 		return
 	}
 

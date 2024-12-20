@@ -75,7 +75,7 @@ func (cs *commandStub) isCommandEventValid(c Command, e *irc.Event, minBodyToken
 
 	// if sleeping, ignore all triggers except wake
 	if !cs.ctx.Session().IsAwake {
-		isWakeTrigger := c.Name() == wakeCommandName && slices.Contains(registry.Command(wakeCommandName).Triggers(), strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))
+		isWakeTrigger := c.Name() == WakeCommandName && slices.Contains(registry.Command(WakeCommandName).Triggers(), strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))
 		if isWakeTrigger {
 			if !cs.authorizer.IsUserAuthorizedByRole(nick, cs.authorizer.RequiredRole()) {
 				cs.UnauthorizedReply(e)
@@ -89,7 +89,7 @@ func (cs *commandStub) isCommandEventValid(c Command, e *irc.Event, minBodyToken
 	// if the commandStub is not allowed in private messages and the message is a private message, ignore
 	if !c.AllowedInPrivateMessages() && e.IsPrivateMessage() {
 		if attempted {
-			cs.Replyf(e, "The %s command is not allowed in private messages. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", cs.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))))
+			cs.Replyf(e, "The %s command is not allowed in private messages. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", cs.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))))
 		}
 		return false
 	}
@@ -105,7 +105,7 @@ func (cs *commandStub) isCommandEventValid(c Command, e *irc.Event, minBodyToken
 	// if the commandStub requires a minimum number of body Tokens, check that
 	if minBodyTokens > 0 && len(tokens) < minBodyTokens+1 {
 		if attempted {
-			cs.Replyf(e, "Invalid number of arguments for %s. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", cs.cfg.Commands.Prefix, registry.Command(helpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))))
+			cs.Replyf(e, "Invalid number of arguments for %s. See %s for more information.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)), style.Italics(fmt.Sprintf("%s%s %s", cs.cfg.Commands.Prefix, registry.Command(HelpCommandName).Triggers()[0], strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))))
 		}
 		return false
 	}

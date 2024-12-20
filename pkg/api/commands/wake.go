@@ -7,43 +7,43 @@ import (
 	"assistant/pkg/log"
 )
 
-const wakeCommandName = "wake"
+const WakeCommandName = "wake"
 
-type wakeCommand struct {
+type WakeCommand struct {
 	*commandStub
 }
 
 func NewWakeCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &wakeCommand{
+	return &WakeCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
 	}
 }
 
-func (c *wakeCommand) Name() string {
-	return wakeCommandName
+func (c *WakeCommand) Name() string {
+	return WakeCommandName
 }
 
-func (c *wakeCommand) Description() string {
+func (c *WakeCommand) Description() string {
 	return "Wakes the bot, enabling it across all channels."
 }
 
-func (c *wakeCommand) Triggers() []string {
+func (c *WakeCommand) Triggers() []string {
 	return []string{"wake"}
 }
 
-func (c *wakeCommand) Usages() []string {
+func (c *WakeCommand) Usages() []string {
 	return []string{"%s"}
 }
 
-func (c *wakeCommand) AllowedInPrivateMessages() bool {
+func (c *WakeCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *wakeCommand) CanExecute(e *irc.Event) bool {
+func (c *WakeCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *wakeCommand) Execute(e *irc.Event) {
+func (c *WakeCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s]", c.Name(), e.From, e.ReplyTarget())
 

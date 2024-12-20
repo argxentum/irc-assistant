@@ -8,7 +8,7 @@ import (
 	"errors"
 )
 
-func (c *summaryCommand) redditRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) redditRequest(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "reddit request for %s", url)
 

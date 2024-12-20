@@ -8,7 +8,7 @@ import (
 
 var csf map[string]func(e *irc.Event, url string) (*summary, error)
 
-func (c *summaryCommand) contentSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
 	if csf == nil {
 		csf = map[string]func(e *irc.Event, url string) (*summary, error){
 			"https://joinmastodon.org/apps": c.parseMastodon,
@@ -18,7 +18,7 @@ func (c *summaryCommand) contentSummarization() map[string]func(e *irc.Event, ur
 	return csf
 }
 
-func (c *summaryCommand) contentSummary(e *irc.Event, url string) (func(e *irc.Event, url string) (*summary, error), error) {
+func (c *SummaryCommand) contentSummary(e *irc.Event, url string) (func(e *irc.Event, url string) (*summary, error), error) {
 	if len(url) == 0 {
 		return nil, nil
 	}

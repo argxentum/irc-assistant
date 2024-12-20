@@ -12,45 +12,45 @@ import (
 	"strings"
 )
 
-const stockCommandName = "stock"
+const StockCommandName = "stock"
 
-type stockCommand struct {
+type StockCommand struct {
 	*commandStub
 	retriever retriever.DocumentRetriever
 }
 
 func NewStockCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
-	return &stockCommand{
+	return &StockCommand{
 		commandStub: defaultCommandStub(ctx, cfg, irc),
 		retriever:   retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 	}
 }
 
-func (c *stockCommand) Name() string {
-	return stockCommandName
+func (c *StockCommand) Name() string {
+	return StockCommandName
 }
 
-func (c *stockCommand) Description() string {
+func (c *StockCommand) Description() string {
 	return "Displays the current price of the given stock symbol or company name."
 }
 
-func (c *stockCommand) Triggers() []string {
+func (c *StockCommand) Triggers() []string {
 	return []string{"stock"}
 }
 
-func (c *stockCommand) Usages() []string {
+func (c *StockCommand) Usages() []string {
 	return []string{"%s <symbol>"}
 }
 
-func (c *stockCommand) AllowedInPrivateMessages() bool {
+func (c *StockCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *stockCommand) CanExecute(e *irc.Event) bool {
+func (c *StockCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-func (c *stockCommand) Execute(e *irc.Event) {
+func (c *StockCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	symbol := tokens[1]
 
@@ -67,7 +67,7 @@ func (c *stockCommand) Execute(e *irc.Event) {
 	c.SendMessage(e, e.ReplyTarget(), message)
 }
 
-func (c *stockCommand) retrieveStockPriceMessage(e *irc.Event, symbol string) string {
+func (c *StockCommand) retrieveStockPriceMessage(e *irc.Event, symbol string) string {
 	logger := log.Logger()
 
 	query := url.QueryEscape(fmt.Sprintf("current stock price %s", strings.ToUpper(symbol)))
