@@ -26,6 +26,7 @@ const startRateLimitTimeoutSeconds = 15
 const maxRateLimitTimeoutSeconds = 300
 const rateLimitSummaryMultiplier = 1.25
 const rateLimitDisinfoMultiplier = 1.75
+const rateLimitShowWarningAfter = 1
 
 type summary struct {
 	messages []string
@@ -37,6 +38,7 @@ type UserRateLimit struct {
 	summaryCount int
 	disinfoCount int
 	timeoutAt    time.Time
+	ignoreCount  int
 }
 
 func createSummary(message ...string) *summary {
@@ -120,11 +122,15 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if rl.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring rate limited request from %s in %s", e.From, e.ReplyTarget())
 			dis := channel != nil && channel.Summarization.IsPossibleDisinformation(url)
+			rl.ignoreCount++
 			rl.summaryCount++
 			if dis {
 				rl.disinfoCount++
 			}
 			updateRateLimit(e, rl)
+			if rl.ignoreCount > rateLimitShowWarningAfter {
+				c.Replyf(e, "your summarization rate limit reached, please wait %s", elapse.FutureTimeDescriptionConcise(rl.timeoutAt))
+			}
 			c.userRateLimits[e.From+"@"+e.ReplyTarget()] = rl
 			return
 		} else {
@@ -132,6 +138,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			rl.timeoutAt = time.Time{}
 			rl.summaryCount = 0
 			rl.disinfoCount = 0
+			rl.ignoreCount = 0
 		}
 	}
 
@@ -212,9 +219,10 @@ func (c *SummaryCommand) InitializeUserRateLimit(channel, nick string, duration 
 	rl := c.userRateLimits[nick+"@"+channel]
 	if rl == nil || rl.timeoutAt.Before(time.Now()) {
 		rl = &UserRateLimit{
-			channel:   channel,
-			nick:      nick,
-			timeoutAt: time.Now().Add(duration),
+			channel:     channel,
+			nick:        nick,
+			timeoutAt:   time.Now().Add(duration),
+			ignoreCount: 0,
 		}
 		c.userRateLimits[nick+"@"+channel] = rl
 		logger.Debugf(nil, "join, rate limiting %s in %s until %s", nick, channel, elapse.TimeDescription(rl.timeoutAt))
@@ -261,10 +269,10 @@ func updateRateLimit(e *irc.Event, rl *UserRateLimit) {
 	}
 
 	tp := startRateLimitTimeoutSeconds * (sp + dp)
-	if tp < maxRateLimitTimeoutSeconds {
-		rl.timeoutAt = rl.timeoutAt.Add(time.Duration(tp) * time.Second)
-	} else {
-		rl.timeoutAt = rl.timeoutAt.Add(time.Duration(maxRateLimitTimeoutSeconds) * time.Second)
+	rl.timeoutAt = rl.timeoutAt.Add(time.Duration(tp) * time.Second)
+	maxTimeoutAt := time.Now().Add(time.Duration(maxRateLimitTimeoutSeconds) * time.Second)
+	if rl.timeoutAt.After(maxTimeoutAt) {
+		rl.timeoutAt = maxTimeoutAt
 	}
 
 	logger.Debugf(e, "rate limiting %s in %s until %s (summary: %d, disinfo: %d)", e.From, e.ReplyTarget(), elapse.TimeDescription(rl.timeoutAt), rl.summaryCount, rl.disinfoCount)
