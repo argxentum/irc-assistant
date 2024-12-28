@@ -129,7 +129,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 			updateRateLimit(e, rl)
 			if rl.ignoreCount > rateLimitShowWarningAfter {
-				c.Replyf(e, "your summarization rate limit reached, please wait %s", elapse.FutureTimeDescriptionConcise(rl.timeoutAt))
+				c.Replyf(e, "summarization rate limit reached, please wait %s", elapse.FutureTimeDescriptionConcise(rl.timeoutAt))
 			}
 			c.userRateLimits[e.From+"@"+e.ReplyTarget()] = rl
 			return
