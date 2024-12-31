@@ -23,6 +23,10 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 		return c.parseRedditShortlink(e, url)
 	}
 
+	if strings.HasPrefix(url, "https://old.reddit.com/") {
+		url = strings.Replace(url, "old.reddit.com", "reddit.com", 1)
+	}
+
 	logger := log.Logger()
 
 	if reddit.IsJWTExpired(c.ctx.Session().Reddit.JWT) {
