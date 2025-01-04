@@ -32,8 +32,6 @@ type Command interface {
 	Replyf(e *irc.Event, message string, args ...any)
 }
 
-const inputMaxLength = 512
-
 type commandStub struct {
 	ctx        context.Context
 	cfg        *config.Config

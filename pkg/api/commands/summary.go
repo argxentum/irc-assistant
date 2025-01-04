@@ -22,11 +22,11 @@ const minimumTitleLength = 16
 const maximumTitleLength = 256
 const minimumPreferredTitleLength = 64
 const maximumDescriptionLength = 300
-const startRateLimitTimeoutSeconds = 15
-const maxRateLimitTimeoutSeconds = 300
-const rateLimitSummaryMultiplier = 1.25
-const rateLimitDisinfoMultiplier = 1.75
-const rateLimitShowWarningAfter = 1
+const startRateLimitTimeoutSeconds = 30
+const maxRateLimitTimeoutSeconds = 600
+const rateLimitSummaryMultiplier = 1.3
+const rateLimitDisinfoMultiplier = 2.0
+const rateLimitShowWarningAfter = 2
 
 type summary struct {
 	messages []string
@@ -129,7 +129,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 			updateRateLimit(e, rl)
 			if rl.ignoreCount > rateLimitShowWarningAfter {
-				c.Replyf(e, "summarization rate limit reached, please wait %s", elapse.FutureTimeDescriptionConcise(rl.timeoutAt))
+				c.Replyf(e, "You've been rate limited. I'll resume summarizing your linked content in %s.", elapse.FutureTimeDescriptionConcise(rl.timeoutAt))
 			}
 			c.userRateLimits[e.From+"@"+e.ReplyTarget()] = rl
 			return
