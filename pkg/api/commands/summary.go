@@ -9,6 +9,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"errors"
+	"html"
 	"math"
 	"regexp"
 	"slices"
@@ -233,6 +234,8 @@ func (c *SummaryCommand) InitializeUserRateLimit(channel, nick string, duration 
 	return rl
 }
 
+var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
+
 func (c *SummaryCommand) completeSummary(e *irc.Event, target string, messages []string, dis bool, rl *UserRateLimit) {
 	if !e.IsPrivateMessage() {
 		if rl == nil {
@@ -249,7 +252,16 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, target string, messages [
 		c.userRateLimits[e.From+"@"+target] = rl
 	}
 
-	c.SendMessages(e, target, messages)
+	unescapedMessages := make([]string, 0)
+	for _, message := range messages {
+		if escapedHtmlEntityRegex.MatchString(message) {
+			unescapedMessages = append(unescapedMessages, html.UnescapeString(message))
+		} else {
+			unescapedMessages = append(unescapedMessages, message)
+		}
+	}
+
+	c.SendMessages(e, target, unescapedMessages)
 }
 
 func updateRateLimit(e *irc.Event, rl *UserRateLimit) {
