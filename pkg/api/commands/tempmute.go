@@ -32,7 +32,7 @@ func (c *TempMuteCommand) Name() string {
 }
 
 func (c *TempMuteCommand) Description() string {
-	return "Temporarily mutes the specified user from the channel for the specified duration."
+	return "Temporarily mutes the specified user in the channel for the specified duration. If they were previously auto-voiced, they will be removed from the auto-voice list."
 }
 
 func (c *TempMuteCommand) Triggers() []string {
