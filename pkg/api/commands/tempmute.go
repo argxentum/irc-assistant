@@ -99,7 +99,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 			}
 
 			isAutoVoiced := false
-			if ch.AutoVoicedNicks != nil && slices.Contains(ch.AutoVoicedNicks, nick) {
+			if ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick) {
 				isAutoVoiced = true
 				c.Replyf(e, "Temporarily muted %s for %s. They're now removed from auto-voice.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 			} else {
@@ -111,14 +111,14 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 
 				if isAutoVoiced {
 					voiced := make([]string, 0)
-					for _, n := range ch.AutoVoicedNicks {
+					for _, n := range ch.AutoVoiced {
 						if n != nick {
 							voiced = append(voiced, n)
 						}
 					}
-					ch.AutoVoicedNicks = voiced
+					ch.AutoVoiced = voiced
 
-					if err = fs.UpdateChannel(ch.Name, map[string]interface{}{"auto_voiced": ch.AutoVoicedNicks}); err != nil {
+					if err = fs.UpdateChannel(ch.Name, map[string]interface{}{"auto_voiced": ch.AutoVoiced}); err != nil {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
 					}

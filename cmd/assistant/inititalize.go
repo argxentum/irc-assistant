@@ -137,7 +137,7 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 		}
 	}
 
-	if slices.Contains(ch.AutoVoicedNicks, nick) {
+	if slices.Contains(ch.AutoVoiced, nick) {
 		irc.Voice(channel, nick)
 	}
 }

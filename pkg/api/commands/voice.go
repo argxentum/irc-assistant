@@ -29,7 +29,7 @@ func (c *AutoVoiceCommand) Description() string {
 }
 
 func (c *AutoVoiceCommand) Triggers() []string {
-	return []string{"voice", "v"}
+	return []string{"autovoice", "v"}
 }
 
 func (c *AutoVoiceCommand) Usages() []string {
@@ -66,12 +66,12 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		if ch.AutoVoicedNicks == nil {
-			ch.AutoVoicedNicks = make([]string, 0)
+		if ch.AutoVoiced == nil {
+			ch.AutoVoiced = make([]string, 0)
 		}
 
-		ch.AutoVoicedNicks = append(ch.AutoVoicedNicks, nick)
-		if err = fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoicedNicks}); err != nil {
+		ch.AutoVoiced = append(ch.AutoVoiced, nick)
+		if err = fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoiced}); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}

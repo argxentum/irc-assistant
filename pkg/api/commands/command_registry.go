@@ -147,6 +147,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[UnmuteCommandName] = NewUnmuteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[TempMuteCommandName] = NewTempMuteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[AutoVoiceCommandName] = NewAutoVoiceCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[VoiceRequestCommandName] = NewVoiceRequestCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[KickCommandName] = NewKickCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[BanCommandName] = NewBanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[UnbanCommandName] = NewUnbanCommand(cr.ctx, cr.cfg, cr.irc)

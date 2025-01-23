@@ -18,19 +18,20 @@ type Config struct {
 }
 
 type IRCConfig struct {
-	Owner       string
-	Admins      []string
-	Server      string
-	ServerName  string `yaml:"server_name"`
-	Port        int
-	TLS         bool
-	Nick        string
-	Username    string            `yaml:"user_name"`
-	RealName    string            `yaml:"real_name"`
-	NickServ    NickServConfig    `yaml:"nickserv"`
-	ChanServ    ChanServConfig    `yaml:"chanserv"`
-	PostConnect PostConnectConfig `yaml:"post_connect"`
-	Inactivity  InactivityConfig  `yaml:"inactivity"`
+	Owner                      string
+	Admins                     []string
+	Server                     string
+	ServerName                 string `yaml:"server_name"`
+	Port                       int
+	TLS                        bool
+	Nick                       string
+	Username                   string            `yaml:"user_name"`
+	RealName                   string            `yaml:"real_name"`
+	MessageOwnerOnVoiceRequest bool              `yaml:"message_owner_on_voice_request"`
+	NickServ                   NickServConfig    `yaml:"nickserv"`
+	ChanServ                   ChanServConfig    `yaml:"chanserv"`
+	PostConnect                PostConnectConfig `yaml:"post_connect"`
+	Inactivity                 InactivityConfig  `yaml:"inactivity"`
 }
 
 type WebConfig struct {
