@@ -143,6 +143,8 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[SayCommandName] = NewSayCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[JoinCommandName] = NewJoinCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[LeaveCommandName] = NewLeaveCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[MuteCommandName] = NewMuteCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[UnmuteCommandName] = NewUnmuteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[KickCommandName] = NewKickCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[BanCommandName] = NewBanCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[UnbanCommandName] = NewUnbanCommand(cr.ctx, cr.cfg, cr.irc)

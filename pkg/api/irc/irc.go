@@ -75,6 +75,8 @@ type IRC interface {
 	ListUsers(channel string, callback func(users []*User))
 	Up(channel, nick string)
 	Down(channel, nick string)
+	Voice(channel, nick string)
+	Mute(channel, nick string)
 	Kick(channel, nick, reason string)
 	Ban(channel, mask string)
 	Unban(channel, mask string)
@@ -294,6 +296,14 @@ func (s *service) Up(channel, nick string) {
 
 func (s *service) Down(channel, nick string) {
 	s.conn.Privmsgf(s.cfg.IRC.ChanServ.Recipient, s.cfg.IRC.ChanServ.DownCommand, channel, nick)
+}
+
+func (s *service) Voice(channel, nick string) {
+	s.conn.Mode(channel, "+v", nick)
+}
+
+func (s *service) Mute(channel, nick string) {
+	s.conn.Mode(channel, "-v", nick)
 }
 
 func (s *service) Kick(channel, nick, reason string) {
