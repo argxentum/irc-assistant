@@ -24,11 +24,11 @@ func (c *UnmuteCommand) Name() string {
 }
 
 func (c *UnmuteCommand) Description() string {
-	return "Voices (unmutes) the specified user in the channel."
+	return "Unmutes the specified user in the channel."
 }
 
 func (c *UnmuteCommand) Triggers() []string {
-	return []string{"unmute", "um", "v"}
+	return []string{"unmute", "um"}
 }
 
 func (c *UnmuteCommand) Usages() []string {

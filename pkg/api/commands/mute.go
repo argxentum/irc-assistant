@@ -4,7 +4,9 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"slices"
 )
 
 const MuteCommandName = "mute"
@@ -56,6 +58,29 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			logger.Warningf(e, "bot lacks needed channel permissions in %s", channel)
 			c.Replyf(e, "Missing required permissions to mute users in this channel. Did you forget /mode %s +h %s?", channel, c.cfg.IRC.Nick)
 			return
+		}
+
+		fs := firestore.Get()
+
+		ch, err := fs.Channel(channel)
+		if err != nil {
+			logger.Errorf(e, "error retrieving channel, %s", err)
+			return
+		}
+
+		if ch.AutoVoicedNicks != nil && slices.Contains(ch.AutoVoicedNicks, nick) {
+			voiced := make([]string, 0)
+			for _, n := range ch.AutoVoicedNicks {
+				if n != nick {
+					voiced = append(voiced, n)
+				}
+			}
+			ch.AutoVoicedNicks = voiced
+
+			if err = fs.UpdateChannel(ch.Name, map[string]interface{}{"auto_voiced": ch.AutoVoicedNicks}); err != nil {
+				logger.Errorf(e, "error updating channel, %s", err)
+				return
+			}
 		}
 
 		c.irc.Mute(channel, nick)

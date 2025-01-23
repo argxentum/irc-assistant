@@ -12,6 +12,7 @@ const taskIDPrefix = "task"
 const (
 	TaskTypeReminder          = "reminder"
 	TaskTypeBanRemoval        = "ban_removal"
+	TaskTypeMuteRemoval       = "mute_removal"
 	TaskTypePersistentChannel = "persistent_channel"
 )
 
@@ -63,6 +64,10 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypeBanRemoval:
 		if task.Data, err = deserializeTaskData[BanRemovalTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeMuteRemoval:
+		if task.Data, err = deserializeTaskData[MuteRemovalTaskData](d); err != nil {
 			return nil, err
 		}
 	case TaskTypePersistentChannel:

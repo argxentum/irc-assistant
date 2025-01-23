@@ -11,6 +11,7 @@ import (
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -117,5 +118,26 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 	reg := commands.LoadCommandRegistry(ctx, cfg, irc)
 	if cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand); cmd != nil {
 		cmd.InitializeUserRateLimit(channel, nick, 15*time.Second)
+	}
+
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	ch, err := fs.Channel(channel)
+	if err != nil {
+		panic(fmt.Errorf("error retrieving channel, %s", err))
+	}
+
+	if ch == nil {
+		logger.Debugf(nil, "channel %s not found, creating", channel)
+		ch = models.NewChannel(channel, cfg.IRC.Inactivity.DefaultDuration)
+		err = fs.CreateChannel(ch)
+		if err != nil {
+			panic(fmt.Errorf("error creating channel, %s", err))
+		}
+	}
+
+	if slices.Contains(ch.AutoVoicedNicks, nick) {
+		irc.Voice(channel, nick)
 	}
 }

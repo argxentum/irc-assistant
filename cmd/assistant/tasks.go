@@ -33,6 +33,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypeBanRemoval:
 				isScheduledTask = true
 				err = processBanRemoval(irc, task)
+			case models.TaskTypeMuteRemoval:
+				isScheduledTask = true
+				err = processMuteRemoval(irc, task)
 			case models.TaskTypePersistentChannel:
 				isScheduledTask = false
 				err = processPersistentChannel(ctx, cfg, irc, task)
@@ -107,6 +110,17 @@ func processBanRemoval(irc irc.IRC, task *models.Task) error {
 	logger.Debugf(nil, "processing ban removal for %s in %s", data.Mask, data.Channel)
 
 	irc.Unban(data.Channel, data.Mask)
+
+	return nil
+}
+
+func processMuteRemoval(irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.MuteRemovalTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing mute removal for %s in %s", data.Nick, data.Channel)
+
+	irc.Voice(data.Channel, data.Nick)
 
 	return nil
 }

@@ -73,6 +73,9 @@ func (fs *Firestore) taskPath(task *models.Task) string {
 	case models.TaskTypeBanRemoval:
 		data := task.Data.(models.BanRemovalTaskData)
 		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
+	case models.TaskTypeMuteRemoval:
+		data := task.Data.(models.MuteRemovalTaskData)
+		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
 	case models.TaskTypePersistentChannel:
 		data := task.Data.(models.PersistentTaskData)
 		return fs.PersistentChannelTaskPath(data.Channel, task.ID)
@@ -88,7 +91,7 @@ func (fs *Firestore) tasksPath(user, destination, taskType string) string {
 		} else {
 			return fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathUsers, user, pathTasks)
 		}
-	case models.TaskTypeBanRemoval:
+	case models.TaskTypeBanRemoval, models.TaskTypeMuteRemoval:
 		return fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathTasks)
 	default:
 		return "unknown"
@@ -175,6 +178,13 @@ func (fs *Firestore) populateTaskData(tasks []*models.Task) ([]*models.Task, err
 			task.Data = payload
 		case models.TaskTypeBanRemoval:
 			var payload models.BanRemovalTaskData
+			err = json.Unmarshal(d, &payload)
+			if err != nil {
+				return nil, err
+			}
+			task.Data = payload
+		case models.TaskTypeMuteRemoval:
+			var payload models.MuteRemovalTaskData
 			err = json.Unmarshal(d, &payload)
 			if err != nil {
 				return nil, err
