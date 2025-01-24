@@ -4,7 +4,9 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 )
 
 const UnmuteCommandName = "unmute"
@@ -59,6 +61,35 @@ func (c *UnmuteCommand) Execute(e *irc.Event) {
 		if !authorized {
 			logger.Warningf(e, "bot lacks needed channel permissions in %s", channel)
 			c.Replyf(e, "Missing required permissions to unmute users in this channel. Did you forget /mode %s +h %s?", channel, c.cfg.IRC.Nick)
+			return
+		}
+
+		fs := firestore.Get()
+		ch, err := fs.Channel(channel)
+		if err != nil {
+			logger.Errorf(e, "error retrieving channel, %s", err)
+			return
+		}
+
+		if ch == nil {
+			logger.Errorf(e, "channel %s does not exist", channel)
+			return
+		}
+
+		if ch.VoiceRequests == nil {
+			ch.VoiceRequests = make([]models.VoiceRequest, 0)
+		}
+
+		voiceRequests := make([]models.VoiceRequest, 0)
+		for _, request := range ch.VoiceRequests {
+			if request.Nick != nick {
+				voiceRequests = append(voiceRequests, request)
+			}
+		}
+
+		ch.VoiceRequests = voiceRequests
+		if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
+			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
 

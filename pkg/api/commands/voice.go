@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 )
 
 const AutoVoiceCommandName = "auto_voice"
@@ -76,7 +77,21 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 		}
 
 		ch.AutoVoiced = append(ch.AutoVoiced, nick)
-		if err = fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoiced}); err != nil {
+
+		if ch.VoiceRequests == nil {
+			ch.VoiceRequests = make([]models.VoiceRequest, 0)
+		}
+
+		voiceRequests := make([]models.VoiceRequest, 0)
+		for _, request := range ch.VoiceRequests {
+			if request.Nick != nick {
+				voiceRequests = append(voiceRequests, request)
+			}
+		}
+
+		ch.VoiceRequests = voiceRequests
+
+		if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
