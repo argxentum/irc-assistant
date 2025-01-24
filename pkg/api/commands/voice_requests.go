@@ -102,11 +102,9 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 		messages = append(messages, fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel)))
 
 		for _, vr := range ch.VoiceRequests {
-			messages = append(messages, fmt.Sprintf("%s, %s", vr.Nick, elapse.PastTimeDescription(vr.RequestedAt)))
+			messages = append(messages, fmt.Sprintf("%s, %s", style.Underline(vr.Nick), elapse.PastTimeDescription(vr.RequestedAt)))
 		}
 
 		c.SendMessages(e, e.ReplyTarget(), messages)
-
-		logger.Infof(e, "unmuted %s in %s", nick, channel)
 	})
 }
