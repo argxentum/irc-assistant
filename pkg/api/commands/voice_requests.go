@@ -12,6 +12,8 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 const VoiceRequestsCommandName = "voice_requests"
@@ -31,7 +33,7 @@ func (c *VoiceRequestsCommand) Name() string {
 }
 
 func (c *VoiceRequestsCommand) Description() string {
-	return "Shows voice requests for the specified channel. If no channel is specified, the current channel is used."
+	return "Manage voice requests for the specified channel. If no channel is specified, the current channel is used."
 }
 
 func (c *VoiceRequestsCommand) Triggers() []string {
@@ -39,7 +41,11 @@ func (c *VoiceRequestsCommand) Triggers() []string {
 }
 
 func (c *VoiceRequestsCommand) Usages() []string {
-	return []string{"%s [<channel>]"}
+	return []string{
+		"%s (shows voice requests for channel)",
+		"%s <channel> (shows voice requests for specified channel)",
+		"%s <y/n> <number> [<number>...] (approve [y] or deny [n] voice requests by number)",
+	}
 }
 
 func (c *VoiceRequestsCommand) AllowedInPrivateMessages() bool {
@@ -55,13 +61,29 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 
 	channel := e.ReplyTarget()
 	if e.IsPrivateMessage() {
-		if len(tokens) > 1 {
+		if len(tokens) > 1 && irc.IsChannel(tokens[1]) {
 			channel = tokens[1]
+			tokens = tokens[1:]
 		} else {
-			c.Replyf(e, "Please specify a channel to view voice requests for: %s <channel>", c.Name())
+			c.Replyf(e, "Please specify a channel to view voice requests for: %s <channel>", tokens[0])
 			return
 		}
 	}
+
+	action := ""
+	numbers := make([]int, 0)
+	if len(tokens) >= 2 {
+		action = strings.ToLower(tokens[1])
+		for _, token := range tokens[1:] {
+			if n, err := strconv.Atoi(token); err == nil {
+				numbers = append(numbers, n)
+			}
+		}
+	}
+
+	isManageAction := len(action) > 0 && len(numbers) > 0
+	isApproveAction := isManageAction && (action == "y" || action == "yes")
+	isDeclineAction := isManageAction && (action == "n" || action == "no")
 
 	nick := e.From
 	if e.IsPrivateMessage() {
@@ -90,6 +112,10 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 			return
 		}
 
+		if ch.AutoVoiced == nil {
+			ch.AutoVoiced = make([]string, 0)
+		}
+
 		if ch.VoiceRequests == nil {
 			ch.VoiceRequests = make([]models.VoiceRequest, 0)
 		}
@@ -98,13 +124,98 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 			return cmp.Compare(a.RequestedAt.Unix(), b.RequestedAt.Unix())
 		})
 
-		messages := make([]string, 0)
-		messages = append(messages, fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel)))
+		if !isManageAction {
+			messages := make([]string, 0)
+			messages = append(messages, fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel)))
 
-		for _, vr := range ch.VoiceRequests {
-			messages = append(messages, fmt.Sprintf("%s, %s", style.Underline(vr.Nick), elapse.PastTimeDescription(vr.RequestedAt)))
+			for i, vr := range ch.VoiceRequests {
+				messages = append(messages, fmt.Sprintf("%s: %s, %s", style.Bold(style.Underline(fmt.Sprintf("%d", i+1))), style.Bold(vr.Nick), elapse.PastTimeDescription(vr.RequestedAt)))
+			}
+
+			c.SendMessages(e, e.ReplyTarget(), messages)
+			return
 		}
 
-		c.SendMessages(e, e.ReplyTarget(), messages)
+		if isApproveAction {
+			vrs := make([]models.VoiceRequest, 0)
+			for _, number := range numbers {
+				if number < 1 || number > len(ch.VoiceRequests) {
+					c.Replyf(e, "Invalid voice request number: %d", number)
+					return
+				}
+
+				vr := ch.VoiceRequests[number-1]
+				vrs = append(vrs, vr)
+			}
+
+			for _, vr := range vrs {
+				if !slices.Contains(ch.AutoVoiced, vr.Nick) {
+					ch.AutoVoiced = append(ch.AutoVoiced, vr.Nick)
+				}
+
+				voiceRequests := make([]models.VoiceRequest, 0)
+
+				for _, request := range ch.VoiceRequests {
+					if request.Nick != vr.Nick {
+						voiceRequests = append(voiceRequests, request)
+					}
+				}
+
+				ch.VoiceRequests = voiceRequests
+
+				c.Replyf(e, "Approved voice request for %s", style.Bold(nick))
+			}
+
+			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+				logger.Errorf(e, "error updating channel, %s", err)
+				return
+			}
+		} else if isDeclineAction {
+			vrs := make([]models.VoiceRequest, 0)
+			for _, number := range numbers {
+				if number < 1 || number > len(ch.VoiceRequests) {
+					c.Replyf(e, "Invalid voice request number: %d", number)
+					return
+				}
+
+				vr := ch.VoiceRequests[number-1]
+				vrs = append(vrs, vr)
+			}
+
+			for _, vr := range vrs {
+				voiceRequests := make([]models.VoiceRequest, 0)
+				for _, request := range ch.VoiceRequests {
+					if request.Nick != vr.Nick {
+						voiceRequests = append(voiceRequests, request)
+					}
+				}
+
+				ch.VoiceRequests = voiceRequests
+
+				c.Replyf(e, "Denied voice request for %s", style.Bold(vr.Nick))
+			}
+
+			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
+				logger.Errorf(e, "error updating channel, %s", err)
+				return
+			}
+		} else {
+			c.Replyf(e, "Invalid input, please specify %s to approve or %s to deny voice requests", style.Bold("y"), style.Bold("n"))
+			return
+		}
+
+		voiceRequests := make([]models.VoiceRequest, 0)
+		for _, request := range ch.VoiceRequests {
+			if request.Nick != nick {
+				voiceRequests = append(voiceRequests, request)
+			}
+		}
+
+		ch.VoiceRequests = voiceRequests
+
+		if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+			logger.Errorf(e, "error updating channel, %s", err)
+			return
+		}
 	})
 }
