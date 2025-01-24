@@ -50,6 +50,10 @@ func (c *VoiceRequestCommand) CanExecute(e *irc.Event) bool {
 }
 
 func (c *VoiceRequestCommand) Execute(e *irc.Event) {
+	if !e.IsPrivateMessage() {
+		return
+	}
+
 	tokens := Tokens(e.Message())
 	channel := tokens[1]
 	nick := e.ReplyTarget()
