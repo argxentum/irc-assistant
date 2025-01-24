@@ -16,48 +16,48 @@ import (
 	"strings"
 )
 
-const VoiceRequestsCommandName = "voice_requests"
+const VoiceRequestManagementCommandName = "voice_request_management"
 const maxVoiceRequestsToShow = 10
 
-type VoiceRequestsCommand struct {
+type VoiceRequestManagementCommand struct {
 	*commandStub
 }
 
-func NewVoiceRequestsCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &VoiceRequestsCommand{
+func NewVoiceRequestManagementCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
+	return &VoiceRequestManagementCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusHalfOperator),
 	}
 }
 
-func (c *VoiceRequestsCommand) Name() string {
-	return VoiceRequestsCommandName
+func (c *VoiceRequestManagementCommand) Name() string {
+	return VoiceRequestManagementCommandName
 }
 
-func (c *VoiceRequestsCommand) Description() string {
+func (c *VoiceRequestManagementCommand) Description() string {
 	return "Manage voice requests for the specified channel. If no channel is specified, the current channel is used."
 }
 
-func (c *VoiceRequestsCommand) Triggers() []string {
+func (c *VoiceRequestManagementCommand) Triggers() []string {
 	return []string{"voicerequests", "vr"}
 }
 
-func (c *VoiceRequestsCommand) Usages() []string {
+func (c *VoiceRequestManagementCommand) Usages() []string {
 	return []string{
-		"%s (shows voice requests for channel)",
+		fmt.Sprintf("%%s (shows voice requests for channel, up to %d)", maxVoiceRequestsToShow),
 		"%s <channel> (shows voice requests for specified channel)",
-		"%s <y/n> <number> [<number>...] (approve [y] or deny [n] voice requests by number)",
+		"%s <channel> <y/n> <number> [<number>...] (approve [y] or deny [n] voice requests by number)",
 	}
 }
 
-func (c *VoiceRequestsCommand) AllowedInPrivateMessages() bool {
+func (c *VoiceRequestManagementCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *VoiceRequestsCommand) CanExecute(e *irc.Event) bool {
+func (c *VoiceRequestManagementCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 0)
 }
 
-func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
+func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 
 	channel := e.ReplyTarget()
@@ -126,6 +126,8 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 		})
 
 		if !isManageAction {
+			logger.Debugf(e, "showing voice requests for %s", channel)
+
 			messages := make([]string, 0)
 			title := fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel))
 
@@ -171,8 +173,9 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 				}
 
 				ch.VoiceRequests = voiceRequests
-
-				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(nick), vr.Mask())
+				c.irc.Voice(channel, vr.Nick)
+				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
+				logger.Debugf(e, "approved voice request for %s (%s)", vr.Nick, vr.Mask())
 			}
 
 			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
@@ -200,8 +203,8 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 				}
 
 				ch.VoiceRequests = voiceRequests
-
 				c.Replyf(e, "Denied voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
+				logger.Debugf(e, "denied voice request for %s (%s)", vr.Nick, vr.Mask())
 			}
 
 			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
@@ -209,21 +212,8 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 				return
 			}
 		} else {
+			logger.Debugf(e, "invalid voice request management action, %s", action)
 			c.Replyf(e, "Invalid input, please specify %s to approve or %s to deny voice requests", style.Bold("y"), style.Bold("n"))
-			return
-		}
-
-		voiceRequests := make([]models.VoiceRequest, 0)
-		for _, request := range ch.VoiceRequests {
-			if request.Nick != nick {
-				voiceRequests = append(voiceRequests, request)
-			}
-		}
-
-		ch.VoiceRequests = voiceRequests
-
-		if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
-			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
 	})
