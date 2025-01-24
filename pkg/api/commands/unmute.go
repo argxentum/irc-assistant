@@ -24,7 +24,7 @@ func (c *UnmuteCommand) Name() string {
 }
 
 func (c *UnmuteCommand) Description() string {
-	return "Unmutes the specified user in the channel."
+	return "Unmutes the specified user in the channel. If no channel is specified, the current channel is used."
 }
 
 func (c *UnmuteCommand) Triggers() []string {
@@ -32,11 +32,11 @@ func (c *UnmuteCommand) Triggers() []string {
 }
 
 func (c *UnmuteCommand) Usages() []string {
-	return []string{"%s <nick>"}
+	return []string{"%s <nick> [<channel>]"}
 }
 
 func (c *UnmuteCommand) AllowedInPrivateMessages() bool {
-	return false
+	return true
 }
 
 func (c *UnmuteCommand) CanExecute(e *irc.Event) bool {
@@ -46,7 +46,11 @@ func (c *UnmuteCommand) CanExecute(e *irc.Event) bool {
 func (c *UnmuteCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
+
 	channel := e.ReplyTarget()
+	if len(tokens) > 2 {
+		channel = tokens[2]
+	}
 
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
