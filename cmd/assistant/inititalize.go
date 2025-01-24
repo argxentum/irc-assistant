@@ -137,6 +137,23 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 		}
 	}
 
+	u, err := fs.User(channel, nick)
+	if err != nil {
+		panic(fmt.Errorf("error retrieving user, %s", err))
+	}
+
+	if u == nil {
+		logger.Debugf(nil, "user %s not found, creating", nick)
+		err = fs.CreateUser(channel, models.NewUser(nick))
+		if err != nil {
+			panic(fmt.Errorf("error creating user, %s", err))
+		}
+
+		if len(ch.IntroMessages) > 0 {
+			irc.SendMessages(nick, ch.IntroMessages)
+		}
+	}
+
 	if slices.Contains(ch.AutoVoiced, nick) {
 		irc.Voice(channel, nick)
 	}

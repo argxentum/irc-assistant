@@ -111,6 +111,11 @@ func (eh *handler) resetChannelInactivityTimeout(e *irc.Event) {
 		return
 	}
 
+	if channel == nil {
+		logger.Errorf(e, "channel %s does not exist", e.ReplyTarget())
+		return
+	}
+
 	duration, err := elapse.ParseDuration(channel.InactivityDuration)
 	if err != nil {
 		logger.Errorf(e, "error parsing default inactivity duration, %s", err)

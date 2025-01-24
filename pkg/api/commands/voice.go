@@ -66,6 +66,11 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			return
 		}
 
+		if ch == nil {
+			logger.Errorf(e, "channel %s does not exist", channel)
+			return
+		}
+
 		if ch.AutoVoiced == nil {
 			ch.AutoVoiced = make([]string, 0)
 		}

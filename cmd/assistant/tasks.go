@@ -65,6 +65,11 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 					return
 				}
 
+				if channel == nil {
+					logger.Errorf(nil, "channel %s not found for %s", task.Data.(models.PersistentTaskData).Channel, task.ID)
+					return
+				}
+
 				duration, err := elapse.ParseDuration(channel.InactivityDuration)
 				if err != nil {
 					logger.Errorf(nil, "error parsing duration %s, %s", channel.InactivityDuration, err)
@@ -146,6 +151,11 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 		channel, err := fs.Channel(channelName)
 		if err != nil {
 			logger.Errorf(nil, "error getting channel, %s", err)
+		}
+
+		if channel == nil {
+			logger.Errorf(nil, "channel %s does not exist, exiting", channelName)
+			return nil
 		}
 
 		message := fmt.Sprintf("🕑 %s of inactivity detected, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)

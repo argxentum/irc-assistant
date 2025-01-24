@@ -98,6 +98,11 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
+			if ch == nil {
+				logger.Errorf(e, "channel %s does not exist", channel)
+				return
+			}
+
 			isAutoVoiced := false
 			if ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick) {
 				isAutoVoiced = true

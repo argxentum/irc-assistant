@@ -68,6 +68,11 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	if ch == nil {
+		logger.Errorf(e, "channel %s does not exist", channel)
+		return
+	}
+
 	if ch.VoiceRequests == nil {
 		ch.VoiceRequests = make([]models.VoiceRequest, 0)
 	}

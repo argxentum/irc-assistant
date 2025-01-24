@@ -68,6 +68,11 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			return
 		}
 
+		if ch == nil {
+			logger.Errorf(e, "channel %s does not exist", channel)
+			return
+		}
+
 		if ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick) {
 			voiced := make([]string, 0)
 			for _, n := range ch.AutoVoiced {
