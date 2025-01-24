@@ -11,10 +11,14 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 )
+
+const userCommandPrivateMessageRateLimitDuration = 1500 * time.Millisecond
 
 type Handler interface {
 	FindMatchingCommand(e *irc.Event) commands.Command
@@ -26,6 +30,7 @@ type handler struct {
 	cfg      *config.Config
 	irc      irc.IRC
 	registry commands.CommandRegistry
+	cmdhist  map[string]time.Time
 }
 
 func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
@@ -34,6 +39,7 @@ func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
 		cfg:      cfg,
 		irc:      irc,
 		registry: commands.LoadCommandRegistry(ctx, cfg, irc),
+		cmdhist:  make(map[string]time.Time),
 	}
 
 	return eh
@@ -83,6 +89,18 @@ func (eh *handler) Handle(e *irc.Event) {
 		}
 
 		if f := eh.FindMatchingCommand(e); f != nil {
+			if isUserMask(e.Source) {
+				mask := irc.Parse(e.Source)
+				if c, ok := eh.cmdhist[mask.Host]; ok {
+					if time.Since(c) < userCommandPrivateMessageRateLimitDuration {
+						logger.Warningf(e, "ignoring command from %s, private message command rate limit exceeded", e.From)
+						eh.cmdhist[mask.Host] = time.Now()
+						return
+					}
+				}
+				eh.cmdhist[mask.Host] = time.Now()
+			}
+
 			f.Authorizer().IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
 				if !authorized {
 					logger.Warningf(e, "unauthorized attempt by %s to use %s", e.From, tokens[0])
@@ -99,6 +117,12 @@ func (eh *handler) Handle(e *irc.Event) {
 			})
 		}
 	}
+}
+
+var userMaskRegex = regexp.MustCompile(`^[^!]+![^@]+@.+$`)
+
+func isUserMask(source string) bool {
+	return userMaskRegex.MatchString(source)
 }
 
 func (eh *handler) resetChannelInactivityTimeout(e *irc.Event) {
