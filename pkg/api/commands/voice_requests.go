@@ -17,6 +17,7 @@ import (
 )
 
 const VoiceRequestsCommandName = "voice_requests"
+const maxVoiceRequestsToShow = 10
 
 type VoiceRequestsCommand struct {
 	*commandStub
@@ -126,10 +127,18 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 
 		if !isManageAction {
 			messages := make([]string, 0)
-			messages = append(messages, fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel)))
+			title := fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel))
 
-			for i, vr := range ch.VoiceRequests {
-				messages = append(messages, fmt.Sprintf("%s: %s, %s", style.Bold(style.Underline(fmt.Sprintf("%d", i+1))), style.Bold(vr.Nick), elapse.PastTimeDescription(vr.RequestedAt)))
+			vrs := ch.VoiceRequests
+			if len(ch.VoiceRequests) > maxVoiceRequestsToShow {
+				vrs = ch.VoiceRequests[:maxVoiceRequestsToShow]
+				title += fmt.Sprintf(" (showing oldest %d)", maxVoiceRequestsToShow)
+			}
+
+			messages = append(messages, title)
+
+			for i, vr := range vrs {
+				messages = append(messages, fmt.Sprintf("%s: %s (%s), %s", style.Bold(style.Underline(fmt.Sprintf("%d", i+1))), style.Bold(vr.Nick), vr.Mask(), elapse.PastTimeDescription(vr.RequestedAt)))
 			}
 
 			c.SendMessages(e, e.ReplyTarget(), messages)
@@ -163,7 +172,7 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 
 				ch.VoiceRequests = voiceRequests
 
-				c.Replyf(e, "Approved voice request for %s", style.Bold(nick))
+				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(nick), vr.Mask())
 			}
 
 			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
@@ -192,7 +201,7 @@ func (c *VoiceRequestsCommand) Execute(e *irc.Event) {
 
 				ch.VoiceRequests = voiceRequests
 
-				c.Replyf(e, "Denied voice request for %s", style.Bold(vr.Nick))
+				c.Replyf(e, "Denied voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
 			}
 
 			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {

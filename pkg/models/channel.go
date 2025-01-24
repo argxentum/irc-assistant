@@ -1,6 +1,7 @@
 package models
 
 import (
+	"assistant/pkg/api/irc"
 	"slices"
 	"strings"
 	"time"
@@ -23,7 +24,19 @@ type ChannelSummarization struct {
 
 type VoiceRequest struct {
 	Nick        string    `firestore:"nick" json:"nick"`
+	Username    string    `firestore:"username" json:"username"`
+	Host        string    `firestore:"host" json:"host"`
 	RequestedAt time.Time `firestore:"requested_at" json:"requested_at"`
+}
+
+func (vr VoiceRequest) Mask() string {
+	mask := &irc.Mask{
+		Nick:   vr.Nick,
+		UserID: vr.Username,
+		Host:   vr.Host,
+	}
+
+	return mask.String()
 }
 
 func (cs ChannelSummarization) IsPossibleDisinformation(url string) bool {

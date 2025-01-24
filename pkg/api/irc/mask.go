@@ -11,12 +11,27 @@ type Mask struct {
 	Host   string
 }
 
-func (h *Mask) String() string {
-	return fmt.Sprintf("%s!%s@%s", h.Nick, h.UserID, h.Host)
+func (m *Mask) String() string {
+	n := m.Nick
+	if len(n) == 0 {
+		n = "*"
+	}
+
+	u := m.UserID
+	if len(u) == 0 {
+		u = "*"
+	}
+
+	h := m.Host
+	if len(h) == 0 {
+		h = "*"
+	}
+
+	return fmt.Sprintf("%s!%s@%s", n, u, h)
 }
 
-func (h *Mask) NickWildcardString() string {
-	return fmt.Sprintf("*!%s@%s", h.UserID, h.Host)
+func (m *Mask) NickWildcardString() string {
+	return fmt.Sprintf("*!%s@%s", m.UserID, m.Host)
 }
 
 func Parse(mask string) *Mask {

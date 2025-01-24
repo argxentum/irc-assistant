@@ -57,6 +57,7 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := tokens[1]
 	nick := e.ReplyTarget()
+	mask := irc.Parse(e.Source)
 
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
@@ -77,13 +78,20 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 		ch.VoiceRequests = make([]models.VoiceRequest, 0)
 	}
 
-	if slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool { return request.Nick == nick }) {
+	if slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool { return request.Nick == nick || request.Host == mask.Host }) {
 		c.Replyf(e, "You have already requested voice in %s. We'll review your request as soon as possible. Thanks for your patience.", channel)
 		logger.Debugf(e, "voice already requested %s in %s", nick, channel)
 		return
 	}
 
-	ch.VoiceRequests = append(ch.VoiceRequests, models.VoiceRequest{Nick: nick, RequestedAt: time.Now()})
+	vr := models.VoiceRequest{
+		Nick:        mask.Nick,
+		Username:    mask.UserID,
+		Host:        mask.Host,
+		RequestedAt: time.Now(),
+	}
+
+	ch.VoiceRequests = append(ch.VoiceRequests, vr)
 	if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
 		logger.Errorf(e, "error updating channel, %s", err)
 		return
