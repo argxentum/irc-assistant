@@ -15,6 +15,12 @@ import (
 
 const VoiceRequestCommandName = "voice_request"
 
+const (
+	voiceRequestIntervalEach   = "each"
+	voiceRequestIntervalHourly = "hourly"
+	voiceRequestIntervalDaily  = "daily"
+)
+
 type VoiceRequestCommand struct {
 	*commandStub
 }
@@ -99,8 +105,12 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 
 	c.Replyf(e, "Your voice request in %s has been received. We'll be in touch soon.", style.Bold(channel))
 
-	if c.cfg.IRC.MessageOwnerOnVoiceRequest {
-		c.irc.SendMessage(c.cfg.IRC.Owner, fmt.Sprintf("New voice request in %s: %s", channel, nick))
+	if len(ch.VoiceRequestNotifications) > 0 {
+		for _, vrn := range ch.VoiceRequestNotifications {
+			if vrn.Interval == voiceRequestIntervalEach {
+				c.irc.SendMessage(vrn.User, fmt.Sprintf("New voice request in %s: %s", channel, nick))
+			}
+		}
 	}
 
 	logger.Infof(e, "voice requested %s in %s", nick, channel)
