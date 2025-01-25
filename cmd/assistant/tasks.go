@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -128,23 +129,14 @@ func processMuteRemoval(irc irc.IRC, task *models.Task) error {
 	irc.Voice(data.Channel, data.Nick)
 
 	if data.AutoVoice {
-		fs := firestore.Get()
-		ch, err := fs.Channel(data.Channel)
+		ch, err := repository.GetChannel(nil, data.Channel)
 		if err != nil {
 			return fmt.Errorf("error retrieving channel, %s", err)
 		}
 
-		if ch == nil {
-			return fmt.Errorf("channel %s does not exist", data.Channel)
-		}
-
-		if ch.AutoVoiced == nil {
-			ch.AutoVoiced = make([]string, 0)
-		}
-
 		ch.AutoVoiced = append(ch.AutoVoiced, data.Nick)
 
-		if err = fs.UpdateChannel(data.Channel, map[string]interface{}{"auto_voiced": ch.AutoVoiced}); err != nil {
+		if err = repository.UpdateChannelAutoVoiced(nil, ch); err != nil {
 			return fmt.Errorf("error updating channel, %s", err)
 		}
 	}

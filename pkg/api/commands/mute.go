@@ -3,10 +3,9 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"slices"
 )
 
 const MuteCommandName = "mute"
@@ -60,29 +59,15 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		fs := firestore.Get()
-
-		ch, err := fs.Channel(channel)
+		ch, err := repository.GetChannel(e, channel)
 		if err != nil {
 			logger.Errorf(e, "error retrieving channel, %s", err)
 			return
 		}
 
-		if ch == nil {
-			logger.Errorf(e, "channel %s does not exist", channel)
-			return
-		}
-
-		if ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick) {
-			voiced := make([]string, 0)
-			for _, n := range ch.AutoVoiced {
-				if n != nick {
-					voiced = append(voiced, n)
-				}
-			}
-			ch.AutoVoiced = voiced
-
-			if err = fs.UpdateChannel(ch.Name, map[string]interface{}{"auto_voiced": ch.AutoVoiced}); err != nil {
+		if repository.IsChannelAutoVoicedUser(e, ch, nick) {
+			repository.RemoveChannelAutoVoicedUser(e, ch, nick)
+			if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
 				return
 			}

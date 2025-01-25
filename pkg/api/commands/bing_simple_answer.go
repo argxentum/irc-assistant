@@ -96,13 +96,17 @@ func (c *BingSimpleAnswerCommand) Execute(e *irc.Event) {
 	answer := strings.TrimSpace(coalesce(answer1, answer2))
 	secondary := strings.TrimSpace(coalesce(secondary1, secondary2))
 
-	if len(label) == 0 || len(answer) == 0 || len(secondary) == 0 {
+	if len(label) == 0 || len(answer) == 0 {
 		logger.Warningf(e, "error parsing bing search results for %s", input)
 		c.Replyf(e, "Sorry, something went wrong and I couldn't find an answer.")
 		return
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf(c.reply, label, style.Bold(answer), secondary))
+	message := fmt.Sprintf(c.reply, label, style.Bold(answer))
+	if len(secondary) > 0 {
+		message = fmt.Sprintf("%s %s", message, secondary)
+	}
+	c.SendMessage(e, e.ReplyTarget(), message)
 
 	if len(c.footnote) > 0 {
 		c.SendMessage(e, e.ReplyTarget(), c.footnote)

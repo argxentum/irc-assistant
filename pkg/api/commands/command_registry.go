@@ -137,9 +137,9 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s"},
 		"Displays the next election date.",
 		"election",
-		"when is the next election day",
-		"%s is %s %s",
-		"Note: early voting and state/local election dates differ by location. More info: https://www.usa.gov/when-to-vote",
+		"when is the next US election day",
+		"%s is %s",
+		"More info: https://www.usa.gov/voting-and-elections",
 		0,
 	)
 

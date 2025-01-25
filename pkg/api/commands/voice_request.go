@@ -3,14 +3,11 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
 	"fmt"
-	"slices"
-	"time"
 )
 
 const VoiceRequestCommandName = "voice_request"
@@ -68,37 +65,24 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
 
-	fs := firestore.Get()
-	ch, err := fs.Channel(channel)
+	ch, err := repository.GetChannel(e, channel)
 	if err != nil {
 		logger.Errorf(e, "error retrieving channel, %s", err)
 		return
 	}
 
-	if ch == nil {
-		logger.Errorf(e, "channel %s does not exist", channel)
-		return
-	}
-
-	if ch.VoiceRequests == nil {
-		ch.VoiceRequests = make([]models.VoiceRequest, 0)
-	}
-
-	if slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool { return request.Nick == nick || request.Host == mask.Host }) {
-		c.Replyf(e, "You have already requested voice in %s. We'll review your request as soon as possible. Thanks for your patience.", channel)
+	if repository.VoiceRequestExistsForNick(e, ch, mask.Nick) {
+		c.Replyf(e, "You've already requested voice in %s. We'll review your request as soon as possible. Thanks for your patience.", channel)
 		logger.Debugf(e, "voice already requested %s in %s", nick, channel)
 		return
+	} else if repository.VoiceRequestExistsForHost(e, ch, mask.Host) {
+		c.Replyf(e, "You've already requested voice in %s using a different nick. Please submit only one voice request at a time. We'll review your first request as soon as possible. Thanks for your patience.", channel)
+		logger.Debugf(e, "voice already requested with different nick %s in %s", nick, channel)
+		return
 	}
 
-	vr := models.VoiceRequest{
-		Nick:        mask.Nick,
-		Username:    mask.UserID,
-		Host:        mask.Host,
-		RequestedAt: time.Now(),
-	}
-
-	ch.VoiceRequests = append(ch.VoiceRequests, vr)
-	if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
+	repository.AddChannelVoiceRequest(e, ch, mask)
+	if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 		logger.Errorf(e, "error updating channel, %s", err)
 		return
 	}

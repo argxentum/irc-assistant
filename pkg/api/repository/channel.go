@@ -1,0 +1,157 @@
+package repository
+
+import (
+	"assistant/pkg/api/irc"
+	"assistant/pkg/firestore"
+	"assistant/pkg/log"
+	"assistant/pkg/models"
+	"cmp"
+	"fmt"
+	"slices"
+	"time"
+)
+
+func GetChannel(e *irc.Event, channel string) (*models.Channel, error) {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	ch, err := fs.Channel(channel)
+	if err != nil {
+		logger.Errorf(e, "error retrieving channel, %s", err)
+		return nil, err
+	}
+
+	if ch == nil {
+		logger.Errorf(e, "channel %s does not exist", channel)
+		return nil, err
+	}
+
+	if ch.AutoVoiced == nil {
+		ch.AutoVoiced = make([]string, 0)
+	}
+
+	if ch.VoiceRequests == nil {
+		ch.VoiceRequests = make([]models.VoiceRequest, 0)
+	}
+
+	slices.SortFunc(ch.VoiceRequests, func(a, b models.VoiceRequest) int {
+		return cmp.Compare(a.RequestedAt.Unix(), b.RequestedAt.Unix())
+	})
+
+	return ch, nil
+}
+
+func UpdateChannelVoiceRequests(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func UpdateChannelAutoVoiced(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoiced}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func IsChannelAutoVoicedUser(e *irc.Event, ch *models.Channel, nick string) bool {
+	return slices.Contains(ch.AutoVoiced, nick)
+}
+
+func RemoveChannelAutoVoicedUser(e *irc.Event, ch *models.Channel, nick string) {
+	autoVoiced := make([]string, 0)
+
+	for _, n := range ch.AutoVoiced {
+		if n != nick {
+			autoVoiced = append(autoVoiced, n)
+		}
+	}
+
+	ch.AutoVoiced = autoVoiced
+}
+
+func AddChannelAutoVoiceUser(e *irc.Event, ch *models.Channel, nick string) {
+	if !slices.Contains(ch.AutoVoiced, nick) {
+		ch.AutoVoiced = append(ch.AutoVoiced, nick)
+	}
+}
+
+func UpdateChannelVoiceRequestsAndAutoVoiced(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func VoiceRequestExistsForNick(e *irc.Event, ch *models.Channel, nick string) bool {
+	return slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool {
+		return request.Nick == nick
+	})
+}
+
+func VoiceRequestExistsForHost(e *irc.Event, ch *models.Channel, host string) bool {
+	return slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool {
+		return request.Host == host
+	})
+}
+
+func AddChannelVoiceRequest(e *irc.Event, ch *models.Channel, mask *irc.Mask) {
+	voiceRequests := make([]models.VoiceRequest, 0)
+	for _, request := range ch.VoiceRequests {
+		if request.Nick != mask.Nick {
+			voiceRequests = append(voiceRequests, request)
+		}
+	}
+
+	vr := models.VoiceRequest{
+		Nick:        mask.Nick,
+		Username:    mask.UserID,
+		Host:        mask.Host,
+		RequestedAt: time.Now(),
+	}
+
+	ch.VoiceRequests = append(ch.VoiceRequests, vr)
+}
+
+func ChannelVoiceRequestsForInput(e *irc.Event, ch *models.Channel, numbers []int) ([]models.VoiceRequest, error) {
+	vrs := make([]models.VoiceRequest, 0)
+
+	for _, number := range numbers {
+		if number < 1 || number > len(ch.VoiceRequests) {
+			return nil, fmt.Errorf("invalid voice request number: %d", number)
+		}
+
+		vr := ch.VoiceRequests[number-1]
+		vrs = append(vrs, vr)
+	}
+
+	return vrs, nil
+}
+
+func RemoveChannelVoiceRequest(e *irc.Event, ch *models.Channel, nick, host string) {
+	voiceRequests := make([]models.VoiceRequest, 0)
+
+	for _, request := range ch.VoiceRequests {
+		if (len(nick) == 0 || request.Nick != nick) && (len(host) == 0 || request.Host != host) {
+			voiceRequests = append(voiceRequests, request)
+		}
+	}
+
+	ch.VoiceRequests = voiceRequests
+}

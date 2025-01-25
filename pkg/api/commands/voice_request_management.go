@@ -4,14 +4,11 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
-	"cmp"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -66,7 +63,7 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 			channel = tokens[1]
 			tokens = tokens[1:]
 		} else {
-			c.Replyf(e, "Please specify a channel to view voice requests for: %s <channel>", tokens[0])
+			c.Replyf(e, "Please specify a channel to view voice requests for: %s", style.Italics(fmt.Sprintf("%s <channel>", tokens[0])))
 			return
 		}
 	}
@@ -101,120 +98,66 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		fs := firestore.Get()
-		ch, err := fs.Channel(channel)
+		ch, err := repository.GetChannel(e, channel)
 		if err != nil {
 			logger.Errorf(e, "error retrieving channel, %s", err)
 			return
 		}
 
-		if ch == nil {
-			logger.Errorf(e, "channel %s does not exist", channel)
-			return
-		}
-
-		if ch.AutoVoiced == nil {
-			ch.AutoVoiced = make([]string, 0)
-		}
-
-		if ch.VoiceRequests == nil {
-			ch.VoiceRequests = make([]models.VoiceRequest, 0)
-		}
-
-		slices.SortFunc(ch.VoiceRequests, func(a, b models.VoiceRequest) int {
-			return cmp.Compare(a.RequestedAt.Unix(), b.RequestedAt.Unix())
-		})
-
-		if !isManageAction {
-			logger.Debugf(e, "showing voice requests for %s", channel)
-
-			messages := make([]string, 0)
-			title := fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel))
-
-			vrs := ch.VoiceRequests
-			if len(ch.VoiceRequests) > maxVoiceRequestsToShow {
-				vrs = ch.VoiceRequests[:maxVoiceRequestsToShow]
-				title += fmt.Sprintf(" (showing oldest %d)", maxVoiceRequestsToShow)
-			}
-
-			messages = append(messages, title)
-
-			for i, vr := range vrs {
-				messages = append(messages, fmt.Sprintf("%s: %s (%s), %s", style.Bold(style.Underline(fmt.Sprintf("%d", i+1))), style.Bold(vr.Nick), vr.Mask(), elapse.PastTimeDescription(vr.RequestedAt)))
-			}
-
-			c.SendMessages(e, e.ReplyTarget(), messages)
-			return
-		}
-
 		if isApproveAction {
-			vrs := make([]models.VoiceRequest, 0)
-			for _, number := range numbers {
-				if number < 1 || number > len(ch.VoiceRequests) {
-					c.Replyf(e, "Invalid voice request number: %d", number)
-					return
-				}
-
-				vr := ch.VoiceRequests[number-1]
-				vrs = append(vrs, vr)
+			vrs, err := repository.ChannelVoiceRequestsForInput(e, ch, numbers)
+			if err != nil {
+				logger.Errorf(e, "error retrieving voice requests, %s", err)
+				return
 			}
-
 			for _, vr := range vrs {
-				if !slices.Contains(ch.AutoVoiced, vr.Nick) {
-					ch.AutoVoiced = append(ch.AutoVoiced, vr.Nick)
-				}
-
-				voiceRequests := make([]models.VoiceRequest, 0)
-
-				for _, request := range ch.VoiceRequests {
-					if request.Nick != vr.Nick {
-						voiceRequests = append(voiceRequests, request)
-					}
-				}
-
-				ch.VoiceRequests = voiceRequests
+				repository.AddChannelAutoVoiceUser(e, ch, vr.Nick)
+				repository.RemoveChannelVoiceRequest(e, ch, vr.Nick, vr.Host)
 				c.irc.Voice(channel, vr.Nick)
 				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
 				logger.Debugf(e, "approved voice request for %s (%s)", vr.Nick, vr.Mask())
 			}
-
-			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+			if err = repository.UpdateChannelVoiceRequestsAndAutoVoiced(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
+			}
+			return
+		}
+
+		if isDeclineAction {
+			vrs, err := repository.ChannelVoiceRequestsForInput(e, ch, numbers)
+			if err != nil {
+				logger.Errorf(e, "error retrieving voice requests, %s", err)
 				return
 			}
-		} else if isDeclineAction {
-			vrs := make([]models.VoiceRequest, 0)
-			for _, number := range numbers {
-				if number < 1 || number > len(ch.VoiceRequests) {
-					c.Replyf(e, "Invalid voice request number: %d", number)
-					return
-				}
-
-				vr := ch.VoiceRequests[number-1]
-				vrs = append(vrs, vr)
-			}
-
 			for _, vr := range vrs {
-				voiceRequests := make([]models.VoiceRequest, 0)
-				for _, request := range ch.VoiceRequests {
-					if request.Nick != vr.Nick {
-						voiceRequests = append(voiceRequests, request)
-					}
-				}
-
-				ch.VoiceRequests = voiceRequests
+				repository.RemoveChannelVoiceRequest(e, ch, vr.Nick, vr.Host)
 				c.Replyf(e, "Denied voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
 				logger.Debugf(e, "denied voice request for %s (%s)", vr.Nick, vr.Mask())
 			}
-
-			if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
+			if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
-				return
 			}
-		} else {
-			logger.Debugf(e, "invalid voice request management action, %s", action)
-			c.Replyf(e, "Invalid input, please specify %s to approve or %s to deny voice requests", style.Bold("y"), style.Bold("n"))
 			return
 		}
+
+		logger.Debugf(e, "showing voice requests for %s", channel)
+
+		messages := make([]string, 0)
+		title := fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel))
+
+		vrs := ch.VoiceRequests
+		if len(ch.VoiceRequests) > maxVoiceRequestsToShow {
+			vrs = ch.VoiceRequests[:maxVoiceRequestsToShow]
+			title += fmt.Sprintf(" (showing oldest %d)", maxVoiceRequestsToShow)
+		}
+
+		messages = append(messages, title)
+
+		for i, vr := range vrs {
+			messages = append(messages, fmt.Sprintf("%s: %s (%s), %s", style.Bold(style.Underline(fmt.Sprintf("%d", i+1))), style.Bold(vr.Nick), vr.Mask(), elapse.PastTimeDescription(vr.RequestedAt)))
+		}
+
+		c.SendMessages(e, e.ReplyTarget(), messages)
+		return
 	})
 }

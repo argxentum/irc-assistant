@@ -4,13 +4,13 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 )
@@ -91,41 +91,28 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				reason = fmt.Sprintf("%s - temporarily muted for %s", reason, elapse.ParseDurationDescription(duration))
 			}
 
-			fs := firestore.Get()
-			ch, err := fs.Channel(channel)
+			ch, err := repository.GetChannel(e, channel)
 			if err != nil {
 				logger.Errorf(e, "error retrieving channel, %s", err)
 				return
 			}
 
-			if ch == nil {
-				logger.Errorf(e, "channel %s does not exist", channel)
-				return
-			}
-
-			isAutoVoiced := ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick)
+			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick)
 			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 
 			go func() {
 				c.irc.Mute(channel, nick)
 
 				if isAutoVoiced {
-					voiced := make([]string, 0)
-					for _, n := range ch.AutoVoiced {
-						if n != nick {
-							voiced = append(voiced, n)
-						}
-					}
-					ch.AutoVoiced = voiced
-
-					if err = fs.UpdateChannel(ch.Name, map[string]interface{}{"auto_voiced": ch.AutoVoiced}); err != nil {
+					repository.RemoveChannelAutoVoicedUser(e, ch, nick)
+					if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
 					}
 				}
 
 				task := models.NewMuteRemovalTask(time.Now().Add(seconds), nick, channel, isAutoVoiced)
-				err = fs.AddTask(task)
+				err = firestore.Get().AddTask(task)
 				if err != nil {
 					logger.Errorf(e, "error adding task, %s", err)
 					return

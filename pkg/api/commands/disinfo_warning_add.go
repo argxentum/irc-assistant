@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -76,14 +77,9 @@ func (c *DisinfoWarningAddCommand) Execute(e *irc.Event) {
 		channelName = tokens[1]
 	}
 
-	channel, err := store.Channel(channelName)
+	channel, err := repository.GetChannel(e, channelName)
 	if err != nil {
 		logger.Errorf(e, "error retrieving channel: %s", err)
-		return
-	}
-
-	if channel == nil {
-		c.Replyf(e, "Channel %s not found.", style.Bold(channelName))
 		return
 	}
 

@@ -3,10 +3,9 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
 )
 
 const AutoVoiceCommandName = "auto_voice"
@@ -60,38 +59,16 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		fs := firestore.Get()
-		ch, err := fs.Channel(e.ReplyTarget())
+		ch, err := repository.GetChannel(e, channel)
 		if err != nil {
 			logger.Errorf(e, "error retrieving channel, %s", err)
 			return
 		}
 
-		if ch == nil {
-			logger.Errorf(e, "channel %s does not exist", channel)
-			return
-		}
+		repository.AddChannelAutoVoiceUser(e, ch, nick)
+		repository.RemoveChannelVoiceRequest(e, ch, nick, "")
 
-		if ch.AutoVoiced == nil {
-			ch.AutoVoiced = make([]string, 0)
-		}
-
-		ch.AutoVoiced = append(ch.AutoVoiced, nick)
-
-		if ch.VoiceRequests == nil {
-			ch.VoiceRequests = make([]models.VoiceRequest, 0)
-		}
-
-		voiceRequests := make([]models.VoiceRequest, 0)
-		for _, request := range ch.VoiceRequests {
-			if request.Nick != nick {
-				voiceRequests = append(voiceRequests, request)
-			}
-		}
-
-		ch.VoiceRequests = voiceRequests
-
-		if err = fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+		if err = repository.UpdateChannelVoiceRequestsAndAutoVoiced(e, ch); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
