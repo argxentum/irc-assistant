@@ -14,11 +14,12 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
 
-const userPrivateMessageCommandRateLimitDuration = 1500 * time.Millisecond
+const userCommandRateLimitDuration = 1500 * time.Millisecond
 
 type Handler interface {
 	FindMatchingCommand(e *irc.Event) commands.Command
@@ -26,6 +27,7 @@ type Handler interface {
 }
 
 type handler struct {
+	sync.Mutex
 	ctx      context.Context
 	cfg      *config.Config
 	irc      irc.IRC
@@ -46,13 +48,14 @@ func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
 func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 	logger := log.Logger()
 
-	if IsUserPrivateMessageCommandRateLimited(e) {
-		logger.Warningf(e, "ignoring command from %s, private message command rate limit exceeded", e.From)
+	if eh.isUserCommandRateLimited(e) {
+		logger.Warningf(e, "ignoring input from %s, rate limit exceeded", e.From)
 		return nil
 	}
 
 	for _, f := range eh.registry.CommandsSortedForProcessing() {
 		if f.CanExecute(e) {
+			eh.updateUserCommandHistory(e)
 			return f
 		}
 	}
@@ -115,16 +118,26 @@ func (eh *handler) Handle(e *irc.Event) {
 
 var messageHistory = make(map[string]time.Time)
 
-func IsUserPrivateMessageCommandRateLimited(e *irc.Event) bool {
+func (eh *handler) updateUserCommandHistory(e *irc.Event) {
+	if isUserMask(e.Source) {
+		mask := irc.Parse(e.Source)
+		eh.Lock()
+		messageHistory[mask.Host] = time.Now()
+		eh.Unlock()
+	}
+}
+
+func (eh *handler) isUserCommandRateLimited(e *irc.Event) bool {
 	if isUserMask(e.Source) {
 		mask := irc.Parse(e.Source)
 		if c, ok := messageHistory[mask.Host]; ok {
-			if time.Since(c) < userPrivateMessageCommandRateLimitDuration {
+			if time.Since(c) < userCommandRateLimitDuration {
+				eh.Lock()
 				messageHistory[mask.Host] = time.Now()
+				eh.Unlock()
 				return true
 			}
 		}
-		messageHistory[mask.Host] = time.Now()
 	}
 
 	return false
