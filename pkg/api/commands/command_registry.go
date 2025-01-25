@@ -50,18 +50,23 @@ func (cr *commandRegistry) Commands() map[string]Command {
 	return cr.commands
 }
 
+var orderedCommands = make([]Command, 0)
+
 func (cr *commandRegistry) CommandsSortedForProcessing() []Command {
-	triggered := make([]Command, 0)
+	if len(orderedCommands) > 0 {
+		return orderedCommands
+	}
+
 	nonTriggered := make([]Command, 0)
 	for _, f := range cr.commands {
 		if len(f.Triggers()) == 0 {
 			nonTriggered = append(nonTriggered, f)
 		} else {
-			triggered = append(triggered, f)
+			orderedCommands = append(orderedCommands, f)
 		}
 	}
-	triggered = append(triggered, nonTriggered...)
-	return triggered
+	orderedCommands = append(orderedCommands, nonTriggered...)
+	return orderedCommands
 }
 
 func (cr *commandRegistry) RegisterCommands() {
