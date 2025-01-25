@@ -26,7 +26,7 @@ func (c *MuteCommand) Name() string {
 }
 
 func (c *MuteCommand) Description() string {
-	return "Mutes the specified user in the channel. If they were previously auto-voiced, they will be removed from the auto-voice list."
+	return "Mutes the specified user in the channel."
 }
 
 func (c *MuteCommand) Triggers() []string {

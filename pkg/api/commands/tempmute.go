@@ -32,7 +32,7 @@ func (c *TempMuteCommand) Name() string {
 }
 
 func (c *TempMuteCommand) Description() string {
-	return "Temporarily mutes the specified user in the channel for the specified duration. If they were previously auto-voiced, they will be removed from the auto-voice list."
+	return "Temporarily mutes the specified user in the channel for the specified duration."
 }
 
 func (c *TempMuteCommand) Triggers() []string {
@@ -103,13 +103,8 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			isAutoVoiced := false
-			if ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick) {
-				isAutoVoiced = true
-				c.Replyf(e, "Temporarily muted %s for %s. They're now removed from auto-voice.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
-			} else {
-				c.Replyf(e, "Temporarily muted %s for %s", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
-			}
+			isAutoVoiced := ch.AutoVoiced != nil && slices.Contains(ch.AutoVoiced, nick)
+			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 
 			go func() {
 				c.irc.Mute(channel, nick)
@@ -129,7 +124,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 					}
 				}
 
-				task := models.NewMuteRemovalTask(time.Now().Add(seconds), nick, channel)
+				task := models.NewMuteRemovalTask(time.Now().Add(seconds), nick, channel, isAutoVoiced)
 				err = fs.AddTask(task)
 				if err != nil {
 					logger.Errorf(e, "error adding task, %s", err)
