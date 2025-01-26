@@ -87,6 +87,12 @@ func (e *Event) Labels() map[string]string {
 }
 
 func createEvent(e *irce.Event) *Event {
+	for i, arg := range e.Arguments {
+		for k, v := range substitutions {
+			e.Arguments[i] = strings.Replace(arg, k, v, -1)
+		}
+	}
+
 	return &Event{
 		ID:        uuid.New().String(),
 		Raw:       e.Raw,

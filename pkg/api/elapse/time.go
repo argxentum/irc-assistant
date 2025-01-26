@@ -59,6 +59,48 @@ func PastTimeDescription(t time.Time) string {
 	}
 }
 
+func PastTimeDescriptionConcise(t time.Time) string {
+	elapsed := time.Now().Sub(t)
+	years, months, weeks, days, hours, minutes, seconds := units(elapsed)
+
+	if years > 0 {
+		if years == 1 {
+			return "a year"
+		}
+		return fmt.Sprintf("%d years", years)
+	} else if months > 0 {
+		if months == 1 {
+			return "a month"
+		}
+		return fmt.Sprintf("%d months", months)
+	} else if weeks > 0 {
+		if weeks == 1 {
+			return "a week"
+		}
+		return fmt.Sprintf("%d weeks", weeks)
+	} else if days > 0 {
+		if days == 1 {
+			return "a day"
+		}
+		return fmt.Sprintf("%d days", days)
+	} else if hours > 0 {
+		if hours == 1 {
+			return "an hour"
+		}
+		return fmt.Sprintf("%d hours", hours)
+	} else if minutes > 0 {
+		if minutes == 1 {
+			return "a minute"
+		}
+		return fmt.Sprintf("%d minutes", minutes)
+	} else {
+		if seconds == 1 {
+			return "a second"
+		}
+		return fmt.Sprintf("%d seconds", seconds)
+	}
+}
+
 func FutureTimeDescription(t time.Time) string {
 	elapsed := t.Sub(time.Now())
 	years, months, weeks, days, hours, minutes, seconds := units(elapsed)

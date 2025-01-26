@@ -8,6 +8,32 @@ import (
 	"regexp"
 )
 
+func Search(query string) (*page.WikipediaPage, error) {
+	results, suggestion, err := gowiki.Search(query, 3, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(suggestion) > 0 {
+		return GetPage(suggestion)
+	}
+
+	for _, r := range results {
+		p, err := GetPage(r)
+		if err != nil {
+			continue
+		}
+
+		if len(p.URL) == 0 {
+			continue
+		}
+
+		return p, nil
+	}
+
+	return nil, nil
+}
+
 func GetPage(query string) (*page.WikipediaPage, error) {
 	p, err := gowiki.GetPage(query, -1, false, true)
 	if err != nil {
@@ -15,6 +41,11 @@ func GetPage(query string) (*page.WikipediaPage, error) {
 	}
 
 	_, err = p.GetSummary()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.GetContent()
 	if err != nil {
 		return nil, err
 	}

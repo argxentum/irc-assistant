@@ -33,7 +33,7 @@ func (c *EchoCommand) Triggers() []string {
 }
 
 func (c *EchoCommand) Usages() []string {
-	return []string{"echo <message>"}
+	return []string{"%s <message>"}
 }
 
 func (c *EchoCommand) AllowedInPrivateMessages() bool {
