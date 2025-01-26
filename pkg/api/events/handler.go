@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -77,8 +78,9 @@ func (eh *handler) Handle(e *irc.Event) {
 		}
 	case irc.CodePrivateMessage:
 		tokens := commands.Tokens(e.Message())
+		isPrivate := e.IsPrivateMessage()
 
-		if !e.IsPrivateMessage() {
+		if !isPrivate {
 			eh.resetChannelInactivityTimeout(e)
 
 			bannedWords := eh.bannedWordsInMessage(e, tokens)
@@ -112,6 +114,15 @@ func (eh *handler) Handle(e *irc.Event) {
 
 				go f.Execute(e)
 			})
+		} else if !isPrivate && len(e.Message()) > 0 {
+			u, err := repository.GetUser(e, e.ReplyTarget(), e.From, true)
+			if err != nil {
+				logger.Errorf(e, "unable to find or create user in order to update last message, %s", err)
+			} else {
+				if err = repository.UpdateUserLastMessage(e, u); err != nil {
+					logger.Errorf(e, "unable to update user last message, %s", err)
+				}
+			}
 		}
 	}
 }

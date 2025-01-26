@@ -15,7 +15,12 @@ func (fs *Firestore) CreateUser(channel string, user *models.User) error {
 	return create(fs.ctx, fs.client, path, user)
 }
 
-func (fs *Firestore) UpdateUser(channel string, user *models.User) error {
+func (fs *Firestore) SetUser(channel string, user *models.User) error {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, user.Nick)
 	return set(fs.ctx, fs.client, path, user)
+}
+
+func (fs *Firestore) UpdateUser(channel string, user *models.User, fields map[string]any) error {
+	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, user.Nick)
+	return update(fs.ctx, fs.client, path, fields)
 }

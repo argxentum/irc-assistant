@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -50,11 +51,13 @@ func (c *KarmaGetCommand) CanExecute(e *irc.Event) bool {
 
 func (c *KarmaGetCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
+	channel := e.ReplyTarget()
 	nick := tokens[1]
-	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), nick)
 
+	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), nick)
 	fs := firestore.Get()
-	u, err := fs.User(e.ReplyTarget(), nick)
+
+	u, err := repository.GetUser(e, channel, nick, false)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting user, %s", err)
 		c.Replyf(e, "unable to get karma for %s.", style.Bold(nick))
@@ -81,7 +84,7 @@ func (c *KarmaGetCommand) Execute(e *irc.Event) {
 	h := history[rand.IntN(len(history))]
 
 	action := "giving"
-	if h.Op == firestore.OpSubtract {
+	if h.Op == repository.OpSubtract {
 		action = "taking away"
 	}
 

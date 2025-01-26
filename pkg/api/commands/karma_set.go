@@ -3,9 +3,9 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"fmt"
 	"regexp"
@@ -95,8 +95,7 @@ func (c *KarmaSetCommand) Execute(e *irc.Event) {
 
 		log.Logger().Infof(e, "⚡ %s [%s/%s] %s %s %s", c.Name(), e.From, e.ReplyTarget(), to, op, reason)
 
-		fs := firestore.Get()
-		karma, err := fs.AddKarmaHistory(e.ReplyTarget(), e.From, to, op, reason)
+		karma, err := repository.AddUserKarmaHistory(e, e.ReplyTarget(), e.From, to, op, reason)
 		if err != nil {
 			logger.Errorf(e, "error updating karma: %s", err)
 			return

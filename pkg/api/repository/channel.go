@@ -41,30 +41,6 @@ func GetChannel(e *irc.Event, channel string) (*models.Channel, error) {
 	return ch, nil
 }
 
-func UpdateChannelVoiceRequests(e *irc.Event, ch *models.Channel) error {
-	logger := log.Logger()
-	fs := firestore.Get()
-
-	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests}); err != nil {
-		logger.Errorf(e, "error updating channel, %s", err)
-		return err
-	}
-
-	return nil
-}
-
-func UpdateChannelAutoVoiced(e *irc.Event, ch *models.Channel) error {
-	logger := log.Logger()
-	fs := firestore.Get()
-
-	if err := fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoiced}); err != nil {
-		logger.Errorf(e, "error updating channel, %s", err)
-		return err
-	}
-
-	return nil
-}
-
 func IsChannelAutoVoicedUser(e *irc.Event, ch *models.Channel, nick string) bool {
 	return slices.Contains(ch.AutoVoiced, nick)
 }
@@ -91,7 +67,31 @@ func UpdateChannelVoiceRequestsAndAutoVoiced(e *irc.Event, ch *models.Channel) e
 	logger := log.Logger()
 	fs := firestore.Get()
 
-	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced}); err != nil {
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced, "updated_at": time.Now()}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func UpdateChannelVoiceRequests(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "updated_at": time.Now()}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func UpdateChannelAutoVoiced(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"auto_voiced": ch.AutoVoiced, "updated_at": time.Now()}); err != nil {
 		logger.Errorf(e, "error updating channel, %s", err)
 		return err
 	}
