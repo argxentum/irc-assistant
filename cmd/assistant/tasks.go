@@ -37,6 +37,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypeMuteRemoval:
 				isScheduledTask = true
 				err = processMuteRemoval(irc, task)
+			case models.TaskTypeNotifyVoiceRequests:
+				isScheduledTask = true
+				err = processNotifyVoiceRequests(irc, task)
 			case models.TaskTypePersistentChannel:
 				isScheduledTask = false
 				err = processPersistentChannel(ctx, cfg, irc, task)
@@ -141,6 +144,34 @@ func processMuteRemoval(irc irc.IRC, task *models.Task) error {
 		}
 	}
 
+	return nil
+}
+
+func processNotifyVoiceRequests(irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.NotifyVoiceRequestsTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing notify voice requests in %s", data.Channel)
+
+	ch, err := repository.GetChannel(nil, data.Channel)
+	if err != nil {
+		return fmt.Errorf("error retrieving channel, %s", err)
+	}
+
+	if len(ch.VoiceRequestNotifications) == 0 {
+		logger.Debugf(nil, "no voice request notifications configured for %s", data.Channel)
+		return nil
+	}
+
+	if len(ch.VoiceRequests) == 0 {
+		logger.Debugf(nil, "no voice requests in %s", data.Channel)
+		return nil
+	}
+
+	notice := fmt.Sprintf("Note: %s outstanding voice requests in %s. To review, %s.", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(data.Channel), style.Italics("!vr <channel>"))
+	for _, n := range ch.VoiceRequestNotifications {
+		irc.SendMessage(n.User, notice)
+	}
 	return nil
 }
 

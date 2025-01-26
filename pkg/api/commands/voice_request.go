@@ -6,16 +6,18 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"fmt"
+	"time"
 )
 
 const VoiceRequestCommandName = "voice_request"
 
 const (
-	voiceRequestIntervalEach   = "each"
-	voiceRequestIntervalHourly = "hourly"
-	voiceRequestIntervalDaily  = "daily"
+	voiceRequestNotificationEach      = "each"
+	voiceRequestNotificationScheduled = "scheduled"
 )
 
 type VoiceRequestCommand struct {
@@ -91,11 +93,27 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 
 	if len(ch.VoiceRequestNotifications) > 0 {
 		for _, vrn := range ch.VoiceRequestNotifications {
-			if vrn.Interval == voiceRequestIntervalEach {
+			if vrn.Interval == voiceRequestNotificationEach {
 				c.irc.SendMessage(vrn.User, fmt.Sprintf("New voice request in %s: %s", channel, nick))
 			}
+		}
+
+		task := models.NewNotifyVoiceRequestsTask(nextNoonUTC(), channel)
+		err = firestore.Get().AddTask(task)
+		if err != nil {
+			logger.Errorf(e, "error adding task, %s", err)
+			return
 		}
 	}
 
 	logger.Infof(e, "voice requested %s in %s", nick, channel)
+}
+
+func nextNoonUTC() time.Time {
+	now := time.Now().UTC()
+	todayNoon := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
+	if now.Hour() >= 12 {
+		return todayNoon.AddDate(0, 0, 1)
+	}
+	return todayNoon
 }
