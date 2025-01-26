@@ -55,7 +55,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
 
-	duration := strings.Replace(tokens[1], "+", "", 1)
+	duration := tokens[1]
 	nick := tokens[2]
 
 	reason := ""

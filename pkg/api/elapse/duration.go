@@ -12,6 +12,7 @@ import (
 var timeOffsetRegexp = regexp.MustCompile(`^(\d+(?:\.\d+)?)([a-zA-Z]+)$`)
 
 func ParseDuration(offset string) (time.Duration, error) {
+	offset = strings.TrimPrefix(offset, "+")
 	matches := timeOffsetRegexp.FindStringSubmatch(offset)
 	if len(matches) != 3 {
 		return time.Duration(0), fmt.Errorf("invalid duration, %s", offset)
