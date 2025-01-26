@@ -142,8 +142,13 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 
 		logger.Debugf(e, "showing voice requests for %s", channel)
 
+		name := "requests"
+		if len(ch.VoiceRequests) == 1 {
+			name = "request"
+		}
+
 		messages := make([]string, 0)
-		title := fmt.Sprintf("%s voice requests in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(channel))
+		title := fmt.Sprintf("%s voice %s in %s", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), name, style.Bold(channel))
 
 		vrs := ch.VoiceRequests
 		if len(ch.VoiceRequests) > maxVoiceRequestsToShow {

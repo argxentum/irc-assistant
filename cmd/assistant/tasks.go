@@ -168,7 +168,12 @@ func processNotifyVoiceRequests(irc irc.IRC, task *models.Task) error {
 		return nil
 	}
 
-	notice := fmt.Sprintf("Note: %s outstanding voice requests in %s. To review, %s.", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), style.Bold(data.Channel), style.Italics("!vr <channel>"))
+	name := "requests"
+	if len(ch.VoiceRequests) == 1 {
+		name = "request"
+	}
+
+	notice := fmt.Sprintf("Note: %s outstanding voice %s in %s. To review, %s.", style.Bold(fmt.Sprintf("%d", len(ch.VoiceRequests))), name, style.Bold(data.Channel), style.Italics("!vr <channel>"))
 	for _, n := range ch.VoiceRequestNotifications {
 		irc.SendMessage(n.User, notice)
 	}
