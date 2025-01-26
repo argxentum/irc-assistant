@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"strings"
 )
 
 const UnmuteCommandName = "unmute"
@@ -25,7 +26,7 @@ func (c *UnmuteCommand) Name() string {
 }
 
 func (c *UnmuteCommand) Description() string {
-	return "Unmutes the specified user in the channel. If no channel is specified, the current channel is used."
+	return "Unmutes the specified user in the channel."
 }
 
 func (c *UnmuteCommand) Triggers() []string {
@@ -33,7 +34,7 @@ func (c *UnmuteCommand) Triggers() []string {
 }
 
 func (c *UnmuteCommand) Usages() []string {
-	return []string{"%s <nick> [<channel>]"}
+	return []string{"%s [<channel>] <nick>"}
 }
 
 func (c *UnmuteCommand) AllowedInPrivateMessages() bool {
@@ -46,15 +47,20 @@ func (c *UnmuteCommand) CanExecute(e *irc.Event) bool {
 
 func (c *UnmuteCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	nick := tokens[1]
 
-	channel := e.ReplyTarget()
-	if len(tokens) > 2 {
-		channel = tokens[2]
+	channel := ""
+	nicks := make([]string, 0)
+
+	if e.IsPrivateMessage() && irc.IsChannel(tokens[1]) && len(tokens) >= 3 {
+		channel = tokens[1]
+		nicks = tokens[2:]
+	} else {
+		channel = e.ReplyTarget()
+		nicks = tokens[1:]
 	}
 
 	logger := log.Logger()
-	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
+	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, strings.Join(nicks, ", "))
 
 	c.isBotAuthorizedByChannelStatus(channel, irc.ChannelStatusHalfOperator, func(authorized bool) {
 		if !authorized {
@@ -69,14 +75,16 @@ func (c *UnmuteCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		repository.RemoveChannelVoiceRequest(e, ch, nick, "")
+		for _, nick := range nicks {
+			repository.RemoveChannelVoiceRequest(e, ch, nick, "")
+			c.irc.Voice(channel, nick)
+		}
 
 		if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
 
-		c.irc.Voice(channel, nick)
-		logger.Infof(e, "unmuted %s in %s", nick, channel)
+		logger.Infof(e, "unmuted %s in %s", strings.Join(nicks, ", "), channel)
 	})
 }
