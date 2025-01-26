@@ -88,6 +88,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[AnimatedTextCommandName] = NewAnimatedTextCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[GIFSearchCommandName] = NewGifSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[WikipediaCommandName] = NewWikipediaCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[SeenCommandName] = NewSeenCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,
