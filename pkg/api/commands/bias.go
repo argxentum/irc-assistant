@@ -3,16 +3,19 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -61,6 +64,13 @@ var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]
 func (c *BiasCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
+
+	if result, ok := repository.GetBiasResultFromAssistantCache(e, input); ok {
+		log.Logger().Debugf(e, "found bias result in cache")
+		c.SendBiasResult(e, result)
+		return
+	}
+
 	headers := retriever.RandomHeaderSet()
 
 	logger := log.Logger()
@@ -127,53 +137,49 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		title = strings.TrimFunc(title, func(r rune) bool {
-			return !unicode.IsLetter(r)
-		})
-		title = strings.Replace(title, "Bias and Credibility", "", -1)
-
-		message := ""
-
-		if len(detail) > 0 {
-			rating := biasRatingRegexp.FindStringSubmatch(detail)
-			if len(rating) > 1 {
-				content := text.Capitalize(rating[1], true)
-				content = strings.TrimFunc(content, func(r rune) bool {
-					return !unicode.IsLetter(r)
-				})
-				message += fmt.Sprintf("%s: %s", style.Underline("Bias"), text.CapitalizeEveryWord(content, true))
-			}
-
-			factual := factualReportingRegexp.FindStringSubmatch(detail)
-			if len(factual) > 1 {
-				content := text.Capitalize(factual[1], true)
-				content = strings.TrimFunc(content, func(r rune) bool {
-					return !unicode.IsLetter(r)
-				})
-				if len(message) > 0 {
-					message += ", "
-				}
-				message += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), text.CapitalizeEveryWord(content, true))
-			}
-
-			credibility := credibilityRegexp.FindStringSubmatch(detail)
-			if len(credibility) > 1 {
-				content := text.Capitalize(credibility[1], true)
-				content = strings.TrimFunc(content, func(r rune) bool {
-					return !unicode.IsLetter(r)
-				})
-				if len(message) > 0 {
-					message += ", "
-				}
-				message += fmt.Sprintf("%s: %s", style.Underline("Credibility"), text.CapitalizeEveryWord(content, true))
-			}
-
-			if len(message) > 0 {
-				message = fmt.Sprintf("%s %s", style.Bold(strings.TrimSpace(title)), message)
-			}
+		result := models.BiasResult{
+			CachedAt: time.Now(),
 		}
 
-		c.SendMessages(e, e.ReplyTarget(), []string{message, detailURL})
+		result.Title = strings.TrimFunc(title, func(r rune) bool {
+			return !unicode.IsLetter(r)
+		})
+		result.Title = strings.TrimSpace(strings.Replace(title, "Bias and Credibility", "", -1))
+
+		rating := biasRatingRegexp.FindStringSubmatch(detail)
+		if len(rating) > 1 {
+			content := text.Capitalize(rating[1], true)
+			content = strings.TrimFunc(content, func(r rune) bool {
+				return !unicode.IsLetter(r)
+			})
+			result.Rating = text.CapitalizeEveryWord(content, true)
+		}
+
+		factual := factualReportingRegexp.FindStringSubmatch(detail)
+		if len(factual) > 1 {
+			content := text.Capitalize(factual[1], true)
+			content = strings.TrimFunc(content, func(r rune) bool {
+				return !unicode.IsLetter(r)
+			})
+			result.Factual = text.CapitalizeEveryWord(content, true)
+		}
+
+		credibility := credibilityRegexp.FindStringSubmatch(detail)
+		if len(credibility) > 1 {
+			content := text.Capitalize(credibility[1], true)
+			content = strings.TrimFunc(content, func(r rune) bool {
+				return !unicode.IsLetter(r)
+			})
+			result.Credibility = text.CapitalizeEveryWord(content, true)
+		}
+
+		result.DetailURL = strings.TrimSpace(detailURL)
+
+		if err := repository.AddBiasResultToAssistantCache(e, input, result); err != nil {
+			logger.Warningf(e, "error adding bias result to cache: %s", err)
+		}
+
+		c.SendBiasResult(e, result)
 	})
 
 	searchQuery := url.QueryEscape(input)
@@ -187,4 +193,32 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 		c.Replyf(e, "Unable to determine bias details for %s", style.Bold(input))
 		return
 	}
+}
+
+func (c *BiasCommand) SendBiasResult(e *irc.Event, result models.BiasResult) {
+	message := ""
+
+	if len(result.Rating) > 0 {
+		message += fmt.Sprintf("%s: %s", style.Underline("Bias"), result.Rating)
+	}
+
+	if len(result.Factual) > 0 {
+		if len(message) > 0 {
+			message += ", "
+		}
+		message += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), result.Factual)
+	}
+
+	if len(result.Credibility) > 0 {
+		if len(message) > 0 {
+			message += ", "
+		}
+		message += fmt.Sprintf("%s: %s", style.Underline("Credibility"), result.Credibility)
+	}
+
+	if len(message) > 0 {
+		message = fmt.Sprintf("%s %s", style.Bold(result.Title), message)
+	}
+
+	c.SendMessages(e, e.ReplyTarget(), []string{message, result.DetailURL})
 }

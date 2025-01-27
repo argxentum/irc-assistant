@@ -53,7 +53,7 @@ func initializeAssistant(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 
 	if assistant == nil {
 		logger.Debugf(nil, "assistant not found, creating")
-		err = fs.CreateAssistant()
+		assistant, err = fs.CreateAssistant()
 		if err != nil {
 			logger.Errorf(nil, "error creating assistant, %s", err)
 			return
