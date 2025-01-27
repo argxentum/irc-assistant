@@ -94,7 +94,7 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 	if len(ch.VoiceRequestNotifications) > 0 {
 		for _, vrn := range ch.VoiceRequestNotifications {
 			if vrn.Interval == voiceRequestNotificationEach {
-				c.irc.SendMessage(vrn.User, fmt.Sprintf("New voice request in %s: %s", channel, nick))
+				c.irc.SendMessage(vrn.User, fmt.Sprintf("New voice request in %s: %s (%s)", channel, style.Bold(nick), mask))
 			}
 		}
 

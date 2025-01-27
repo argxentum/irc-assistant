@@ -115,6 +115,7 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 				repository.RemoveChannelVoiceRequest(e, ch, vr.Nick, vr.Host)
 				c.irc.Voice(channel, vr.Nick)
 				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
+				c.SendMessage(e, vr.Nick, fmt.Sprintf("🎉 Your voice request in %s has been approved. Welcome! We'd love it if you'd take a moment to say hello and introduce yourself.", style.Bold(channel)))
 				logger.Debugf(e, "approved voice request for %s (%s)", vr.Nick, vr.Mask())
 			}
 			if err = repository.UpdateChannelVoiceRequestsAndAutoVoiced(e, ch); err != nil {
