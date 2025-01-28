@@ -54,7 +54,7 @@ func AddBiasResultToAssistantCache(e *irc.Event, input string, result models.Bia
 	return UpdateAssistantCache(e, assistant.Cache)
 }
 
-func GetBiasResultFromAssistantCache(e *irc.Event, input string) (models.BiasResult, bool) {
+func GetBiasResultFromAssistantCache(e *irc.Event, input string, ignoreStaleResults bool) (models.BiasResult, bool) {
 	assistant, err := GetAssistant(e, false)
 	if err != nil {
 		return models.BiasResult{}, false
@@ -62,7 +62,7 @@ func GetBiasResultFromAssistantCache(e *irc.Event, input string) (models.BiasRes
 
 	result, ok := assistant.Cache.BiasResults[SanitizedBiasInput(input)]
 
-	if result.CachedAt.Before(time.Now().AddDate(-1, 0, 0)) {
+	if ignoreStaleResults && result.CachedAt.Before(time.Now().AddDate(-1, 0, 0)) {
 		log.Logger().Debugf(e, "bias result for %s is stale, ignoring", input)
 		return models.BiasResult{}, false
 	}

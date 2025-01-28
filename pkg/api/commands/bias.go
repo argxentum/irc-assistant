@@ -65,7 +65,7 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 
-	if result, ok := repository.GetBiasResultFromAssistantCache(e, input); ok {
+	if result, ok := repository.GetBiasResultFromAssistantCache(e, input, true); ok {
 		log.Logger().Debugf(e, "found bias result in cache")
 		c.SendBiasResult(e, result)
 		return

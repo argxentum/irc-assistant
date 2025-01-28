@@ -194,16 +194,9 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 		if s != nil {
 			messages := s.messages
-			asst, err := repository.GetAssistant(e, false)
-			if asst != nil && err == nil {
-				biasInput := repository.SanitizedBiasInput(url)
-				if asst.Cache.BiasResults != nil {
-					if result, ok := asst.Cache.BiasResults[biasInput]; ok {
-						messages = append(messages, result.Description())
-					}
-				}
+			if result, ok := repository.GetBiasResultFromAssistantCache(e, url, false); ok {
+				messages = append(messages, result.Description())
 			}
-
 			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
 			return
 		}
@@ -274,14 +267,8 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 		}
 	}
 
-	asst, err := repository.GetAssistant(e, false)
-	if asst != nil && err == nil {
-		biasInput := repository.SanitizedBiasInput(url)
-		if asst.Cache.BiasResults != nil {
-			if result, ok := asst.Cache.BiasResults[biasInput]; ok {
-				unescapedMessages = append(unescapedMessages, result.Description())
-			}
-		}
+	if result, ok := repository.GetBiasResultFromAssistantCache(e, url, false); ok {
+		unescapedMessages = append(unescapedMessages, result.Description())
 	}
 
 	c.SendMessages(e, target, unescapedMessages)
