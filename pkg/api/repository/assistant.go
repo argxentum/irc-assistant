@@ -70,12 +70,12 @@ func GetBiasResultFromAssistantCache(e *irc.Event, input string) (models.BiasRes
 	return result, ok
 }
 
-var domainRegex = regexp.MustCompile(`\.[a-z]+$`)
+var rootDomainRegex = regexp.MustCompile(`(?:\.[a-z]+)+$`)
 
 func sanitizeInput(input string) string {
 	input = strings.ToLower(input)
-	if domainRegex.MatchString(input) {
-		input = domainRegex.ReplaceAllString(input, "")
+	if rootDomainRegex.MatchString(input) {
+		input = rootDomainRegex.ReplaceAllString(input, "")
 	}
 	return input
 }
