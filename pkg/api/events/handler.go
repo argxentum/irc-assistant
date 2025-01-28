@@ -20,7 +20,7 @@ import (
 	"unicode"
 )
 
-const userCommandRateLimitDuration = 1500 * time.Millisecond
+const userCommandRateLimitDuration = 1250 * time.Millisecond
 
 type Handler interface {
 	FindMatchingCommand(e *irc.Event) commands.Command
@@ -117,10 +117,10 @@ func (eh *handler) Handle(e *irc.Event) {
 		} else if !isPrivate && len(e.Message()) > 0 {
 			u, err := repository.GetUser(e, e.ReplyTarget(), e.From, true)
 			if err != nil {
-				logger.Errorf(e, "unable to find or create user in order to update last message, %s", err)
+				logger.Errorf(e, "unable to find or create user in order to update recent user messages, %s", err)
 			} else {
-				if err = repository.UpdateUserLastMessage(e, u); err != nil {
-					logger.Errorf(e, "unable to update user last message, %s", err)
+				if err = repository.AddRecentUserMessage(e, u); err != nil {
+					logger.Errorf(e, "unable to add recent user message, %s", err)
 				}
 			}
 		}

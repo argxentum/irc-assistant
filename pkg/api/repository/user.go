@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/models"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -33,20 +34,46 @@ func GetUser(e *irc.Event, channel, nick string, createIfNotExists bool) (*model
 	return u, nil
 }
 
-func UpdateUserLastMessage(e *irc.Event, u *models.User) error {
+func AddRecentUserMessage(e *irc.Event, u *models.User) error {
 	channel := e.ReplyTarget()
-	u, err := GetUser(e, channel, u.Nick, false)
-	if err != nil {
-		return err
-	}
 
-	u.LastMessage = models.UserLastMessage{
+	u.RecentMessages = append(u.RecentMessages, models.RecentMessage{
 		Message: e.Message(),
 		At:      time.Now(),
+	})
+
+	if len(u.RecentMessages) > models.MaximumRecentUserMessages {
+		u.RecentMessages = u.RecentMessages[1:]
 	}
 
 	fs := firestore.Get()
-	return fs.UpdateUser(channel, u, map[string]interface{}{"last_message": u.LastMessage, "updated_at": time.Now()})
+	return fs.UpdateUser(channel, u, map[string]interface{}{"recent_messages": u.RecentMessages, "updated_at": time.Now()})
+}
+
+func FindMostRecentUserMessage(e *irc.Event, u *models.User) (models.RecentMessage, bool) {
+	if len(u.RecentMessages) == 0 {
+		return models.RecentMessage{}, false
+	}
+
+	return u.RecentMessages[len(u.RecentMessages)-1], true
+}
+
+func FindRecentUserMessage(e *irc.Event, u *models.User, input string) (models.RecentMessage, bool) {
+	input = strings.TrimSpace(input)
+
+	if len(u.RecentMessages) == 0 {
+		return models.RecentMessage{}, false
+	}
+
+	// iterate through recent messages backward, to match the most recent message
+	for i := len(u.RecentMessages) - 1; i >= 0; i-- {
+		m := u.RecentMessages[i]
+		if strings.Contains(strings.TrimSpace(strings.ToLower(m.Message)), input) {
+			return m, true
+		}
+	}
+
+	return models.RecentMessage{}, false
 }
 
 func IncrementUserKarma(e *irc.Event, u *models.User) error {

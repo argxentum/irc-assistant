@@ -59,10 +59,11 @@ func (c *SeenCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	if u == nil || len(u.LastMessage.Message) == 0 {
+	if u == nil || len(u.RecentMessages) == 0 {
 		c.Replyf(e, "Sorry, I haven't seen %s.", style.Bold(nick))
 		return
 	}
 
-	c.Replyf(e, "%s was last seen %s saying: %s", style.Bold(nick), style.Bold(elapse.PastTimeDescription(u.LastMessage.At)), style.Italics(u.LastMessage.Message))
+	lastMessage := u.RecentMessages[len(u.RecentMessages)-1]
+	c.Replyf(e, "%s was last seen %s saying: %s", style.Bold(nick), style.Bold(elapse.PastTimeDescription(lastMessage.At)), style.Italics(lastMessage.Message))
 }
