@@ -14,8 +14,8 @@ func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summary, err
 	}
 
 	description := page.Summary
-	if len(description) > maximumDescriptionLength {
-		description = description[:maximumDescriptionLength] + "..."
+	if len(description) > standardMaximumDescriptionLength {
+		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
 	return createSummary(fmt.Sprintf("%s • %s", style.Bold(page.Title), description)), nil

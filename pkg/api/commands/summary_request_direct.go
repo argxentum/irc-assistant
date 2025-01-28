@@ -36,8 +36,8 @@ func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 	description := strings.TrimSpace(descriptionAttr)
 	h1 := strings.TrimSpace(doc.Find("html body h1").First().Text())
 
-	if len(description) > maximumDescriptionLength {
-		description = description[:maximumDescriptionLength] + "..."
+	if len(description) > standardMaximumDescriptionLength {
+		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
 	if len(titleAttr) > 0 {
@@ -60,7 +60,7 @@ func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 
 	logger.Debugf(e, "title: %s, description: %s", title, description)
 
-	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < maximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
+	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < standardMaximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
 		if text.MostlyContains(title, description, 0.9) {
 			if len(description) > len(title) {
 				return createSummary(style.Bold(description)), nil

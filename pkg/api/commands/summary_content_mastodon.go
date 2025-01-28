@@ -19,8 +19,8 @@ func (c *SummaryCommand) parseMastodon(e *irc.Event, url string) (*summary, erro
 	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
 	description := strings.TrimSpace(descriptionAttr)
 
-	if len(description) > maximumDescriptionLength {
-		description = description[:maximumDescriptionLength] + "..."
+	if len(description) > standardMaximumDescriptionLength {
+		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
 	if len(title) == 0 {

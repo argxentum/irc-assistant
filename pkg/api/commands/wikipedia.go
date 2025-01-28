@@ -64,8 +64,8 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 	}
 
 	description := page.Summary
-	if len(description) > maximumDescriptionLength {
-		description = description[:maximumDescriptionLength] + "..."
+	if len(description) > extendedMaximumDescriptionLength {
+		description = description[:extendedMaximumDescriptionLength] + "..."
 	}
 
 	messages := []string{
