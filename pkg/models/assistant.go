@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"assistant/pkg/api/style"
+	"fmt"
+	"time"
+)
 
 type Assistant struct {
 	Name      string         `firestore:"name"`
@@ -29,4 +33,32 @@ func NewAssistant(name string) *Assistant {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+}
+
+func (br BiasResult) Description() string {
+	desc := ""
+
+	if len(br.Rating) > 0 {
+		desc += fmt.Sprintf("%s: %s", style.Underline("Bias"), br.Rating)
+	}
+
+	if len(br.Factual) > 0 {
+		if len(desc) > 0 {
+			desc += ", "
+		}
+		desc += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), br.Factual)
+	}
+
+	if len(br.Credibility) > 0 {
+		if len(desc) > 0 {
+			desc += ", "
+		}
+		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), br.Credibility)
+	}
+
+	if len(desc) > 0 {
+		desc = fmt.Sprintf("📊 %s %s", style.Bold(br.Title), desc)
+	}
+
+	return desc
 }

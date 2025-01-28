@@ -49,7 +49,7 @@ func AddBiasResultToAssistantCache(e *irc.Event, input string, result models.Bia
 		assistant.Cache.BiasResults = make(map[string]models.BiasResult)
 	}
 
-	assistant.Cache.BiasResults[sanitizeInput(input)] = result
+	assistant.Cache.BiasResults[SanitizedBiasInput(input)] = result
 
 	return UpdateAssistantCache(e, assistant.Cache)
 }
@@ -60,7 +60,7 @@ func GetBiasResultFromAssistantCache(e *irc.Event, input string) (models.BiasRes
 		return models.BiasResult{}, false
 	}
 
-	result, ok := assistant.Cache.BiasResults[sanitizeInput(input)]
+	result, ok := assistant.Cache.BiasResults[SanitizedBiasInput(input)]
 
 	if result.CachedAt.Before(time.Now().AddDate(-1, 0, 0)) {
 		log.Logger().Debugf(e, "bias result for %s is stale, ignoring", input)
@@ -70,12 +70,16 @@ func GetBiasResultFromAssistantCache(e *irc.Event, input string) (models.BiasRes
 	return result, ok
 }
 
-var rootDomainRegex = regexp.MustCompile(`(?:\.[a-z]+)+$`)
+var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
+var domainCoreRegex = regexp.MustCompile(`(?:\.[a-z]+)+$`)
 
-func sanitizeInput(input string) string {
+func SanitizedBiasInput(input string) string {
 	input = strings.ToLower(input)
-	if rootDomainRegex.MatchString(input) {
-		input = rootDomainRegex.ReplaceAllString(input, "")
+	if rootDomainRegexp.MatchString(input) {
+		input = rootDomainRegexp.FindStringSubmatch(input)[1]
+	}
+	if domainCoreRegex.MatchString(input) {
+		input = domainCoreRegex.ReplaceAllString(input, "")
 	}
 	return input
 }

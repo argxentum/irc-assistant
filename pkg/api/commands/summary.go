@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -169,7 +170,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				logger.Debugf(e, "URL is possible disinformation: %s", url)
 				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
 			}
-			c.completeSummary(e, e.ReplyTarget(), ds.messages, dis, p)
+			c.completeSummary(e, url, e.ReplyTarget(), ds.messages, dis, p)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
 		}
@@ -192,7 +193,18 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
 		}
 		if s != nil {
-			c.completeSummary(e, e.ReplyTarget(), s.messages, false, p)
+			messages := s.messages
+			asst, err := repository.GetAssistant(e, false)
+			if asst != nil && err == nil {
+				biasInput := repository.SanitizedBiasInput(url)
+				if asst.Cache.BiasResults != nil {
+					if result, ok := asst.Cache.BiasResults[biasInput]; ok {
+						messages = append(messages, result.Description())
+					}
+				}
+			}
+
+			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
 			return
 		}
 	}
@@ -211,7 +223,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "URL is possible disinformation: %s", url)
 			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
-		c.completeSummary(e, e.ReplyTarget(), s.messages, dis, p)
+		c.completeSummary(e, url, e.ReplyTarget(), s.messages, dis, p)
 	}
 }
 
@@ -237,7 +249,7 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
-func (c *SummaryCommand) completeSummary(e *irc.Event, target string, messages []string, dis bool, p *UserPause) {
+func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messages []string, dis bool, p *UserPause) {
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -259,6 +271,16 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, target string, messages [
 			unescapedMessages = append(unescapedMessages, html.UnescapeString(message))
 		} else {
 			unescapedMessages = append(unescapedMessages, message)
+		}
+	}
+
+	asst, err := repository.GetAssistant(e, false)
+	if asst != nil && err == nil {
+		biasInput := repository.SanitizedBiasInput(url)
+		if asst.Cache.BiasResults != nil {
+			if result, ok := asst.Cache.BiasResults[biasInput]; ok {
+				unescapedMessages = append(unescapedMessages, result.Description())
+			}
 		}
 	}
 

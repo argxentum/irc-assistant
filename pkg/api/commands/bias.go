@@ -196,29 +196,5 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 }
 
 func (c *BiasCommand) SendBiasResult(e *irc.Event, result models.BiasResult) {
-	message := ""
-
-	if len(result.Rating) > 0 {
-		message += fmt.Sprintf("%s: %s", style.Underline("Bias"), result.Rating)
-	}
-
-	if len(result.Factual) > 0 {
-		if len(message) > 0 {
-			message += ", "
-		}
-		message += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), result.Factual)
-	}
-
-	if len(result.Credibility) > 0 {
-		if len(message) > 0 {
-			message += ", "
-		}
-		message += fmt.Sprintf("%s: %s", style.Underline("Credibility"), result.Credibility)
-	}
-
-	if len(message) > 0 {
-		message = fmt.Sprintf("%s %s", style.Bold(result.Title), message)
-	}
-
-	c.SendMessages(e, e.ReplyTarget(), []string{message, result.DetailURL})
+	c.SendMessages(e, e.ReplyTarget(), []string{result.Description(), result.DetailURL})
 }
