@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
@@ -76,6 +77,10 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 		messages = append(messages, post.Comment.FormattedBody())
 	}
 
+	if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
+		messages = append(messages, bias.Description())
+	}
+
 	return createSummary(messages...), nil
 }
 
@@ -136,5 +141,12 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 		created = fmt.Sprintf(" %s", elapse.TimeDescription(createdAt))
 	}
 
-	return createSummary(fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments))), nil
+	messages := make([]string, 0)
+	messages = append(messages, fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments)))
+
+	if bias, ok := repository.GetBiasResult(e, link, false); ok {
+		messages = append(messages, bias.Description())
+	}
+
+	return createSummary(messages...), nil
 }
