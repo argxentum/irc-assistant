@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
@@ -91,6 +92,10 @@ func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 
 		if post.Comment != nil {
 			content = append(content, post.Comment.FormattedBody())
+		}
+
+		if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
+			content = append(content, bias.Description())
 		}
 
 		if i < len(posts)-1 {

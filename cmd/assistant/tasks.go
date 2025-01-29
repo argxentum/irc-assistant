@@ -225,6 +225,10 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 				messages = append(messages, post.Comment.FormattedBody())
 			}
 
+			if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
+				messages = append(messages, bias.Description())
+			}
+
 			irc.SendMessages(channelName, messages)
 			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
 

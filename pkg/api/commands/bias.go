@@ -65,7 +65,7 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 
-	if result, ok := repository.GetBiasResultFromAssistantCache(e, input, true); ok {
+	if result, ok := repository.GetBiasResult(e, input, true); ok {
 		log.Logger().Debugf(e, "found bias result in cache")
 		c.SendBiasResult(e, result)
 		return
@@ -175,7 +175,7 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 
 		result.DetailURL = strings.TrimSpace(detailURL)
 
-		if err := repository.AddBiasResultToAssistantCache(e, input, result); err != nil {
+		if err := repository.AddBiasResult(e, input, result); err != nil {
 			logger.Warningf(e, "error adding bias result to cache: %s", err)
 		}
 

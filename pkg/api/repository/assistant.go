@@ -38,7 +38,7 @@ func UpdateAssistantCache(e *irc.Event, cache models.AssistantCache) error {
 	return fs.UpdateAssistant(map[string]interface{}{"cache": cache})
 }
 
-func AddBiasResultToAssistantCache(e *irc.Event, input string, result models.BiasResult) error {
+func AddBiasResult(e *irc.Event, input string, result models.BiasResult) error {
 	log.Logger().Debugf(e, "adding bias result to assistant cache")
 	assistant, err := GetAssistant(e, false)
 	if err != nil {
@@ -54,7 +54,7 @@ func AddBiasResultToAssistantCache(e *irc.Event, input string, result models.Bia
 	return UpdateAssistantCache(e, assistant.Cache)
 }
 
-func GetBiasResultFromAssistantCache(e *irc.Event, input string, ignoreStaleResults bool) (models.BiasResult, bool) {
+func GetBiasResult(e *irc.Event, input string, ignoreStaleResults bool) (models.BiasResult, bool) {
 	assistant, err := GetAssistant(e, false)
 	if err != nil {
 		return models.BiasResult{}, false
