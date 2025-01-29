@@ -23,7 +23,7 @@ func GetChannel(e *irc.Event, channel string) (*models.Channel, error) {
 
 	if ch == nil {
 		logger.Errorf(e, "channel %s does not exist", channel)
-		return nil, err
+		return nil, fmt.Errorf("channel %s does not exist", channel)
 	}
 
 	if ch.AutoVoiced == nil {
@@ -100,12 +100,20 @@ func UpdateChannelAutoVoiced(e *irc.Event, ch *models.Channel) error {
 }
 
 func VoiceRequestExistsForNick(e *irc.Event, ch *models.Channel, nick string) bool {
+	if ch.VoiceRequests == nil || len(ch.VoiceRequests) == 0 {
+		return false
+	}
+
 	return slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool {
 		return request.Nick == nick
 	})
 }
 
 func VoiceRequestExistsForHost(e *irc.Event, ch *models.Channel, host string) bool {
+	if ch.VoiceRequests == nil || len(ch.VoiceRequests) == 0 {
+		return false
+	}
+
 	return slices.ContainsFunc(ch.VoiceRequests, func(request models.VoiceRequest) bool {
 		return request.Host == host
 	})
