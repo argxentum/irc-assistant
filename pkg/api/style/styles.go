@@ -11,6 +11,7 @@ const (
 	StyleColor         = "\x03"
 	StyleReset         = "\x0F"
 
+	ColorNone    = -1
 	ColorWhite   = 0
 	ColorBlack   = 1
 	ColorBlue    = 2
@@ -51,9 +52,15 @@ func Monospace(s string) string {
 }
 
 func ColorForeground(s string, fg int) string {
+	if fg < 0 {
+		return s
+	}
 	return StyleColor + fmt.Sprintf("%02d", fg) + s + StyleColor
 }
 
 func ColorForegroundBackground(s string, fg, bg int) string {
+	if fg < 0 || bg < 0 {
+		return s
+	}
 	return StyleColor + fmt.Sprintf("%02d,%02d", fg, bg) + s + StyleColor
 }

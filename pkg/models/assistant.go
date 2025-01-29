@@ -3,6 +3,7 @@ package models
 import (
 	"assistant/pkg/api/style"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -38,22 +39,49 @@ func NewAssistant(name string) *Assistant {
 func (br BiasResult) Description() string {
 	desc := ""
 
+	ratingColor := style.ColorNone
+	if strings.Contains(strings.ToLower(br.Rating), "least biased") {
+		ratingColor = style.ColorGreen
+	} else if strings.ToLower(br.Rating) == "left" || strings.ToLower(br.Rating) == "right" {
+		ratingColor = style.ColorYellow
+	} else if strings.Contains(strings.ToLower(br.Rating), "extreme") {
+		ratingColor = style.ColorRed
+	}
+
 	if len(br.Rating) > 0 {
-		desc += fmt.Sprintf("%s: %s", style.Underline("Bias"), br.Rating)
+		desc += fmt.Sprintf("%s: %s", style.Underline("Bias"), style.ColorForeground(br.Rating, ratingColor))
+	}
+
+	factualColor := style.ColorNone
+	if strings.Contains(strings.ToLower(br.Factual), "high") {
+		factualColor = style.ColorGreen
+	} else if strings.ToLower(br.Factual) == "mixed" {
+		factualColor = style.ColorYellow
+	} else if strings.Contains(strings.ToLower(br.Factual), "low") {
+		factualColor = style.ColorRed
 	}
 
 	if len(br.Factual) > 0 {
 		if len(desc) > 0 {
 			desc += ", "
 		}
-		desc += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), br.Factual)
+		desc += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), style.ColorForeground(br.Factual, factualColor))
+	}
+
+	credibilityColor := style.ColorNone
+	if strings.Contains(strings.ToLower(br.Credibility), "high") {
+		credibilityColor = style.ColorGreen
+	} else if strings.Contains(strings.ToLower(br.Credibility), "medium") {
+		credibilityColor = style.ColorYellow
+	} else if strings.Contains(strings.ToLower(br.Credibility), "low") {
+		credibilityColor = style.ColorRed
 	}
 
 	if len(br.Credibility) > 0 {
 		if len(desc) > 0 {
 			desc += ", "
 		}
-		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), br.Credibility)
+		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), style.ColorForeground(br.Credibility, credibilityColor))
 	}
 
 	if len(desc) > 0 {

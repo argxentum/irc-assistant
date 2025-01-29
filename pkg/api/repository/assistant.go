@@ -70,7 +70,7 @@ func GetBiasResultFromAssistantCache(e *irc.Event, input string, ignoreStaleResu
 	return result, ok
 }
 
-var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
+var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+(?:\.[a-z]+)+)(?:/|$)`)
 var domainCoreRegex = regexp.MustCompile(`(?:\.[a-z]+)+$`)
 
 func SanitizedBiasInput(input string) string {
@@ -78,6 +78,7 @@ func SanitizedBiasInput(input string) string {
 	if rootDomainRegexp.MatchString(input) {
 		input = rootDomainRegexp.FindStringSubmatch(input)[1]
 	}
+	input = strings.Replace(input, "www.", "", -1)
 	if domainCoreRegex.MatchString(input) {
 		input = domainCoreRegex.ReplaceAllString(input, "")
 	}
