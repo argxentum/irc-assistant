@@ -125,6 +125,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			dis := channel != nil && channel.Summarization.IsPossibleDisinformation(url)
+			if dis {
+				logger.Debugf(e, "URL is possible disinformation: %s", url)
+				c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
+			}
+
 			p.ignoreCount++
 			p.summaryCount++
 			if dis {
