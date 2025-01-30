@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
@@ -53,7 +54,7 @@ func (c *NotesSearchCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-var noteIDRegex = regexp.MustCompile(`^(\d\w+)$`)
+var noteIDRegex = regexp.MustCompile(`^([a-zA-Z0-9]+)$`)
 
 func (c *NotesSearchCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
@@ -107,7 +108,7 @@ func (c *NotesSearchCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	c.SendNotes(e, input, url, notes)
+	c.SendNotes(e, notes)
 }
 
 func createNoteOutputMessages(e *irc.Event, nick string, n *models.Note) []string {
@@ -115,38 +116,34 @@ func createNoteOutputMessages(e *irc.Event, nick string, n *models.Note) []strin
 		n.Content = n.Content[:noteMaxLength] + "..."
 	}
 
-	message := ""
-	if !e.IsPrivateMessage() {
-		message = fmt.Sprintf("%s shared note %s: %s", nick, style.Bold(n.ID), n.Content)
-	} else {
-		message = fmt.Sprintf("Note %s: %s", style.Bold(n.ID), n.Content)
-	}
+	messages := make([]string, 0)
+	messages = append(messages, fmt.Sprintf("🗒 %s (%s, %s • %s)", style.Bold(n.Content), nick, elapse.PastTimeDescription(n.NotedAt), n.ID))
 
 	if len(n.Source) > 0 {
-		return []string{message, n.Source}
-	} else {
-		return []string{message}
+		messages = append(messages, n.Source)
 	}
+
+	return messages
 }
 
 func (c *NotesSearchCommand) SendNote(e *irc.Event, n *models.Note) {
 	c.SendMessages(e, e.ReplyTarget(), createNoteOutputMessages(e, e.From, n))
 }
 
-func (c *NotesSearchCommand) SendNotes(e *irc.Event, content, url string, notes []*models.Note) {
+func (c *NotesSearchCommand) SendNotes(e *irc.Event, notes []*models.Note) {
 	if len(notes) == 1 {
 		c.SendNote(e, notes[0])
 		return
 	}
 
 	if len(notes) > maxNotesToShow {
-		c.Replyf(e, "Found %s matching notes (showing last %s):", style.Bold(fmt.Sprintf("%d", len(notes))), style.Bold(fmt.Sprintf("%d", maxNotesToShow)))
+		c.Replyf(e, fmt.Sprintf("Found %s matching notes (only showing %s)", style.Bold(fmt.Sprintf("%d", len(notes))), style.Bold(fmt.Sprintf("%d", maxNotesToShow))))
 	} else {
-		c.Replyf(e, "Found %s matching notes:", style.Bold(fmt.Sprintf("%d", len(notes))))
+		c.Replyf(e, fmt.Sprintf("Found %s matching notes", style.Bold(fmt.Sprintf("%d", len(notes)))))
 	}
 
+	messages := make([]string, 0)
 	shown := 0
-
 	for i := len(notes) - 1; i >= 0; i-- {
 		if shown >= maxNotesToShow {
 			break
@@ -162,8 +159,9 @@ func (c *NotesSearchCommand) SendNotes(e *irc.Event, content, url string, notes 
 			note = n.Source
 		}
 
-		c.Replyf(e, "%s: %s", style.Bold(style.Underline(n.ID)), note)
-
+		messages = append(messages, fmt.Sprintf("%s: %s", style.Bold(n.ID), note))
 		shown++
 	}
+
+	c.SendMessages(e, e.ReplyTarget(), messages)
 }
