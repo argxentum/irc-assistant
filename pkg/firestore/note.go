@@ -79,6 +79,19 @@ func (fs *Firestore) UserNotesMatchingSource(nick, source string) ([]*models.Not
 }
 
 func (fs *Firestore) CreateUserNote(nick string, note *models.Note) error {
+	usersPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick)
+	user, err := get[models.User](fs.ctx, fs.client, usersPath)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		empty := make(map[string]any)
+		err = create[map[string]any](fs.ctx, fs.client, usersPath, &empty)
+		if err != nil {
+			return err
+		}
+	}
+
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes, note.ID)
 	return create(fs.ctx, fs.client, path, note)
 }
