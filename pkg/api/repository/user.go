@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/models"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -122,8 +123,41 @@ func GetUserNotes(e *irc.Event, nick string) ([]*models.Note, error) {
 	return firestore.Get().UserNotes(nick)
 }
 
+type noteSearchResult struct {
+	score int
+	note  *models.Note
+}
+
 func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) ([]*models.Note, error) {
-	return firestore.Get().UserNotesMatchingKeywords(nick, keywords)
+	matching, err := firestore.Get().UserNotesMatchingKeywords(nick, keywords)
+	if err != nil {
+		return nil, err
+	}
+
+	sr := make([]noteSearchResult, 0)
+	for _, n := range matching {
+		score := 0
+		for _, k := range keywords {
+			if strings.Contains(strings.ToLower(n.Content), k) {
+				score++
+			}
+		}
+
+		if score > 0 {
+			sr = append(sr, noteSearchResult{score, n})
+		}
+	}
+
+	sort.Slice(sr, func(i, j int) bool {
+		return sr[i].score > sr[j].score
+	})
+
+	notes := make([]*models.Note, 0)
+	for _, r := range sr {
+		notes = append(notes, r.note)
+	}
+
+	return notes, nil
 }
 
 func GetUserNotesMatchingSource(e *irc.Event, nick, source string) ([]*models.Note, error) {
