@@ -18,17 +18,6 @@ type Quote struct {
 	Keywords []string  `firestore:"keywords"`
 }
 
-func NewQuote(author, quote, quotedBy string) *Quote {
-	return &Quote{
-		ID:       fmt.Sprintf("%s-%s", quoteIDPrefix, uuid.NewString()),
-		Author:   author,
-		Quote:    quote,
-		QuotedBy: quotedBy,
-		QuotedAt: time.Now(),
-		Keywords: text.ParseKeywords(quote),
-	}
-}
-
 func NewQuoteFromRecentMessage(author, quotedBy string, message RecentMessage) *Quote {
 	return &Quote{
 		ID:       fmt.Sprintf("%s-%s", quoteIDPrefix, uuid.NewString()),

@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
@@ -82,13 +83,7 @@ func (c *NotesSearchCommand) Execute(e *irc.Event) {
 		input = strings.TrimSpace(input)
 	}
 
-	keywords := make([]string, 0)
-	words := strings.Split(input, " ")
-	for _, word := range words {
-		if len(word) > 0 {
-			keywords = append(keywords, word)
-		}
-	}
+	keywords := text.ParseKeywords(input)
 
 	var notes []*models.Note
 	var err error
