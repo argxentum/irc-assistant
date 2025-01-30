@@ -82,7 +82,7 @@ func (c *RedditCommand) Execute(e *irc.Event) {
 func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTopComment) {
 	content := make([]string, 0)
 	for i, post := range posts {
-		title := text.Sanitize(post.Post.Title)
+		title := text.SanitizeSummaryContent(post.Post.Title)
 		if len(title) == 0 {
 			continue
 		}
@@ -95,7 +95,7 @@ func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 		}
 
 		if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-			content = append(content, bias.Description())
+			content = append(content, bias.ShortDescription())
 		}
 
 		if i < len(posts)-1 {

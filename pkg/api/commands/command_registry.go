@@ -91,6 +91,9 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[SeenCommandName] = NewSeenCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[QuoteAddCommandName] = NewQuoteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[QuotesSearchCommandName] = NewQuotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[NoteAddCommandName] = NewNoteAddCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[NoteDeleteCommandName] = NewNoteDeleteCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[NotesSearchCommandName] = NewNotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,

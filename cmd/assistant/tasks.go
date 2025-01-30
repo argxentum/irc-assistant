@@ -226,7 +226,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			}
 
 			if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-				messages = append(messages, bias.Description())
+				messages = append(messages, bias.ShortDescription())
 			}
 
 			irc.SendMessages(channelName, messages)

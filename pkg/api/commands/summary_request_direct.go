@@ -40,6 +40,14 @@ func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
+	cssIndicators := []string{"{", ":", ";", "}"}
+	if text.ContainsAll(title, cssIndicators) {
+		title = ""
+	}
+	if text.ContainsAll(h1, cssIndicators) {
+		h1 = ""
+	}
+
 	if len(titleAttr) > 0 {
 		title = titleMeta
 	} else if len(h1) > 0 {

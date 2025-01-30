@@ -200,7 +200,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if s != nil {
 			messages := s.messages
 			if result, ok := repository.GetBiasResult(e, url, false); ok {
-				messages = append(messages, result.Description())
+				messages = append(messages, result.ShortDescription())
 			}
 			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
 			return
@@ -273,7 +273,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 	}
 
 	if result, ok := repository.GetBiasResult(e, url, false); ok {
-		unescapedMessages = append(unescapedMessages, result.Description())
+		unescapedMessages = append(unescapedMessages, result.ShortDescription())
 	}
 
 	c.SendMessages(e, target, unescapedMessages)

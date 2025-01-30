@@ -196,5 +196,5 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 }
 
 func (c *BiasCommand) SendBiasResult(e *irc.Event, result models.BiasResult) {
-	c.SendMessages(e, e.ReplyTarget(), []string{result.Description(), result.DetailURL})
+	c.SendMessages(e, e.ReplyTarget(), []string{result.FullDescription(), result.DetailURL})
 }

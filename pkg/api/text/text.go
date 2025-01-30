@@ -91,7 +91,7 @@ func mustBeCapitalized(s string) bool {
 
 const defaultMaxLength = 256
 
-func Sanitize(s string) string {
+func SanitizeSummaryContent(s string) string {
 	return SanitizeToMaxLength(s, defaultMaxLength)
 }
 

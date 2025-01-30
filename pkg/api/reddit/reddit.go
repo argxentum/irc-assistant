@@ -49,7 +49,7 @@ type Post struct {
 }
 
 func (p Post) FormattedTitle() string {
-	title := html.UnescapeString(text.Sanitize(p.Title))
+	title := html.UnescapeString(text.SanitizeSummaryContent(p.Title))
 	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
 }
 
@@ -77,12 +77,12 @@ func (c *Comment) IsFromModerator() bool {
 }
 
 func (c *Comment) FormattedBody() string {
-	comment := html.UnescapeString(text.Sanitize(c.Body))
+	comment := html.UnescapeString(text.SanitizeSummaryContent(c.Body))
 
 	if c.Author == "[deleted]" {
-		return fmt.Sprintf("Top comment: %s", style.Italics(text.Sanitize(comment)))
+		return fmt.Sprintf("Top comment: %s", style.Italics(text.SanitizeSummaryContent(comment)))
 	} else {
-		return fmt.Sprintf("Top comment, by u/%s: %s", c.Author, style.Italics(text.Sanitize(comment)))
+		return fmt.Sprintf("Top comment, by u/%s: %s", c.Author, style.Italics(text.SanitizeSummaryContent(comment)))
 	}
 }
 

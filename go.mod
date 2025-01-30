@@ -6,24 +6,25 @@ require (
 	cloud.google.com/go/firestore v1.18.0
 	cloud.google.com/go/logging v1.13.0
 	cloud.google.com/go/pubsub v1.45.3
+	github.com/Arilucea/go-wiki v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
+	github.com/sqids/sqids-go v0.4.1
 	github.com/thoj/go-ircevent v0.0.0-20210723090443-73e444401d64
-	google.golang.org/api v0.218.0
+	google.golang.org/api v0.219.0
 	google.golang.org/grpc v1.70.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	cloud.google.com/go v0.118.0 // indirect
-	cloud.google.com/go/auth v0.14.0 // indirect
+	cloud.google.com/go/auth v0.14.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.3.1 // indirect
 	cloud.google.com/go/longrunning v0.6.4 // indirect
-	github.com/Arilucea/go-wiki v1.0.0 // indirect
 	github.com/anaskhan96/soup v1.2.5 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/htmlquery v1.3.4 // indirect
@@ -56,8 +57,8 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto v0.0.0-20250124145028-65684f501c47 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250124145028-65684f501c47 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47 // indirect
+	google.golang.org/genproto v0.0.0-20250127172529-29210b9bc287 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250127172529-29210b9bc287 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250127172529-29210b9bc287 // indirect
 	google.golang.org/protobuf v1.36.4 // indirect
 )

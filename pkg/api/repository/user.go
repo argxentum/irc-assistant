@@ -113,3 +113,27 @@ func AddUserKarmaHistory(e *irc.Event, channel, from, to, operation, reason stri
 	kh := models.NewKarmaHistory(from, op, 1, reason)
 	return u.Karma, firestore.Get().SaveKarmaHistory(channel, to, kh)
 }
+
+func GetUserNote(e *irc.Event, nick, id string) (*models.Note, error) {
+	return firestore.Get().UserNote(nick, id)
+}
+
+func GetUserNotes(e *irc.Event, nick string) ([]*models.Note, error) {
+	return firestore.Get().UserNotes(nick)
+}
+
+func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) ([]*models.Note, error) {
+	return firestore.Get().UserNotesMatchingKeywords(nick, keywords)
+}
+
+func GetUserNotesMatchingSource(e *irc.Event, nick, source string) ([]*models.Note, error) {
+	return firestore.Get().UserNotesMatchingSource(nick, source)
+}
+
+func AddUserNote(e *irc.Event, nick string, note *models.Note) error {
+	return firestore.Get().CreateUserNote(nick, note)
+}
+
+func DeleteUserNote(e *irc.Event, nick, id string) error {
+	return firestore.Get().DeleteUserNote(nick, id)
+}

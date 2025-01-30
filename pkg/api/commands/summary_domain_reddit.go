@@ -65,7 +65,7 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 		return nil, errors.New("post not found")
 	}
 
-	title := text.Sanitize(post.Post.Title)
+	title := text.SanitizeSummaryContent(post.Post.Title)
 	if len(title) == 0 {
 		return nil, nil
 	}
@@ -78,7 +78,7 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	}
 
 	if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-		messages = append(messages, bias.Description())
+		messages = append(messages, bias.ShortDescription())
 	}
 
 	return createSummary(messages...), nil
@@ -145,7 +145,7 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 	messages = append(messages, fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments)))
 
 	if bias, ok := repository.GetBiasResult(e, link, false); ok {
-		messages = append(messages, bias.Description())
+		messages = append(messages, bias.ShortDescription())
 	}
 
 	return createSummary(messages...), nil

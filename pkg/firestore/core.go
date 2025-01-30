@@ -198,6 +198,26 @@ func list[T any](ctx context.Context, client *firestore.Client, collectionPath s
 	return documents, nil
 }
 
+func listDocumentIDs(ctx context.Context, client *firestore.Client, collectionPath string) ([]string, error) {
+	cr := client.Collection(collectionPath)
+	if cr == nil {
+		return nil, fmt.Errorf("invalid collection path, %s", collectionPath)
+	}
+
+	iter := cr.Documents(ctx)
+	ds, err := iter.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("error listing documents, %s", err)
+	}
+
+	ids := make([]string, 0)
+	for _, d := range ds {
+		ids = append(ids, d.Ref.ID)
+	}
+
+	return ids, nil
+}
+
 func query[T any](ctx context.Context, client *firestore.Client, criteria QueryCriteria) ([]*T, error) {
 	cr := client.Collection(criteria.Path)
 	if cr == nil {

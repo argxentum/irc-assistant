@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -44,7 +45,7 @@ func (c *QuotesSearchCommand) Usages() []string {
 }
 
 func (c *QuotesSearchCommand) AllowedInPrivateMessages() bool {
-	return true
+	return false
 }
 
 func (c *QuotesSearchCommand) CanExecute(e *irc.Event) bool {
@@ -71,7 +72,7 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 
 	keywords := make([]string, 0)
 	if len(content) > 0 {
-		keywords = models.GenerateKeywords(content)
+		keywords = text.ParseKeywords(content)
 	}
 
 	if len(author) == 0 && len(content) == 0 {

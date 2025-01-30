@@ -36,7 +36,7 @@ func NewAssistant(name string) *Assistant {
 	}
 }
 
-func (br BiasResult) Description() string {
+func (br BiasResult) FullDescription() string {
 	desc := ""
 
 	ratingColor := style.ColorNone
@@ -82,6 +82,29 @@ func (br BiasResult) Description() string {
 			desc += ", "
 		}
 		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), style.ColorForeground(br.Credibility, credibilityColor))
+	}
+
+	if len(desc) > 0 {
+		desc = fmt.Sprintf("📊 %s %s", style.Bold(br.Title), desc)
+	}
+
+	return desc
+}
+
+func (br BiasResult) ShortDescription() string {
+	desc := ""
+
+	credibilityColor := style.ColorNone
+	if strings.Contains(strings.ToLower(br.Credibility), "high") {
+		credibilityColor = style.ColorGreen
+	} else if strings.Contains(strings.ToLower(br.Credibility), "medium") {
+		credibilityColor = style.ColorYellow
+	} else if strings.Contains(strings.ToLower(br.Credibility), "low") {
+		credibilityColor = style.ColorRed
+	}
+
+	if len(br.Credibility) > 0 {
+		desc += fmt.Sprintf("%s", style.ColorForeground(br.Credibility, credibilityColor))
 	}
 
 	if len(desc) > 0 {

@@ -21,7 +21,7 @@ func (c *SummaryCommand) redditRequest(e *irc.Event, url string) (*summary, erro
 		return nil, errors.New("no posts found")
 	}
 
-	title := text.Sanitize(posts[0].Post.Title)
+	title := text.SanitizeSummaryContent(posts[0].Post.Title)
 	if len(title) == 0 {
 		return nil, nil
 	}
