@@ -76,7 +76,7 @@ var allowedContentTypePrefixes = []string{
 	"application/vnd.collection",
 }
 
-func isContentTypeAllowed(contentType string) bool {
+func IsContentTypeAllowed(contentType string) bool {
 	for _, p := range allowedContentTypePrefixes {
 		if strings.HasPrefix(contentType, p) {
 			return true

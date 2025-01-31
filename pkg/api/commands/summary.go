@@ -12,6 +12,7 @@ import (
 	"errors"
 	"html"
 	"math"
+	"net/http"
 	"regexp"
 	"slices"
 	"strings"
@@ -121,6 +122,12 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
 
+	// prefetch url directly to do an initial check whether the content type is allowed
+	if isDirectDisallowedContentType(e, url) {
+		logger.Debugf(e, "direct prefetch, disallowed content type for %s", url)
+		return
+	}
+
 	if !e.IsPrivateMessage() && p != nil {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
@@ -137,7 +144,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 			updatePause(e, p)
 			if p.ignoreCount > pauseShowWarningAfter {
-				c.Replyf(e, "🥵 Slow down, please. I've paused summarizing your links for %s.", elapse.FutureTimeDescriptionConcise(p.timeoutAt))
+				c.Replyf(e, "%s Slow down, please. I've paused summarizing your links for %s.", "\U0001F975", elapse.FutureTimeDescriptionConcise(p.timeoutAt))
 			}
 			c.userPauses[e.From+"@"+e.ReplyTarget()] = p
 			return
@@ -223,6 +230,18 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 		c.completeSummary(e, url, e.ReplyTarget(), s.messages, dis, p)
 	}
+}
+
+func isDirectDisallowedContentType(e *irc.Event, url string) bool {
+	logger := log.Logger()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		logger.Debugf(e, "error attempting to get response content type, %s", err)
+		return false
+	}
+
+	return !retriever.IsContentTypeAllowed(resp.Header.Get("Content-Type"))
 }
 
 func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time.Duration) *UserPause {

@@ -90,7 +90,7 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 
 	logger.Debugf(e, "[%d] (%s) %s", ret.response.StatusCode, ret.response.Header.Get("Content-Type"), req.URL.String())
 
-	if ret.response.StatusCode == http.StatusOK && !isContentTypeAllowed(ret.response.Header.Get("Content-Type")) {
+	if ret.response.StatusCode == http.StatusOK && !IsContentTypeAllowed(ret.response.Header.Get("Content-Type")) {
 		logger.Debugf(e, "disallowed content type %s", ret.response.Header.Get("Content-Type"))
 		return nil, DisallowedContentTypeError
 	}
