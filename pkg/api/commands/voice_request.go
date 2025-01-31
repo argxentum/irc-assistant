@@ -62,7 +62,7 @@ func (c *VoiceRequestCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := tokens[1]
 	nick := e.ReplyTarget()
-	mask := irc.Parse(e.Source)
+	mask := irc.ParseMask(e.Source)
 
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)

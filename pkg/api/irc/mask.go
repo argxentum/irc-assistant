@@ -34,7 +34,7 @@ func (m *Mask) NickWildcardString() string {
 	return fmt.Sprintf("*!%s@%s", m.UserID, m.Host)
 }
 
-func Parse(mask string) *Mask {
+func ParseMask(mask string) *Mask {
 	n := strings.Split(mask, "!")
 	if len(n) != 2 {
 		return nil
