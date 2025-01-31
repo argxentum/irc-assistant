@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
@@ -85,15 +86,22 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 	views = strings.TrimSuffix(views, " views")
 	author := strings.TrimPrefix(items[0].VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
 
+	messages := make([]string, 0)
 	if len(title) > 0 && len(views) > 0 && len(author) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, views)), nil
+		messages = append(messages, fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, views))
 	} else if len(title) > 0 && len(views) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s views", style.Bold(title), views)), nil
+		messages = append(messages, fmt.Sprintf("%s • %s views", style.Bold(title), views))
 	} else if len(title) > 0 {
-		return createSummary(fmt.Sprintf("%s", style.Bold(title))), nil
+		messages = append(messages, fmt.Sprintf("%s", style.Bold(title)))
 	}
 
-	return nil, nil
+	if len(author) > 0 {
+		if result, ok := repository.GetBiasResult(e, author, false); ok {
+			messages = append(messages, result.ShortDescription())
+		}
+	}
+
+	return createSummary(messages...), nil
 }
 
 func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, error) {
@@ -227,17 +235,26 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, 
 		}
 	}
 
+	messages := make([]string, 0)
 	viewCount = strings.TrimSuffix(viewCount, " views")
 
 	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 && len(authorHandle) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s (%s) • %s views", style.Bold(title), author, authorHandle, viewCount)), nil
+		messages = append(messages, fmt.Sprintf("%s • %s (%s) • %s views", style.Bold(title), author, authorHandle, viewCount))
 	} else if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, viewCount)), nil
+		messages = append(messages, fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, viewCount))
 	} else if len(title) > 0 && len(viewCount) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s views", style.Bold(title), viewCount)), nil
+		messages = append(messages, fmt.Sprintf("%s • %s views", style.Bold(title), viewCount))
 	} else if len(title) > 0 {
-		return createSummary(fmt.Sprintf("%s", style.Bold(title))), nil
+		messages = append(messages, fmt.Sprintf("%s", style.Bold(title)))
 	}
 
-	return nil, nil
+	if len(author) > 0 {
+		if result, ok := repository.GetBiasResult(e, author, false); ok {
+			messages = append(messages, result.ShortDescription())
+		} else if result, ok = repository.GetBiasResult(e, strings.TrimPrefix(authorHandle, "@"), false); ok {
+			messages = append(messages, result.ShortDescription())
+		}
+	}
+
+	return createSummary(messages...), nil
 }
