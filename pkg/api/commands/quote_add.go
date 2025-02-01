@@ -55,8 +55,13 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
 
+	silent := strings.Contains(e.Raw, ".grab")
+	logger.Debugf(e, "silent quote? %v", silent)
+
 	if nick == e.From {
-		c.Replyf(e, "Sorry, you can't quote yourself.")
+		if !silent {
+			c.Replyf(e, "Sorry, you can't quote yourself.")
+		}
 		return
 	}
 
@@ -75,7 +80,9 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 
 	if user == nil {
 		logger.Errorf(e, "user not found")
-		c.Replyf(e, "Sorry, I'm unable to find anyone named %s.", style.Bold(nick))
+		if !silent {
+			c.Replyf(e, "Sorry, I'm unable to find anyone named %s.", style.Bold(nick))
+		}
 		return
 	}
 
@@ -87,10 +94,12 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 		msg, ok = repository.FindRecentUserMessage(e, user, quote)
 	}
 	if !ok {
-		if len(quote) == 0 {
-			c.Replyf(e, "Sorry, I couldn't find any recent messages from %s.", style.Bold(nick))
-		} else {
-			c.Replyf(e, "Sorry, I couldn't find any recent messages from %s matching: %s", style.Bold(nick), style.Italics(quote))
+		if !silent {
+			if len(quote) == 0 {
+				c.Replyf(e, "Sorry, I couldn't find any recent messages from %s.", style.Bold(nick))
+			} else {
+				c.Replyf(e, "Sorry, I couldn't find any recent messages from %s matching: %s", style.Bold(nick), style.Italics(quote))
+			}
 		}
 		return
 	}
@@ -98,16 +107,22 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 	q := models.NewQuoteFromRecentMessage(nick, quotedBy, msg)
 	if q == nil {
 		logger.Errorf(e, "error creating quote")
-		c.Replyf(e, "Sorry, something went wrong while trying to save the quote.")
+		if !silent {
+			c.Replyf(e, "Sorry, something went wrong while trying to save the quote.")
+		}
 		return
 	}
 
 	fs := firestore.Get()
 	if err = fs.CreateQuote(e.ReplyTarget(), q); err != nil {
 		logger.Errorf(e, "error saving quote: %v", err)
-		c.Replyf(e, "Sorry, I couldn't save the quote.")
+		if !silent {
+			c.Replyf(e, "Sorry, I couldn't save the quote.")
+		}
 		return
 	}
 
-	c.Replyf(e, "Saved quote: <%s> %s", style.Bold(style.Italics(q.Author)), style.Italics(q.Quote))
+	if !silent {
+		c.Replyf(e, "Saved quote: <%s> %s", style.Bold(style.Italics(q.Author)), style.Italics(q.Quote))
+	}
 }

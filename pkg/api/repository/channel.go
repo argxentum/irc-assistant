@@ -8,6 +8,8 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -162,4 +164,59 @@ func RemoveChannelVoiceRequest(e *irc.Event, ch *models.Channel, nick, host stri
 	}
 
 	ch.VoiceRequests = voiceRequests
+}
+
+type quoteSearchResult struct {
+	score int
+	quote *models.Quote
+}
+
+func FindUserQuotesWithContent(channel, nick string, keywords []string) ([]*models.Quote, error) {
+	fs := firestore.Get()
+	matching, err := fs.FindUserQuotesWithContent(channel, nick, keywords)
+	if err != nil {
+		return nil, err
+	}
+	return rankQuoteSearchResults(matching, keywords)
+}
+
+func FindUserQuotes(channel, nick string) ([]*models.Quote, error) {
+	fs := firestore.Get()
+	return fs.FindUserQuotes(channel, nick)
+}
+
+func FindQuotes(channel string, keywords []string) ([]*models.Quote, error) {
+	fs := firestore.Get()
+	matching, err := fs.FindQuotes(channel, keywords)
+	if err != nil {
+		return nil, err
+	}
+	return rankQuoteSearchResults(matching, keywords)
+}
+
+func rankQuoteSearchResults(matching []*models.Quote, keywords []string) ([]*models.Quote, error) {
+	sr := make([]quoteSearchResult, 0)
+	for _, q := range matching {
+		score := 0
+		for _, k := range keywords {
+			if strings.Contains(strings.ToLower(q.Quote), k) {
+				score++
+			}
+		}
+
+		if score > 0 {
+			sr = append(sr, quoteSearchResult{score, q})
+		}
+	}
+
+	sort.Slice(sr, func(i, j int) bool {
+		return sr[i].score > sr[j].score
+	})
+
+	quotes := make([]*models.Quote, 0)
+	for _, r := range sr {
+		quotes = append(quotes, r.quote)
+	}
+
+	return quotes, nil
 }

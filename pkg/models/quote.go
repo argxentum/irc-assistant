@@ -28,3 +28,14 @@ func NewQuoteFromRecentMessage(author, quotedBy string, message RecentMessage) *
 		Keywords: text.ParseKeywords(message.Message),
 	}
 }
+
+func NewQuote(author, quotedBy, message string, quotedAt time.Time) *Quote {
+	return &Quote{
+		ID:       fmt.Sprintf("%s-%s", quoteIDPrefix, uuid.NewString()),
+		Author:   author,
+		Quote:    message,
+		QuotedBy: quotedBy,
+		QuotedAt: quotedAt,
+		Keywords: text.ParseKeywords(message),
+	}
+}

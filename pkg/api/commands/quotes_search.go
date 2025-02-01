@@ -2,17 +2,17 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 )
 
 const QuotesSearchCommandName = "quotes_search"
@@ -85,16 +85,15 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	fs := firestore.Get()
 	var quotes []*models.Quote
 	var err error
 
 	if len(author) > 0 && len(keywords) > 0 {
-		quotes, err = fs.FindUserQuotesWithContent(e.ReplyTarget(), author, keywords)
+		quotes, err = repository.FindUserQuotesWithContent(e.ReplyTarget(), author, keywords)
 	} else if len(author) > 0 {
-		quotes, err = fs.FindUserQuotes(e.ReplyTarget(), author)
+		quotes, err = repository.FindUserQuotes(e.ReplyTarget(), author)
 	} else if len(keywords) > 0 {
-		quotes, err = fs.FindQuotes(e.ReplyTarget(), keywords)
+		quotes, err = repository.FindQuotes(e.ReplyTarget(), keywords)
 	}
 
 	if err != nil {
@@ -139,7 +138,7 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 	}
 
 	for _, quote := range quotes {
-		messages = append(messages, fmt.Sprintf("[%s] <%s> %s (added by %s)", quote.QuotedAt.Format(time.RFC3339), style.Bold(style.Italics(quote.Author)), style.Italics(quote.Quote), quote.QuotedBy))
+		messages = append(messages, fmt.Sprintf("<%s> %s (%s, added by %s)", style.Bold(style.Italics(quote.Author)), style.Italics(quote.Quote), elapse.PastTimeDescription(quote.QuotedAt), quote.QuotedBy))
 	}
 
 	c.SendMessages(e, e.ReplyTarget(), messages)

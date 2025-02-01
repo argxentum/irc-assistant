@@ -42,10 +42,10 @@ func (br BiasResult) FullDescription() string {
 	ratingColor := style.ColorNone
 	if strings.Contains(strings.ToLower(br.Rating), "least biased") {
 		ratingColor = style.ColorGreen
+	} else if strings.Contains(strings.ToLower(br.Rating), "extreme") || strings.Contains(strings.ToLower(br.Rating), "conspiracy") || strings.Contains(strings.ToLower(br.Rating), "propaganda") || strings.Contains(strings.ToLower(br.Rating), "pseudoscience") {
+		ratingColor = style.ColorRed
 	} else if strings.ToLower(br.Rating) == "left" || strings.ToLower(br.Rating) == "right" {
 		ratingColor = style.ColorYellow
-	} else if strings.Contains(strings.ToLower(br.Rating), "extreme") {
-		ratingColor = style.ColorRed
 	}
 
 	if len(br.Rating) > 0 {
@@ -101,6 +101,9 @@ func (br BiasResult) ShortDescription() string {
 		credibilityColor = style.ColorYellow
 	} else if strings.Contains(strings.ToLower(br.Credibility), "low") {
 		credibilityColor = style.ColorRed
+	} else if strings.Contains(strings.ToLower(br.Rating), "satire") {
+		credibilityColor = style.ColorBlue
+		br.Credibility = br.Rating
 	}
 
 	if len(br.Credibility) > 0 {

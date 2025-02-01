@@ -79,6 +79,12 @@ func (eh *handler) Handle(e *irc.Event) {
 	logger := log.Logger()
 	logger.Default(e, e.Raw)
 
+	if len(e.Arguments) > 0 {
+		for k, v := range substitutions {
+			e.Arguments[len(e.Arguments)-1] = strings.Replace(e.Arguments[len(e.Arguments)-1], k, v, 1)
+		}
+	}
+
 	switch e.Code {
 	case irc.CodeInvite:
 		// if the sender of invite is the owner or an admin, join the channel
