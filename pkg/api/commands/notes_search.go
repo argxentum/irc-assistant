@@ -140,10 +140,15 @@ func (c *NotesSearchCommand) SendNotes(e *irc.Event, notes []*models.Note) {
 		return
 	}
 
+	qty := "notes"
+	if len(notes) == 1 {
+		qty = "note"
+	}
+
 	if len(notes) > maxNotesToShow {
-		c.Replyf(e, fmt.Sprintf("Found %s matching notes (only showing %s)", style.Bold(fmt.Sprintf("%d", len(notes))), style.Bold(fmt.Sprintf("%d", maxNotesToShow))))
+		c.Replyf(e, fmt.Sprintf("Found %s matching %s. Displaying %s best matches:", style.Bold(fmt.Sprintf("%d", len(notes))), qty, style.Bold(fmt.Sprintf("%d", maxNotesToShow))))
 	} else {
-		c.Replyf(e, fmt.Sprintf("Found %s matching notes", style.Bold(fmt.Sprintf("%d", len(notes)))))
+		c.Replyf(e, fmt.Sprintf("Found %s matching %s:", style.Bold(fmt.Sprintf("%d", len(notes))), qty))
 	}
 
 	messages := make([]string, 0)
