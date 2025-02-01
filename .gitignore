@@ -117,5 +117,6 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/goland
 
 config.yaml
+config.*.yaml
 bin/*
 credentials/*
