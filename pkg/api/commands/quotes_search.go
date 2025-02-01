@@ -131,7 +131,7 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 
 	messages := make([]string, 0)
 	if len(quotes) > maxResults {
-		messages = append(messages, fmt.Sprintf("Found %s %s%s. Displaying most recent %s.", style.Bold(fmt.Sprintf("%d", len(quotes))), qty, match, style.Bold(fmt.Sprintf("%d", maxResults))))
+		messages = append(messages, fmt.Sprintf("Found %s %s%s. Displaying %s best matches.", style.Bold(fmt.Sprintf("%d", len(quotes))), qty, match, style.Bold(fmt.Sprintf("%d", maxResults))))
 		quotes = quotes[:maxResults]
 	} else {
 		messages = append(messages, fmt.Sprintf("Found %s %s%s.", style.Bold(fmt.Sprintf("%d", len(quotes))), qty, match))
