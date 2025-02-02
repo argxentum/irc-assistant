@@ -77,6 +77,9 @@ var allowedContentTypePrefixes = []string{
 }
 
 func IsContentTypeAllowed(contentType string) bool {
+	if contentType == "" {
+		return true
+	}
 	for _, p := range allowedContentTypePrefixes {
 		if strings.HasPrefix(contentType, p) {
 			return true
