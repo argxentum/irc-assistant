@@ -195,16 +195,24 @@ func FindQuotes(channel string, keywords []string) ([]*models.Quote, error) {
 }
 
 func rankQuoteSearchResults(matching []*models.Quote, keywords []string) ([]*models.Quote, error) {
+	requireAllMatch := false
+	if len(keywords) <= 3 {
+		requireAllMatch = true
+	}
+
 	sr := make([]quoteSearchResult, 0)
 	for _, q := range matching {
 		score := 0
+		allMatch := true
 		for _, k := range keywords {
 			if strings.Contains(strings.ToLower(q.Quote), k) {
 				score++
+			} else {
+				allMatch = false
 			}
 		}
 
-		if score > 0 {
+		if score > 0 && (!requireAllMatch || allMatch) {
 			sr = append(sr, quoteSearchResult{score, q})
 		}
 	}

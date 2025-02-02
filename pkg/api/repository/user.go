@@ -134,16 +134,24 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 		return nil, err
 	}
 
+	requireAllMatch := false
+	if len(keywords) <= 3 {
+		requireAllMatch = true
+	}
+
 	sr := make([]noteSearchResult, 0)
 	for _, n := range matching {
 		score := 0
+		allMatch := true
 		for _, k := range keywords {
 			if strings.Contains(strings.ToLower(n.Content), k) {
 				score++
+			} else {
+				allMatch = false
 			}
 		}
 
-		if score > 0 {
+		if score > 0 && (!requireAllMatch || allMatch) {
 			sr = append(sr, noteSearchResult{score, n})
 		}
 	}
