@@ -48,6 +48,7 @@ func ParseDuration(offset string) (time.Duration, error) {
 }
 
 func ParseDurationDescription(offset string) string {
+	offset = strings.TrimPrefix(offset, "+")
 	matches := timeOffsetRegexp.FindStringSubmatch(offset)
 	if len(matches) != 3 {
 		return "invalid duration"

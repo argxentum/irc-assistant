@@ -53,7 +53,7 @@ func (c *SeenCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	nick := tokens[1]
 
-	u, err := repository.GetUser(e, e.ReplyTarget(), nick, false)
+	u, err := repository.GetUserByNick(e, e.ReplyTarget(), nick, false)
 	if err != nil {
 		c.Replyf(e, "I ran into an error looking for %s.", style.Bold(nick))
 		return

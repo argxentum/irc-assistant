@@ -17,15 +17,34 @@ const (
 	OpDecrement = "--"
 )
 
-func GetUser(e *irc.Event, channel, nick string, createIfNotExists bool) (*models.User, error) {
+func GetAllUsersWithHost(e *irc.Event, channel, host string) ([]*models.User, error) {
 	fs := firestore.Get()
-	u, err := fs.User(channel, nick)
+	return fs.GetUsersByHost(channel, host)
+}
+
+func GetAllUsersMatchingUserHost(e *irc.Event, channel, nick string) ([]*models.User, error) {
+	u, err := GetUserByNick(e, channel, nick, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if u == nil {
+		return nil, nil
+	}
+
+	fs := firestore.Get()
+	return fs.GetUsersByHost(channel, u.Host)
+}
+
+func GetUserByNick(e *irc.Event, channel, nick string, createIfNotExists bool) (*models.User, error) {
+	fs := firestore.Get()
+	u, err := fs.GetUserByNick(channel, nick)
 	if err != nil {
 		return nil, err
 	}
 
 	if u == nil && createIfNotExists {
-		u = models.NewUser(nick)
+		u = models.NewUserWithNick(nick)
 		err = fs.CreateUser(channel, u)
 		if err != nil {
 			return nil, err
@@ -77,6 +96,11 @@ func FindRecentUserMessage(e *irc.Event, u *models.User, input string) (models.R
 	return models.RecentMessage{}, false
 }
 
+func UpdateUserIsAutoVoiced(e *irc.Event, u *models.User) error {
+	fs := firestore.Get()
+	return fs.UpdateUser(e.ReplyTarget(), u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()})
+}
+
 func IncrementUserKarma(e *irc.Event, u *models.User) error {
 	u.Karma++
 	fs := firestore.Get()
@@ -90,7 +114,7 @@ func DecrementUserKarma(e *irc.Event, u *models.User) error {
 }
 
 func AddUserKarmaHistory(e *irc.Event, channel, from, to, operation, reason string) (int, error) {
-	u, err := GetUser(nil, channel, to, true)
+	u, err := GetUserByNick(nil, channel, to, true)
 	if err != nil {
 		return 0, err
 	}

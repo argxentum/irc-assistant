@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 )
 
 const MuteCommandName = "mute"
@@ -65,15 +66,40 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		if repository.IsChannelAutoVoicedUser(e, ch, nick) {
+		users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
+		if err != nil {
+			logger.Errorf(e, "error getting users by host: %v", err)
+			return
+		}
+
+		var specifiedUser *models.User
+		for _, u := range users {
+			if u.Nick == nick {
+				specifiedUser = u
+				break
+			}
+		}
+
+		isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || specifiedUser.IsAutoVoiced
+
+		if isAutoVoiced {
 			repository.RemoveChannelAutoVoicedUser(e, ch, nick)
 			if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
 				return
 			}
+
+			for _, u := range users {
+				u.IsAutoVoiced = false
+				if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+					logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+				}
+			}
 		}
 
-		c.irc.Mute(channel, nick)
-		logger.Infof(e, "muted %s in %s", nick, channel)
+		for _, u := range users {
+			c.irc.Mute(channel, u.Nick)
+			logger.Infof(e, "muted %s in %s", nick, channel)
+		}
 	})
 }

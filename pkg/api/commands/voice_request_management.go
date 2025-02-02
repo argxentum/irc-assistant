@@ -111,16 +111,29 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 				return
 			}
 			for _, vr := range vrs {
-				repository.AddChannelAutoVoiceUser(e, ch, vr.Nick)
 				repository.RemoveChannelVoiceRequest(e, ch, vr.Nick, vr.Host)
 				c.irc.Voice(channel, vr.Nick)
 				c.Replyf(e, "Approved voice request for %s (%s)", style.Bold(vr.Nick), vr.Mask())
 				c.SendMessage(e, vr.Nick, fmt.Sprintf("🎉 Your voice request in %s has been approved. Welcome! We'd love it if you'd take a moment to say hello and introduce yourself.", style.Bold(channel)))
 				logger.Debugf(e, "approved voice request for %s (%s)", vr.Nick, vr.Mask())
+
+				u, err := repository.GetUserByNick(e, channel, vr.Nick, false)
+				if err != nil {
+					logger.Errorf(e, "error getting user: %v", err)
+					continue
+				}
+
+				if u != nil {
+					u.IsAutoVoiced = true
+					if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+					}
+				}
 			}
-			if err = repository.UpdateChannelVoiceRequestsAndAutoVoiced(e, ch); err != nil {
+			if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
 			}
+
 			return
 		}
 

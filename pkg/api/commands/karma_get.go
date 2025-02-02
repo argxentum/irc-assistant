@@ -57,7 +57,7 @@ func (c *KarmaGetCommand) Execute(e *irc.Event) {
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), nick)
 	fs := firestore.Get()
 
-	u, err := repository.GetUser(e, channel, nick, false)
+	u, err := repository.GetUserByNick(e, channel, nick, false)
 	if err != nil {
 		log.Logger().Errorf(e, "error getting user, %s", err)
 		c.Replyf(e, "unable to get karma for %s.", style.Bold(nick))

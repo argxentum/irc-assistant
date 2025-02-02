@@ -33,6 +33,20 @@ type IRCConfig struct {
 	Inactivity  InactivityConfig  `yaml:"inactivity"`
 }
 
+func (c IRCConfig) IsOwnerOrAdmin(nick string) bool {
+	if c.Owner == nick {
+		return true
+	}
+
+	for _, admin := range c.Admins {
+		if admin == nick {
+			return true
+		}
+	}
+
+	return false
+}
+
 type WebConfig struct {
 	Domain          string
 	Port            int

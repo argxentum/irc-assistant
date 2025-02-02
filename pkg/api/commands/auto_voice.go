@@ -65,15 +65,38 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		repository.AddChannelAutoVoiceUser(e, ch, nick)
 		repository.RemoveChannelVoiceRequest(e, ch, nick, "")
-
-		if err = repository.UpdateChannelVoiceRequestsAndAutoVoiced(e, ch); err != nil {
+		if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
 
-		c.irc.Voice(channel, nick)
-		logger.Infof(e, "voiced %s in %s", nick, channel)
+		users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
+		if err != nil {
+			logger.Errorf(e, "error getting users by host: %v", err)
+			return
+		}
+
+		specifiedUserFound := false
+		for _, u := range users {
+			if u.Nick == nick {
+				specifiedUserFound = true
+			}
+
+			u.IsAutoVoiced = true
+			if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+			}
+			c.irc.Voice(channel, nick)
+			logger.Infof(e, "voiced %s in %s", nick, channel)
+		}
+
+		if !specifiedUserFound {
+			repository.AddChannelAutoVoiceUser(e, ch, nick)
+			if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
+				logger.Errorf(e, "error updating channel, %s", err)
+				return
+			}
+		}
 	})
 }

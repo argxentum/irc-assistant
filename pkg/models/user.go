@@ -1,6 +1,7 @@
 package models
 
 import (
+	"assistant/pkg/api/irc"
 	"time"
 )
 
@@ -8,7 +9,10 @@ const MaximumRecentUserMessages = 25
 
 type User struct {
 	Nick           string          `firestore:"nick"`
+	UserID         string          `firestore:"user_id"`
+	Host           string          `firestore:"host"`
 	Karma          int             `firestore:"karma"`
+	IsAutoVoiced   bool            `firestore:"is_auto_voiced"`
 	RecentMessages []RecentMessage `firestore:"recent_messages"`
 	CreatedAt      time.Time       `firestore:"created_at"`
 	UpdatedAt      time.Time       `firestore:"updated_at"`
@@ -19,7 +23,18 @@ type RecentMessage struct {
 	At      time.Time `firestore:"at"`
 }
 
-func NewUser(nick string) *User {
+func NewUser(mask *irc.Mask) *User {
+	return &User{
+		Nick:      mask.Nick,
+		UserID:    mask.UserID,
+		Host:      mask.Host,
+		Karma:     0,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+}
+
+func NewUserWithNick(nick string) *User {
 	return &User{
 		Nick:      nick,
 		Karma:     0,

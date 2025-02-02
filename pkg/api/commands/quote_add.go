@@ -72,7 +72,7 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 
 	quotedBy := e.From
 
-	user, err := repository.GetUser(e, e.ReplyTarget(), nick, false)
+	user, err := repository.GetUserByNick(e, e.ReplyTarget(), nick, false)
 	if err != nil {
 		logger.Errorf(e, "error getting user: %v", err)
 		return

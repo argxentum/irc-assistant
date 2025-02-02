@@ -69,6 +69,9 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 		log.Logger().Debugf(e, "found bias result in cache")
 		c.SendBiasResult(e, result)
 		return
+	} else if !c.cfg.IRC.IsOwnerOrAdmin(e.From) {
+		c.Replyf(e, "No bias details found for %s", style.Bold(input))
+		return
 	}
 
 	headers := retriever.RandomHeaderSet()

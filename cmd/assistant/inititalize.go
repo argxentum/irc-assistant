@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -114,10 +115,10 @@ func initializeChannel(ctx context.Context, cfg *config.Config, channel string) 
 	}
 }
 
-func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel, nick string) {
+func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel string, mask *irc.Mask) {
 	reg := commands.LoadCommandRegistry(ctx, cfg, irc)
 	if cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand); cmd != nil {
-		cmd.InitializeUserPause(channel, nick, 15*time.Second)
+		cmd.InitializeUserPause(channel, mask.Nick, 15*time.Second)
 	}
 
 	logger := log.Logger()
@@ -137,24 +138,90 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 		}
 	}
 
-	u, err := fs.User(channel, nick)
+	specifiedUser, err := repository.GetUserByNick(nil, channel, mask.Nick, false)
 	if err != nil {
-		panic(fmt.Errorf("error retrieving user, %s", err))
+		logger.Errorf(nil, "error retrieving user, %s", err)
+		return
 	}
 
-	if u == nil {
-		logger.Debugf(nil, "user %s not found, creating", nick)
-		err = fs.CreateUser(channel, models.NewUser(nick))
+	if specifiedUser != nil {
+		specifiedUser.UserID = mask.UserID
+		specifiedUser.Host = mask.Host
+		specifiedUser.UpdatedAt = time.Now()
+		specifiedUser.IsAutoVoiced = specifiedUser.IsAutoVoiced || slices.Contains(ch.AutoVoiced, mask.Nick)
+
+		if specifiedUser.IsAutoVoiced {
+			irc.Voice(channel, mask.Nick)
+		}
+
+		if err = fs.UpdateUser(channel, specifiedUser, map[string]any{"is_auto_voiced": specifiedUser.IsAutoVoiced, "user_id": specifiedUser.UserID, "host": specifiedUser.Host, "updated_at": specifiedUser.UpdatedAt}); err != nil {
+			panic(fmt.Errorf("error updating user, %s", err))
+		}
+
+		return
+	}
+
+	users, err := repository.GetAllUsersWithHost(nil, channel, mask.Host)
+	if err != nil {
+		logger.Errorf(nil, "error getting users by host: %v", err)
+		return
+	}
+
+	if len(users) == 0 {
+		logger.Debugf(nil, "user %s not found, creating", mask.Nick)
+
+		u := models.NewUser(mask)
+		u.IsAutoVoiced = slices.Contains(ch.AutoVoiced, mask.Nick)
+		err = fs.CreateUser(channel, u)
 		if err != nil {
 			panic(fmt.Errorf("error creating user, %s", err))
 		}
 
 		if len(ch.IntroMessages) > 0 {
-			irc.SendMessages(nick, ch.IntroMessages)
+			irc.SendMessages(mask.Nick, ch.IntroMessages)
+		}
+
+		if u.IsAutoVoiced {
+			irc.Voice(channel, mask.Nick)
+		}
+
+		return
+	}
+
+	var alternateUser *models.User
+	for _, u := range users {
+		if specifiedUser != nil && alternateUser != nil {
+			break
+		}
+		if u.Nick == mask.Nick {
+			specifiedUser = u
+		} else {
+			alternateUser = u
 		}
 	}
 
-	if slices.Contains(ch.AutoVoiced, nick) {
-		irc.Voice(channel, nick)
+	if specifiedUser != nil {
+		if specifiedUser.IsAutoVoiced {
+			irc.Voice(channel, mask.Nick)
+		}
+		return
+	}
+
+	isAutoVoiced := slices.Contains(ch.AutoVoiced, mask.Nick)
+	if alternateUser != nil {
+		isAutoVoiced = isAutoVoiced || alternateUser.IsAutoVoiced
+	}
+
+	specifiedUser = models.NewUser(mask)
+	specifiedUser.IsAutoVoiced = isAutoVoiced
+	specifiedUser.CreatedAt = time.Now()
+	specifiedUser.UpdatedAt = time.Now()
+
+	if err = fs.CreateUser(channel, specifiedUser); err != nil {
+		panic(fmt.Errorf("error creating user, %s", err))
+	}
+
+	if specifiedUser.IsAutoVoiced {
+		irc.Voice(channel, mask.Nick)
 	}
 }

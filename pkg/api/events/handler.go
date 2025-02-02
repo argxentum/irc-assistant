@@ -137,7 +137,7 @@ func (eh *handler) Handle(e *irc.Event) {
 				go f.Execute(e)
 			})
 		} else if !isPrivate && len(e.Message()) > 0 {
-			u, err := repository.GetUser(e, e.ReplyTarget(), e.From, true)
+			u, err := repository.GetUserByNick(e, e.ReplyTarget(), e.From, true)
 			if err != nil {
 				logger.Errorf(e, "unable to find or create user in order to update recent user messages, %s", err)
 			} else {

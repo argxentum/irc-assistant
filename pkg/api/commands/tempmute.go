@@ -97,7 +97,21 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick)
+			users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
+			if err != nil {
+				logger.Errorf(e, "error getting users by host: %v", err)
+				return
+			}
+
+			var specifiedUser *models.User
+			for _, u := range users {
+				if u.Nick == nick {
+					specifiedUser = u
+					break
+				}
+			}
+
+			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || specifiedUser.IsAutoVoiced
 			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 
 			go func() {
@@ -109,16 +123,24 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
 					}
+
+					for _, u := range users {
+						u.IsAutoVoiced = false
+						if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+							logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+						}
+					}
 				}
 
-				task := models.NewMuteRemovalTask(time.Now().Add(seconds), nick, channel, isAutoVoiced)
-				err = firestore.Get().AddTask(task)
-				if err != nil {
-					logger.Errorf(e, "error adding task, %s", err)
-					return
+				for _, u := range users {
+					task := models.NewMuteRemovalTask(time.Now().Add(seconds), u.Nick, channel, isAutoVoiced)
+					err = firestore.Get().AddTask(task)
+					if err != nil {
+						logger.Errorf(e, "error adding task, %s", err)
+						continue
+					}
+					logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
 				}
-
-				logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
 			}()
 		})
 	})

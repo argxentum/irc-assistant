@@ -65,18 +65,6 @@ func AddChannelAutoVoiceUser(e *irc.Event, ch *models.Channel, nick string) {
 	}
 }
 
-func UpdateChannelVoiceRequestsAndAutoVoiced(e *irc.Event, ch *models.Channel) error {
-	logger := log.Logger()
-	fs := firestore.Get()
-
-	if err := fs.UpdateChannel(ch.Name, map[string]any{"voice_requests": ch.VoiceRequests, "auto_voiced": ch.AutoVoiced, "updated_at": time.Now()}); err != nil {
-		logger.Errorf(e, "error updating channel, %s", err)
-		return err
-	}
-
-	return nil
-}
-
 func UpdateChannelVoiceRequests(e *irc.Event, ch *models.Channel) error {
 	logger := log.Logger()
 	fs := firestore.Get()

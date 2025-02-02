@@ -132,15 +132,17 @@ func processMuteRemoval(irc irc.IRC, task *models.Task) error {
 	irc.Voice(data.Channel, data.Nick)
 
 	if data.AutoVoice {
-		ch, err := repository.GetChannel(nil, data.Channel)
+		u, err := repository.GetUserByNick(nil, data.Channel, data.Nick, false)
 		if err != nil {
-			return fmt.Errorf("error retrieving channel, %s", err)
+			return fmt.Errorf("error getting user, %s", err)
 		}
 
-		ch.AutoVoiced = append(ch.AutoVoiced, data.Nick)
-
-		if err = repository.UpdateChannelAutoVoiced(nil, ch); err != nil {
-			return fmt.Errorf("error updating channel, %s", err)
+		if u != nil {
+			fs := firestore.Get()
+			u.IsAutoVoiced = true
+			if err = fs.UpdateUser(data.Channel, u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()}); err != nil {
+				return fmt.Errorf("error updating user isAutoVoiced, %s", err)
+			}
 		}
 	}
 
