@@ -118,7 +118,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 			}
 			logger.Debugf(e, "found specified user? %t", specifiedUser != nil)
 
-			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || specifiedUser.IsAutoVoiced
+			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || (specifiedUser != nil && specifiedUser.IsAutoVoiced)
 			logger.Debugf(e, "isAutoVoiced? %t", isAutoVoiced)
 
 			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
