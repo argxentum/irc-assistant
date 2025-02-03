@@ -3,6 +3,7 @@ package models
 import (
 	"assistant/pkg/api/style"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -39,10 +40,14 @@ func NewAssistant(name string) *Assistant {
 func (br BiasResult) FullDescription() string {
 	desc := ""
 
+	highlyBiased := []string{
+		"extreme", "conspiracy", "propaganda", "pseudoscience", "far",
+	}
+
 	ratingColor := style.ColorNone
 	if strings.Contains(strings.ToLower(br.Rating), "least biased") {
 		ratingColor = style.ColorGreen
-	} else if strings.Contains(strings.ToLower(br.Rating), "extreme") || strings.Contains(strings.ToLower(br.Rating), "conspiracy") || strings.Contains(strings.ToLower(br.Rating), "propaganda") || strings.Contains(strings.ToLower(br.Rating), "pseudoscience") {
+	} else if slices.Contains(highlyBiased, strings.ToLower(br.Rating)) {
 		ratingColor = style.ColorRed
 	} else if strings.ToLower(br.Rating) == "left" || strings.ToLower(br.Rating) == "right" {
 		ratingColor = style.ColorYellow

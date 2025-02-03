@@ -200,13 +200,6 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 		}
 	}
 
-	if specifiedUser != nil {
-		if specifiedUser.IsAutoVoiced {
-			irc.Voice(channel, mask.Nick)
-		}
-		return
-	}
-
 	isAutoVoiced := slices.Contains(ch.AutoVoiced, mask.Nick)
 	if alternateUser != nil {
 		isAutoVoiced = isAutoVoiced || alternateUser.IsAutoVoiced
