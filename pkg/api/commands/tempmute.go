@@ -103,11 +103,13 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			nicks := make([]string, len(users))
-			for _, u := range users {
-				nicks = append(nicks, u.Nick)
+			if len(users) > 0 {
+				nicks := make([]string, len(users))
+				for _, u := range users {
+					nicks = append(nicks, u.Nick)
+				}
+				logger.Debugf(e, "users matching host %s: %v", nick, strings.Join(nicks, ", "))
 			}
-			logger.Debugf(e, "users matching host %s: %v", nick, strings.Join(nicks, ", "))
 
 			var specifiedUser *models.User
 			for _, u := range users {
@@ -116,7 +118,17 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 					break
 				}
 			}
-			logger.Debugf(e, "found specified user? %t", specifiedUser != nil)
+
+			// some users don't yet have a host populated, so find them by nick and add them to users slice
+			if specifiedUser == nil {
+				logger.Debugf(e, "specified user not found by host, retrieving by nick")
+				specifiedUser, err = repository.GetUserByNick(e, channel, nick, false)
+				if err != nil {
+					logger.Errorf(e, "error retrieving user by nick, %s", err)
+					return
+				}
+				users = append(users, specifiedUser)
+			}
 
 			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || (specifiedUser != nil && specifiedUser.IsAutoVoiced)
 			logger.Debugf(e, "isAutoVoiced? %t", isAutoVoiced)
