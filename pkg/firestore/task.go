@@ -107,11 +107,14 @@ func (fs *Firestore) AddTask(task *models.Task) error {
 	path := fs.taskPath(task)
 	scheduled := models.NewScheduledTask(task.ID, path, task.DueAt)
 	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, scheduled.ID)
+	logger.Debugf(nil, "creating scheduled task %s: %s", task.Type, scheduledPath)
+
 	if err := create[models.ScheduledTask](fs.ctx, fs.client, scheduledPath, scheduled); err != nil {
 		logger.Warningf(nil, "error creating task, %s", err)
 		return err
 	}
 
+	logger.Debugf(nil, "creating task %s: %s", task.Type, path)
 	return create(fs.ctx, fs.client, path, task)
 }
 

@@ -39,7 +39,7 @@ func (c *StockCommand) Triggers() []string {
 }
 
 func (c *StockCommand) Usages() []string {
-	return []string{"%s <symbol>"}
+	return []string{"%s <symbol>", "%s <company name>"}
 }
 
 func (c *StockCommand) AllowedInPrivateMessages() bool {
@@ -52,7 +52,7 @@ func (c *StockCommand) CanExecute(e *irc.Event) bool {
 
 func (c *StockCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	symbol := tokens[1]
+	symbol := strings.Join(tokens[1:], " ")
 
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), symbol)

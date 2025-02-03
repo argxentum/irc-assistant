@@ -103,6 +103,12 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
+			nicks := make([]string, len(users))
+			for _, u := range users {
+				nicks = append(nicks, u.Nick)
+			}
+			logger.Debugf(e, "users matching host %s: %v", nick, strings.Join(nicks, ", "))
+
 			var specifiedUser *models.User
 			for _, u := range users {
 				if u.Nick == nick {
@@ -110,29 +116,40 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 					break
 				}
 			}
+			logger.Debugf(e, "found specified user? %t", specifiedUser != nil)
 
 			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || specifiedUser.IsAutoVoiced
+			logger.Debugf(e, "isAutoVoiced? %t", isAutoVoiced)
+
 			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 
 			go func() {
 				c.irc.Mute(channel, nick)
+				logger.Debugf(e, "muted %s in %s", nick, channel)
 
 				if isAutoVoiced {
+					logger.Debugf(e, "removing channel auto-voiced user %s", nick)
 					repository.RemoveChannelAutoVoicedUser(e, ch, nick)
 					if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
 					}
 
+					logger.Debugf(e, "removing auto-voice from %d users records", len(users))
 					for _, u := range users {
+						logger.Debugf(e, "removing auto-voice from %s (%s)", u.Nick, u.Host)
 						u.IsAutoVoiced = false
 						if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
 							logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+						} else {
+							logger.Debugf(e, "removed auto-voice from %s", u.Nick)
 						}
 					}
 				}
 
+				logger.Debugf(e, "adding task to remove mute from %s in %s in %s", nick, channel, elapse.ParseDurationDescription(duration))
 				for _, u := range users {
+					logger.Debugf(e, "adding mute removal task for %s (%s)", u.Nick, u.Host)
 					task := models.NewMuteRemovalTask(time.Now().Add(seconds), u.Nick, channel, isAutoVoiced)
 					err = firestore.Get().AddTask(task)
 					if err != nil {
