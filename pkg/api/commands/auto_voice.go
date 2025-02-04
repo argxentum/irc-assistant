@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 )
 
 const AutoVoiceCommandName = "auto_voice"
@@ -65,37 +66,48 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			return
 		}
 
+		if ch == nil {
+			logger.Warningf(e, "channel not found: %s", channel)
+			return
+		}
+
 		repository.RemoveChannelVoiceRequest(e, ch, nick, "")
 		if err = repository.UpdateChannelVoiceRequests(e, ch); err != nil {
 			logger.Errorf(e, "error updating channel, %s", err)
 			return
 		}
 
-		users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
+		users := make([]*models.User, 0)
+
+		u, err := repository.GetUserByNick(e, channel, nick, true)
 		if err != nil {
 			logger.Errorf(e, "error getting users by host: %v", err)
 			return
 		}
 
-		specifiedUserFound := false
-		for _, u := range users {
-			if u.Nick == nick {
-				specifiedUserFound = true
+		users = append(users, u)
+
+		if len(u.Host) > 0 {
+			hus, err := repository.GetUsersByHost(e, channel, u.Host)
+			if err != nil {
+				logger.Errorf(e, "error getting users by host: %v", err)
+				return
 			}
 
-			u.IsAutoVoiced = true
-			if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
-				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+			for _, hu := range hus {
+				if hu.Nick != u.Nick {
+					users = append(users, hu)
+				}
 			}
-			c.irc.Voice(channel, nick)
-			logger.Infof(e, "voiced %s in %s", nick, channel)
 		}
 
-		if !specifiedUserFound {
-			repository.AddChannelAutoVoiceUser(e, ch, nick)
-			if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
-				logger.Errorf(e, "error updating channel, %s", err)
-				return
+		for _, user := range users {
+			c.irc.Voice(channel, user.Nick)
+			logger.Infof(e, "voiced %s (%s) in %s", user.Nick, user.Host, channel)
+
+			user.IsAutoVoiced = true
+			if err = repository.UpdateUserIsAutoVoiced(e, user); err != nil {
+				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 			}
 		}
 	})

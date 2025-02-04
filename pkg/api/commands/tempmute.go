@@ -97,78 +97,55 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
-			if err != nil {
-				logger.Errorf(e, "error getting users by host: %v", err)
+			if ch == nil {
+				logger.Errorf(e, "channel %s not found", channel)
 				return
 			}
 
-			if len(users) > 0 {
-				nicks := make([]string, len(users))
-				for _, u := range users {
-					nicks = append(nicks, u.Nick)
-				}
-				logger.Debugf(e, "users matching host %s: %v", nick, strings.Join(nicks, ", "))
+			u, err := repository.GetUserByMask(e, channel, user.Mask, true)
+			if err != nil {
+				logger.Errorf(e, "error retrieving user by nick, %s", err)
+				return
 			}
 
-			var specifiedUser *models.User
-			for _, u := range users {
-				if u.Nick == nick {
-					specifiedUser = u
-					break
-				}
+			if u == nil {
+				logger.Errorf(e, "user %s not found by nick", nick)
+				return
 			}
-
-			// some users don't yet have a host populated, so find them by nick and add them to users slice
-			if specifiedUser == nil {
-				logger.Debugf(e, "specified user not found by host, retrieving by nick")
-				specifiedUser, err = repository.GetUserByNick(e, channel, nick, false)
-				if err != nil {
-					logger.Errorf(e, "error retrieving user by nick, %s", err)
-					return
-				}
-				users = append(users, specifiedUser)
-			}
-
-			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || (specifiedUser != nil && specifiedUser.IsAutoVoiced)
-			logger.Debugf(e, "isAutoVoiced? %t", isAutoVoiced)
-
-			c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 
 			go func() {
 				c.irc.Mute(channel, nick)
-				logger.Debugf(e, "muted %s in %s", nick, channel)
+				logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
+				c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
+
+				isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || u.IsAutoVoiced
 
 				if isAutoVoiced {
-					logger.Debugf(e, "removing channel auto-voiced user %s", nick)
+					logger.Debugf(e, "removing channel auto-voice from user %s", nick)
 					repository.RemoveChannelAutoVoicedUser(e, ch, nick)
 					if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
+					} else {
+						logger.Debugf(e, "removed channel auto-voice from %s", nick)
 					}
 
-					logger.Debugf(e, "removing auto-voice from %d users records", len(users))
-					for _, u := range users {
-						logger.Debugf(e, "removing auto-voice from %s (%s)", u.Nick, u.Host)
-						u.IsAutoVoiced = false
-						if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
-							logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
-						} else {
-							logger.Debugf(e, "removed auto-voice from %s", u.Nick)
-						}
+					logger.Debugf(e, "removing auto-voice from user %s (%s)", nick, user.Mask.Host)
+					u.IsAutoVoiced = false
+					if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+					} else {
+						logger.Debugf(e, "removed auto-voice from %s", nick)
 					}
 				}
 
 				logger.Debugf(e, "adding task to remove mute from %s in %s in %s", nick, channel, elapse.ParseDurationDescription(duration))
-				for _, u := range users {
-					logger.Debugf(e, "adding mute removal task for %s (%s)", u.Nick, u.Host)
-					task := models.NewMuteRemovalTask(time.Now().Add(seconds), u.Nick, channel, isAutoVoiced)
-					err = firestore.Get().AddTask(task)
-					if err != nil {
-						logger.Errorf(e, "error adding task, %s", err)
-						continue
-					}
-					logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
+
+				task := models.NewMuteRemovalTask(time.Now().Add(seconds), channel, nick, user.Mask.Host, isAutoVoiced)
+				err = firestore.Get().AddTask(task)
+				if err != nil {
+					logger.Errorf(e, "error adding task, %s", err)
+					return
 				}
 			}()
 		})

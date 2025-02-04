@@ -161,7 +161,7 @@ func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC,
 		return
 	}
 
-	users, err := repository.GetAllUsersWithHost(nil, channel, mask.Host)
+	users, err := repository.GetUsersByHost(nil, channel, mask.Host)
 	if err != nil {
 		logger.Errorf(nil, "error getting users by host: %v", err)
 		return

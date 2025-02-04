@@ -66,40 +66,49 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		users, err := repository.GetAllUsersMatchingUserHost(e, channel, nick)
+		if ch == nil {
+			logger.Warningf(e, "channel not found: %s", channel)
+			return
+		}
+
+		users := make([]*models.User, 0)
+
+		u, err := repository.GetUserByNick(e, channel, nick, true)
 		if err != nil {
 			logger.Errorf(e, "error getting users by host: %v", err)
 			return
 		}
 
-		var specifiedUser *models.User
-		for _, u := range users {
-			if u.Nick == nick {
-				specifiedUser = u
-				break
+		users = append(users, u)
+
+		if len(u.Host) > 0 {
+			hus, err := repository.GetUsersByHost(e, channel, u.Host)
+			if err != nil {
+				logger.Errorf(e, "error getting users by host: %v", err)
+				return
+			}
+
+			for _, hu := range hus {
+				if hu.Nick != u.Nick {
+					users = append(users, hu)
+				}
 			}
 		}
 
-		isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || specifiedUser.IsAutoVoiced
+		for _, user := range users {
+			c.irc.Mute(channel, user.Nick)
+			logger.Infof(e, "muted %s in %s", nick, channel)
 
-		if isAutoVoiced {
 			repository.RemoveChannelAutoVoicedUser(e, ch, nick)
 			if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 				logger.Errorf(e, "error updating channel, %s", err)
 				return
 			}
 
-			for _, u := range users {
-				u.IsAutoVoiced = false
-				if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
-					logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
-				}
+			user.IsAutoVoiced = false
+			if err = repository.UpdateUserIsAutoVoiced(e, user); err != nil {
+				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 			}
-		}
-
-		for _, u := range users {
-			c.irc.Mute(channel, u.Nick)
-			logger.Infof(e, "muted %s in %s", nick, channel)
 		}
 	})
 }

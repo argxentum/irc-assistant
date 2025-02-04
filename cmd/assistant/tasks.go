@@ -129,20 +129,45 @@ func processMuteRemoval(irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
 	logger.Debugf(nil, "processing mute removal for %s in %s", data.Nick, data.Channel)
 
-	irc.Voice(data.Channel, data.Nick)
+	users := make([]*models.User, 0)
 
-	if data.AutoVoice {
+	// find user by nick
+	if len(data.Nick) > 0 {
 		u, err := repository.GetUserByNick(nil, data.Channel, data.Nick, false)
 		if err != nil {
-			return fmt.Errorf("error getting user, %s", err)
+			return fmt.Errorf("error getting user by nick: %v", err)
 		}
 
 		if u != nil {
+			users = append(users, u)
+		}
+	}
+
+	// find users with matching host
+	if len(data.Host) > 0 {
+		us, err := repository.GetUsersByHost(nil, data.Channel, data.Host)
+		if err != nil {
+			return fmt.Errorf("error getting users by host: %v", err)
+		}
+
+		for _, u := range us {
+			if u.Nick != data.Nick {
+				users = append(users, u)
+			}
+		}
+	}
+
+	for _, u := range users {
+		irc.Voice(data.Channel, u.Nick)
+		logger.Debugf(nil, "unmuted %s in %s", u.Nick, data.Channel)
+
+		if data.AutoVoice {
 			fs := firestore.Get()
 			u.IsAutoVoiced = true
-			if err = fs.UpdateUser(data.Channel, u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()}); err != nil {
+			if err := fs.UpdateUser(data.Channel, u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()}); err != nil {
 				return fmt.Errorf("error updating user isAutoVoiced, %s", err)
 			}
+			logger.Debugf(nil, "auto-voiced %s in %s", u.Nick, data.Channel)
 		}
 	}
 

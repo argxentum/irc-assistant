@@ -17,23 +17,9 @@ const (
 	OpDecrement = "--"
 )
 
-func GetAllUsersWithHost(e *irc.Event, channel, host string) ([]*models.User, error) {
+func GetUsersByHost(e *irc.Event, channel, host string) ([]*models.User, error) {
 	fs := firestore.Get()
 	return fs.GetUsersByHost(channel, host)
-}
-
-func GetAllUsersMatchingUserHost(e *irc.Event, channel, nick string) ([]*models.User, error) {
-	u, err := GetUserByNick(e, channel, nick, false)
-	if err != nil {
-		return nil, err
-	}
-
-	if u == nil {
-		return nil, nil
-	}
-
-	fs := firestore.Get()
-	return fs.GetUsersByHost(channel, u.Host)
 }
 
 func GetUserByNick(e *irc.Event, channel, nick string, createIfNotExists bool) (*models.User, error) {
@@ -46,6 +32,23 @@ func GetUserByNick(e *irc.Event, channel, nick string, createIfNotExists bool) (
 	if u == nil && createIfNotExists {
 		u = models.NewUserWithNick(nick)
 		err = fs.CreateUser(channel, u)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return u, nil
+}
+
+func GetUserByMask(e *irc.Event, channel string, mask *irc.Mask, createIfNotExists bool) (*models.User, error) {
+	u, err := firestore.Get().GetUser(channel, mask)
+	if err != nil {
+		return nil, err
+	}
+
+	if u == nil && createIfNotExists {
+		u = models.NewUser(mask)
+		err = firestore.Get().CreateUser(channel, u)
 		if err != nil {
 			return nil, err
 		}
