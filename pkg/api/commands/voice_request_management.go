@@ -117,7 +117,7 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 				c.SendMessage(e, vr.Nick, fmt.Sprintf("🎉 Your voice request in %s has been approved. Welcome! We'd love it if you'd take a moment to say hello and introduce yourself.", style.Bold(channel)))
 				logger.Debugf(e, "approved voice request for %s (%s)", vr.Nick, vr.Mask())
 
-				u, err := repository.GetUserByNick(e, channel, vr.Nick, false)
+				u, err := repository.GetUserByNick(e, channel, vr.Nick, true)
 				if err != nil {
 					logger.Errorf(e, "error getting user: %v", err)
 					continue
@@ -125,7 +125,7 @@ func (c *VoiceRequestManagementCommand) Execute(e *irc.Event) {
 
 				if u != nil {
 					u.IsAutoVoiced = true
-					if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+					if err = repository.UpdateUserIsAutoVoiced(e, channel, u); err != nil {
 						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 					}
 				}

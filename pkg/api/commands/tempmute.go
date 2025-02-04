@@ -132,7 +132,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 
 					logger.Debugf(e, "removing auto-voice from user %s (%s)", nick, user.Mask.Host)
 					u.IsAutoVoiced = false
-					if err = repository.UpdateUserIsAutoVoiced(e, u); err != nil {
+					if err = repository.UpdateUserIsAutoVoiced(e, channel, u); err != nil {
 						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 					} else {
 						logger.Debugf(e, "removed auto-voice from %s", nick)

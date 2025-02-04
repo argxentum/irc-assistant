@@ -106,7 +106,7 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 			}
 
 			user.IsAutoVoiced = false
-			if err = repository.UpdateUserIsAutoVoiced(e, user); err != nil {
+			if err = repository.UpdateUserIsAutoVoiced(e, channel, user); err != nil {
 				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 			}
 		}

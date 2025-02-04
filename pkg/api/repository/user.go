@@ -99,9 +99,9 @@ func FindRecentUserMessage(e *irc.Event, u *models.User, input string) (models.R
 	return models.RecentMessage{}, false
 }
 
-func UpdateUserIsAutoVoiced(e *irc.Event, u *models.User) error {
+func UpdateUserIsAutoVoiced(e *irc.Event, channel string, u *models.User) error {
 	fs := firestore.Get()
-	return fs.UpdateUser(e.ReplyTarget(), u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()})
+	return fs.UpdateUser(channel, u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()})
 }
 
 func IncrementUserKarma(e *irc.Event, u *models.User) error {

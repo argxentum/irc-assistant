@@ -106,7 +106,7 @@ func (c *AutoVoiceCommand) Execute(e *irc.Event) {
 			logger.Infof(e, "voiced %s (%s) in %s", user.Nick, user.Host, channel)
 
 			user.IsAutoVoiced = true
-			if err = repository.UpdateUserIsAutoVoiced(e, user); err != nil {
+			if err = repository.UpdateUserIsAutoVoiced(e, channel, user); err != nil {
 				logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
 			}
 		}
