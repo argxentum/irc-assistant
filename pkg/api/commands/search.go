@@ -76,14 +76,14 @@ func (c *SearchCommand) Execute(e *irc.Event) {
 		}
 
 		if s != nil {
-			c.SendMessages(e, e.ReplyTarget(), s.messages)
-
 			last := s.messages[len(s.messages)-1]
 			if httpRegex.MatchString(last) {
 				if result, ok := repository.GetBiasResult(e, last, false); ok {
-					c.SendMessage(e, e.ReplyTarget(), result.ShortDescription())
+					s.messages = append(s.messages, result.ShortDescription())
 				}
 			}
+
+			c.SendMessages(e, e.ReplyTarget(), s.messages)
 
 			return
 		}
