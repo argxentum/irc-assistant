@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
@@ -59,6 +60,8 @@ func (c *SearchCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
+var httpRegex = regexp.MustCompile(`^https?://`)
+
 func (c *SearchCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
@@ -74,6 +77,14 @@ func (c *SearchCommand) Execute(e *irc.Event) {
 
 		if s != nil {
 			c.SendMessages(e, e.ReplyTarget(), s.messages)
+
+			last := s.messages[len(s.messages)-1]
+			if httpRegex.MatchString(last) {
+				if result, ok := repository.GetBiasResult(e, last, false); ok {
+					c.SendMessage(e, e.ReplyTarget(), result.ShortDescription())
+				}
+			}
+
 			return
 		}
 	}

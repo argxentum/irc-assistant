@@ -96,7 +96,7 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 	}
 
 	if len(author) > 0 {
-		if result, ok := repository.GetBiasResult(e, author, false); ok {
+		if result, ok := repository.GetBiasResult(e, strings.TrimPrefix(author, "@"), false); ok {
 			messages = append(messages, result.ShortDescription())
 		}
 	}
@@ -249,7 +249,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, 
 	}
 
 	if len(author) > 0 {
-		if result, ok := repository.GetBiasResult(e, author, false); ok {
+		if result, ok := repository.GetBiasResult(e, strings.TrimPrefix(author, "@"), false); ok {
 			messages = append(messages, result.ShortDescription())
 		} else if result, ok = repository.GetBiasResult(e, strings.TrimPrefix(authorHandle, "@"), false); ok {
 			messages = append(messages, result.ShortDescription())
