@@ -8,10 +8,8 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
-	"github.com/sqids/sqids-go"
 	"os"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -69,9 +67,6 @@ func moveChannelBiasesToSources(cfg *config.Config) {
 	for k, br := range asst.Cache.BiasResults {
 		fmt.Printf("moving source: %s\n", k)
 
-		s, _ := sqids.New()
-		id, _ := s.Encode([]uint64{uint64(time.Now().UnixNano())})
-
 		br.Title = strings.TrimSpace(strings.Replace(br.Title, "–", "", 1))
 		br.Rating = strings.TrimSpace(strings.ToLower(br.Rating))
 		br.Factual = strings.TrimSpace(strings.ToLower(br.Factual))
@@ -79,7 +74,7 @@ func moveChannelBiasesToSources(cfg *config.Config) {
 
 		keywords := strings.Split(strings.ToLower(k), " ")
 
-		source := models.NewSource(id, br.Title, br.Rating, br.Factual, br.Credibility, br.DetailURL, []string{}, keywords)
+		source := models.NewSource(br.Title, br.Rating, br.Factual, br.Credibility, br.DetailURL, []string{}, keywords)
 		if err = fs.CreateSource(source); err != nil {
 			panic(err)
 		}

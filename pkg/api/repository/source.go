@@ -14,6 +14,10 @@ import (
 
 var httpRegex = regexp.MustCompile(`^https?://(?:www\.)?(.*?)/`)
 
+func AddSource(source *models.Source) error {
+	return firestore.Get().CreateSource(source)
+}
+
 func FindSource(input string) (*models.Source, error) {
 	input = strings.TrimSpace(strings.ToLower(input))
 

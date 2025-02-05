@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"github.com/sqids/sqids-go"
+	"time"
+)
 
 type Source struct {
 	ID          string    `firestore:"id"`
@@ -15,7 +18,24 @@ type Source struct {
 	UpdatedAt   time.Time `firestore:"updated_at"`
 }
 
-func NewSource(id, title, bias, factuality, credibility, reviewURL string, urls, keywords []string) *Source {
+func NewEmptySource() *Source {
+	s, _ := sqids.New()
+	id, _ := s.Encode([]uint64{uint64(time.Now().UnixNano())})
+
+	return &Source{
+		ID:        id,
+		Reviews:   make([]string, 0),
+		URLs:      make([]string, 0),
+		Keywords:  make([]string, 0),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+}
+
+func NewSource(title, bias, factuality, credibility, reviewURL string, urls, keywords []string) *Source {
+	s, _ := sqids.New()
+	id, _ := s.Encode([]uint64{uint64(time.Now().UnixNano())})
+
 	return &Source{
 		ID:          id,
 		Title:       title,

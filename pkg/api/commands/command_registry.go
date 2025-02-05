@@ -77,7 +77,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[PredictItCommandName] = NewPredictItCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SearchCommandName] = NewSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SummaryCommandName] = NewSummaryCommand(cr.ctx, cr.cfg, cr.irc)
-	cr.commands[BiasCommandName] = NewBiasCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[SourceCommandName] = NewSourceCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[MarketsCommandName] = NewMarketsCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[StockCommandName] = NewStockCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[CurrencyCommandName] = NewCurrencyCommand(cr.ctx, cr.cfg, cr.irc)
@@ -151,6 +151,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	)
 
 	// commands requiring authorization
+	cr.commands[SourceAddCommandName] = NewSourceAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[EchoCommandName] = NewEchoCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SayCommandName] = NewSayCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[JoinCommandName] = NewJoinCommand(cr.ctx, cr.cfg, cr.irc)
