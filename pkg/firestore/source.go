@@ -39,7 +39,7 @@ func (fs *Firestore) FindSourcesByKeywords(input []string) ([]*models.Source, er
 	criteria := QueryCriteria{
 		Path: fs.pathToSources(),
 		Filter: firestore.PropertyFilter{
-			Path:     "urls",
+			Path:     "keywords",
 			Operator: ArrayContainsAny,
 			Value:    input,
 		},

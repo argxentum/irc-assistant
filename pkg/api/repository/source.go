@@ -16,7 +16,7 @@ var httpRegex = regexp.MustCompile(`^https?://(?:www\.)?(.*?)/`)
 func FindSource(input string) (*models.Source, error) {
 	input = strings.TrimSpace(strings.ToLower(input))
 
-	src, err := findSourceByURL(input)
+	src, err := findSourceByDomain(input)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func FindSource(input string) (*models.Source, error) {
 	return nil, nil
 }
 
-func findSourceByURL(url string) (*models.Source, error) {
+func findSourceByDomain(url string) (*models.Source, error) {
 	domain := url
 	if httpRegex.MatchString(url) {
 		m := httpRegex.FindStringSubmatch(url)
