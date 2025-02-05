@@ -197,7 +197,11 @@ func SourceShortDescription(source *models.Source) string {
 	source.Credibility = strings.ReplaceAll(source.Credibility, "n/a", "N/A")
 
 	if len(source.Credibility) > 0 {
-		desc += fmt.Sprintf("%s", style.ColorForeground(fmt.Sprintf("%s Credibility", text.CapitalizeEveryWord(source.Credibility, false)), credibilityColor))
+		rating := text.CapitalizeEveryWord(source.Credibility, false)
+		if slices.Contains([]string{"high", "medium", "low"}, strings.ToLower(source.Credibility)) {
+			rating += " Credibility"
+		}
+		desc += fmt.Sprintf("%s", style.ColorForeground(rating, credibilityColor))
 	}
 
 	if len(desc) > 0 {
