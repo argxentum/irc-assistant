@@ -252,8 +252,13 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 				messages = append(messages, post.Comment.FormattedBody())
 			}
 
-			if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-				messages = append(messages, bias.ShortDescription())
+			source, err := repository.FindSource(post.Post.URL)
+			if err != nil {
+				logger.Errorf(nil, "error finding source, %s", err)
+			}
+
+			if source != nil {
+				messages = append(messages, repository.SourceShortDescription(source))
 			}
 
 			irc.SendMessages(channelName, messages)

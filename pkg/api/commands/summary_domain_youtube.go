@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
+	"assistant/pkg/log"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -96,8 +97,13 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 	}
 
 	if len(author) > 0 {
-		if result, ok := repository.GetBiasResult(e, strings.TrimPrefix(author, "@"), false); ok {
-			messages = append(messages, result.ShortDescription())
+		source, err := repository.FindSource(strings.TrimPrefix(author, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			messages = append(messages, repository.SourceShortDescription(source))
 		}
 	}
 
@@ -249,10 +255,20 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, 
 	}
 
 	if len(author) > 0 {
-		if result, ok := repository.GetBiasResult(e, strings.TrimPrefix(author, "@"), false); ok {
-			messages = append(messages, result.ShortDescription())
-		} else if result, ok = repository.GetBiasResult(e, strings.TrimPrefix(authorHandle, "@"), false); ok {
-			messages = append(messages, result.ShortDescription())
+		authorSource, err := repository.FindSource(strings.TrimPrefix(author, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		authorHandleSource, err := repository.FindSource(strings.TrimPrefix(authorHandle, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		if authorSource != nil {
+			messages = append(messages, repository.SourceShortDescription(authorSource))
+		} else if authorHandleSource != nil {
+			messages = append(messages, repository.SourceShortDescription(authorHandleSource))
 		}
 	}
 

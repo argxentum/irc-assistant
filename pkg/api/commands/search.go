@@ -78,8 +78,13 @@ func (c *SearchCommand) Execute(e *irc.Event) {
 		if s != nil {
 			last := s.messages[len(s.messages)-1]
 			if httpRegex.MatchString(last) {
-				if result, ok := repository.GetBiasResult(e, last, false); ok {
-					s.messages = append(s.messages, result.ShortDescription())
+				source, err := repository.FindSource(last)
+				if err != nil {
+					logger.Errorf(nil, "error finding source, %s", err)
+				}
+
+				if source != nil {
+					s.messages = append(s.messages, repository.SourceShortDescription(source))
 				}
 			}
 

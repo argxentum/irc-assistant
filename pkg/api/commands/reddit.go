@@ -94,8 +94,13 @@ func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 			content = append(content, post.Comment.FormattedBody())
 		}
 
-		if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-			content = append(content, bias.ShortDescription())
+		source, err := repository.FindSource(post.Post.URL)
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			content = append(content, repository.SourceShortDescription(source))
 		}
 
 		if i < len(posts)-1 {

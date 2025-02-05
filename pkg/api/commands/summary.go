@@ -206,9 +206,16 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 		if s != nil {
 			messages := s.messages
-			if result, ok := repository.GetBiasResult(e, url, false); ok {
-				messages = append(messages, result.ShortDescription())
+
+			source, err := repository.FindSource(url)
+			if err != nil {
+				logger.Errorf(nil, "error finding source, %s", err)
 			}
+
+			if source != nil {
+				messages = append(messages, repository.SourceShortDescription(source))
+			}
+
 			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
 			return
 		}
@@ -291,8 +298,13 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 		}
 	}
 
-	if result, ok := repository.GetBiasResult(e, url, false); ok {
-		unescapedMessages = append(unescapedMessages, result.ShortDescription())
+	source, err := repository.FindSource(url)
+	if err != nil {
+		log.Logger().Errorf(nil, "error finding source, %s", err)
+	}
+
+	if source != nil {
+		unescapedMessages = append(unescapedMessages, repository.SourceShortDescription(source))
 	}
 
 	c.SendMessages(e, target, unescapedMessages)

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/firestore"
 	"assistant/pkg/models"
 	"fmt"
@@ -129,8 +130,10 @@ func SourceFullDescription(source *models.Source) string {
 		ratingColor = style.ColorYellow
 	}
 
+	source.Bias = strings.ReplaceAll(source.Bias, "n/a", "N/A")
+
 	if len(source.Bias) > 0 {
-		desc += fmt.Sprintf("%s: %s", style.Underline("Bias"), style.ColorForeground(source.Bias, ratingColor))
+		desc += fmt.Sprintf("%s: %s", style.Underline("Bias"), style.ColorForeground(text.CapitalizeEveryWord(source.Bias, false), ratingColor))
 	}
 
 	factualColor := style.ColorNone
@@ -142,11 +145,13 @@ func SourceFullDescription(source *models.Source) string {
 		factualColor = style.ColorRed
 	}
 
+	source.Factuality = strings.ReplaceAll(source.Factuality, "n/a", "N/A")
+
 	if len(source.Factuality) > 0 {
 		if len(desc) > 0 {
 			desc += ", "
 		}
-		desc += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), style.ColorForeground(source.Factuality, factualColor))
+		desc += fmt.Sprintf("%s: %s", style.Underline("Factual reporting"), style.ColorForeground(text.CapitalizeEveryWord(source.Factuality, false), factualColor))
 	}
 
 	credibilityColor := style.ColorNone
@@ -158,11 +163,13 @@ func SourceFullDescription(source *models.Source) string {
 		credibilityColor = style.ColorRed
 	}
 
+	source.Credibility = strings.ReplaceAll(source.Credibility, "n/a", "N/A")
+
 	if len(source.Credibility) > 0 {
 		if len(desc) > 0 {
 			desc += ", "
 		}
-		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), style.ColorForeground(source.Credibility, credibilityColor))
+		desc += fmt.Sprintf("%s: %s", style.Underline("Credibility"), style.ColorForeground(text.CapitalizeEveryWord(source.Credibility, false), credibilityColor))
 	}
 
 	if len(desc) > 0 {
@@ -187,8 +194,10 @@ func SourceShortDescription(source *models.Source) string {
 		source.Credibility = source.Bias
 	}
 
+	source.Credibility = strings.ReplaceAll(source.Credibility, "n/a", "N/A")
+
 	if len(source.Credibility) > 0 {
-		desc += fmt.Sprintf("%s", style.ColorForeground(fmt.Sprintf("%s credibility", source.Credibility), credibilityColor))
+		desc += fmt.Sprintf("%s", style.ColorForeground(fmt.Sprintf("%s Credibility", text.CapitalizeEveryWord(source.Credibility, false)), credibilityColor))
 	}
 
 	if len(desc) > 0 {

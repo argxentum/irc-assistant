@@ -77,8 +77,13 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 		messages = append(messages, post.Comment.FormattedBody())
 	}
 
-	if bias, ok := repository.GetBiasResult(nil, post.Post.URL, false); ok {
-		messages = append(messages, bias.ShortDescription())
+	source, err := repository.FindSource(post.Post.URL)
+	if err != nil {
+		logger.Errorf(nil, "error finding source, %s", err)
+	}
+
+	if source != nil {
+		messages = append(messages, repository.SourceShortDescription(source))
 	}
 
 	return createSummary(messages...), nil
@@ -144,8 +149,13 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 	messages := make([]string, 0)
 	messages = append(messages, fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments)))
 
-	if bias, ok := repository.GetBiasResult(e, link, false); ok {
-		messages = append(messages, bias.ShortDescription())
+	source, err := repository.FindSource(link)
+	if err != nil {
+		logger.Errorf(nil, "error finding source, %s", err)
+	}
+
+	if source != nil {
+		messages = append(messages, repository.SourceShortDescription(source))
 	}
 
 	return createSummary(messages...), nil

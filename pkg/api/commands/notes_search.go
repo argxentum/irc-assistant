@@ -122,8 +122,13 @@ func createNoteOutputMessages(e *irc.Event, nick string, n *models.Note) []strin
 	if len(n.Source) > 0 {
 		messages = append(messages, n.Source)
 
-		if bias, ok := repository.GetBiasResult(e, n.Source, false); ok {
-			messages = append(messages, bias.ShortDescription())
+		source, err := repository.FindSource(n.Source)
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			messages = append(messages, repository.SourceShortDescription(source))
 		}
 	}
 
