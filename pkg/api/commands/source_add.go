@@ -70,6 +70,11 @@ func (c *SourceAddCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
 
+	if s, err := repository.FindSource(domain); err == nil && s != nil {
+		c.Replyf(e, "Source details already exist for %s", style.Bold(domain))
+		return
+	}
+
 	dr := retriever.NewDocumentRetriever(retriever.NewBodyRetriever())
 	params := retriever.DefaultParams(url)
 	params.Timeout = 5000
