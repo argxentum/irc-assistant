@@ -6,10 +6,8 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
 	"fmt"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -53,7 +51,7 @@ func initializeLogger(ctx context.Context, cfg *config.Config) {
 }
 
 func moveChannelBiasesToSources(cfg *config.Config) {
-	fs := firestore.Get()
+	//fs := firestore.Get()
 
 	asst, err := repository.GetAssistant(nil, false)
 	if err != nil {
@@ -64,19 +62,21 @@ func moveChannelBiasesToSources(cfg *config.Config) {
 		panic("assistant not found")
 	}
 
-	for k, br := range asst.Cache.BiasResults {
-		fmt.Printf("moving source: %s\n", k)
+	/*
+		for k, br := range asst.Cache.BiasResults {
+			fmt.Printf("moving source: %s\n", k)
 
-		br.Title = strings.TrimSpace(strings.Replace(br.Title, "–", "", 1))
-		br.Rating = strings.TrimSpace(strings.ToLower(br.Rating))
-		br.Factual = strings.TrimSpace(strings.ToLower(br.Factual))
-		br.Credibility = strings.TrimSpace(strings.Replace(strings.ToLower(br.Credibility), "credibility", "", 1))
+			br.Title = strings.TrimSpace(strings.Replace(br.Title, "–", "", 1))
+			br.Rating = strings.TrimSpace(strings.ToLower(br.Rating))
+			br.Factual = strings.TrimSpace(strings.ToLower(br.Factual))
+			br.Credibility = strings.TrimSpace(strings.Replace(strings.ToLower(br.Credibility), "credibility", "", 1))
 
-		keywords := strings.Split(strings.ToLower(k), " ")
+			keywords := strings.Split(strings.ToLower(k), " ")
 
-		source := models.NewSource(br.Title, br.Rating, br.Factual, br.Credibility, br.DetailURL, []string{}, keywords)
-		if err = fs.CreateSource(source); err != nil {
-			panic(err)
+			source := models.NewSource(br.Title, br.Rating, br.Factual, br.Credibility, br.DetailURL, []string{}, keywords)
+			if err = fs.CreateSource(source); err != nil {
+				panic(err)
+			}
 		}
-	}
+	*/
 }
