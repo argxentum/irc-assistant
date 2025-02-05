@@ -42,7 +42,7 @@ func (c *BiasCommand) Description() string {
 }
 
 func (c *BiasCommand) Triggers() []string {
-	return []string{"bias"}
+	return []string{"bias", "source"}
 }
 
 func (c *BiasCommand) Usages() []string {
@@ -64,6 +64,21 @@ var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]
 func (c *BiasCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
+
+	source, err := repository.FindSource(input)
+	if err != nil {
+		log.Logger().Errorf(e, "error finding source: %s", err)
+		c.Replyf(e, "Unable to determine bias details for %s", style.Bold(input))
+		return
+	}
+
+	if source != nil {
+		c.SendSource(e, source)
+		return
+	} else {
+		c.Replyf(e, "No source details found for %s", style.Bold(input))
+		return
+	}
 
 	if result, ok := repository.GetBiasResult(e, input, true); ok {
 		log.Logger().Debugf(e, "found bias result in cache")
@@ -186,7 +201,7 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 	})
 
 	searchQuery := url.QueryEscape(input)
-	err := sc.Visit(fmt.Sprintf("https://mediabiasfactcheck.com/?s=%s", searchQuery))
+	err = sc.Visit(fmt.Sprintf("https://mediabiasfactcheck.com/?s=%s", searchQuery))
 	if err != nil {
 		logger.Warningf(e, "error visiting search URL: %s", err)
 		if strings.Contains(strings.ToLower(err.Error()), "too many requests") {
@@ -200,4 +215,15 @@ func (c *BiasCommand) Execute(e *irc.Event) {
 
 func (c *BiasCommand) SendBiasResult(e *irc.Event, result models.BiasResult) {
 	c.SendMessages(e, e.ReplyTarget(), []string{result.FullDescription(), result.DetailURL})
+}
+
+func (c *BiasCommand) SendSource(e *irc.Event, source *models.Source) {
+	messages := make([]string, 0)
+	messages = append(messages, repository.SourceShortDescription(source))
+
+	if len(source.Reviews) > 0 {
+		messages = append(messages, source.Reviews[0])
+	}
+
+	c.SendMessages(e, e.ReplyTarget(), messages)
 }

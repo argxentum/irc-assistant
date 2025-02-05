@@ -9,4 +9,5 @@ const (
 	pathNotes        = "notes"
 	pathKarmaHistory = "karma-history"
 	pathTasks        = "tasks"
+	pathSources      = "sources"
 )
