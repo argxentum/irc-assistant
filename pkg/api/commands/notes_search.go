@@ -128,7 +128,7 @@ func createNoteOutputMessages(e *irc.Event, nick string, n *models.Note) []strin
 		}
 
 		if source != nil {
-			messages = append(messages, repository.SourceShortDescription(source))
+			messages = append(messages, repository.ShortSourceSummary(source))
 		}
 	}
 

@@ -103,7 +103,7 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 		}
 
 		if source != nil {
-			messages = append(messages, repository.SourceShortDescription(source))
+			messages = append(messages, repository.ShortSourceSummary(source))
 		}
 	}
 
@@ -266,9 +266,9 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, 
 		}
 
 		if authorSource != nil {
-			messages = append(messages, repository.SourceShortDescription(authorSource))
+			messages = append(messages, repository.ShortSourceSummary(authorSource))
 		} else if authorHandleSource != nil {
-			messages = append(messages, repository.SourceShortDescription(authorHandleSource))
+			messages = append(messages, repository.ShortSourceSummary(authorHandleSource))
 		}
 	}
 

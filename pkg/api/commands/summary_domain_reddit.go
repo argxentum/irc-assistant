@@ -83,7 +83,7 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	}
 
 	if source != nil {
-		messages = append(messages, repository.SourceShortDescription(source))
+		messages = append(messages, repository.ShortSourceSummary(source))
 	}
 
 	return createSummary(messages...), nil
@@ -155,7 +155,7 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 	}
 
 	if source != nil {
-		messages = append(messages, repository.SourceShortDescription(source))
+		messages = append(messages, repository.ShortSourceSummary(source))
 	}
 
 	return createSummary(messages...), nil

@@ -258,7 +258,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			}
 
 			if source != nil {
-				messages = append(messages, repository.SourceShortDescription(source))
+				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
 			irc.SendMessages(channelName, messages)

@@ -118,7 +118,7 @@ func findSourceByKeywords(keywords []string, requireAll bool) ([]*models.Source,
 	return sources, nil
 }
 
-func SourceFullDescription(source *models.Source) string {
+func FullSourceSummary(source *models.Source) string {
 	desc := ""
 
 	highlyBiased := []string{
@@ -183,7 +183,7 @@ func SourceFullDescription(source *models.Source) string {
 	return desc
 }
 
-func SourceShortDescription(source *models.Source) string {
+func ShortSourceSummary(source *models.Source) string {
 	desc := ""
 
 	credibilityColor := style.ColorNone

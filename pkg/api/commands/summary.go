@@ -213,7 +213,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 
 			if source != nil {
-				messages = append(messages, repository.SourceShortDescription(source))
+				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
 			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
@@ -304,7 +304,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 	}
 
 	if source != nil {
-		unescapedMessages = append(unescapedMessages, repository.SourceShortDescription(source))
+		unescapedMessages = append(unescapedMessages, repository.ShortSourceSummary(source))
 	}
 
 	c.SendMessages(e, target, unescapedMessages)

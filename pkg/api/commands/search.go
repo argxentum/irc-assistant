@@ -84,7 +84,7 @@ func (c *SearchCommand) Execute(e *irc.Event) {
 				}
 
 				if source != nil {
-					s.messages = append(s.messages, repository.SourceShortDescription(source))
+					s.messages = append(s.messages, repository.ShortSourceSummary(source))
 				}
 			}
 

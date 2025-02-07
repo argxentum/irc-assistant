@@ -100,7 +100,7 @@ func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTo
 		}
 
 		if source != nil {
-			content = append(content, repository.SourceShortDescription(source))
+			content = append(content, repository.ShortSourceSummary(source))
 		}
 
 		if i < len(posts)-1 {

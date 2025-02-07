@@ -72,7 +72,7 @@ func (c *SourceCommand) Execute(e *irc.Event) {
 
 func SendSource(cs *commandStub, e *irc.Event, source *models.Source) {
 	messages := make([]string, 0)
-	messages = append(messages, repository.SourceFullDescription(source))
+	messages = append(messages, repository.FullSourceSummary(source))
 
 	if len(source.Reviews) > 0 {
 		messages = append(messages, source.Reviews[0])

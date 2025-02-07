@@ -91,9 +91,9 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 		}
 
 		if authorHandleSource != nil {
-			messages = append(messages, repository.SourceShortDescription(authorHandleSource))
+			messages = append(messages, repository.ShortSourceSummary(authorHandleSource))
 		} else if authorSource != nil {
-			messages = append(messages, repository.SourceShortDescription(authorSource))
+			messages = append(messages, repository.ShortSourceSummary(authorSource))
 		}
 	}
 
