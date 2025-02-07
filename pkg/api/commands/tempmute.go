@@ -102,7 +102,8 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			u, err := repository.GetUserByMask(e, channel, user.Mask, true)
+			// get requested user by nick
+			u, err := repository.GetUserByNick(e, channel, nick, true)
 			if err != nil {
 				logger.Errorf(e, "error retrieving user by nick, %s", err)
 				return
@@ -113,34 +114,47 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			go func() {
-				c.irc.Mute(channel, nick)
-				logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
-				c.Replyf(e, "Temporarily muted %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
+			users := make([]*models.User, 0)
+			users = append(users, u)
 
+			// get all users with the same host
+			if len(u.Host) > 0 {
+				hus, err := repository.GetUsersByHost(e, channel, user.Mask.Host)
+				if err != nil {
+					logger.Errorf(e, "error getting users by host: %v", err)
+					return
+				}
+
+				for _, hu := range hus {
+					users = append(users, hu)
+				}
+			}
+
+			go func() {
+				c.Replyf(e, "Temporarily muting %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
 				isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || u.IsAutoVoiced
 
-				if isAutoVoiced {
-					logger.Debugf(e, "removing channel auto-voice from user %s", nick)
-					repository.RemoveChannelAutoVoicedUser(e, ch, nick)
+				//mute and remove auto-voice from all users
+				for _, u := range users {
+					c.irc.Mute(channel, u.Nick)
+					logger.Infof(e, "temporarily muted %s from %s for %s", nick, channel, elapse.ParseDurationDescription(duration))
+
+					repository.RemoveChannelAutoVoicedUser(e, ch, u.Nick)
 					if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
 						logger.Errorf(e, "error updating channel, %s", err)
 						return
-					} else {
-						logger.Debugf(e, "removed channel auto-voice from %s", nick)
 					}
+					logger.Debugf(e, "removed channel auto-voice from user %s", u.Nick)
 
-					logger.Debugf(e, "removing auto-voice from user %s (%s)", nick, user.Mask.Host)
 					u.IsAutoVoiced = false
 					if err = repository.UpdateUserIsAutoVoiced(e, channel, u); err != nil {
 						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
-					} else {
-						logger.Debugf(e, "removed auto-voice from %s", nick)
 					}
+					logger.Debugf(e, "removed auto-voice from user %s", u.Nick)
 				}
 
-				logger.Debugf(e, "adding task to remove mute from %s in %s in %s", nick, channel, elapse.ParseDurationDescription(duration))
-
+				// only need to add a single task for unmuting, since it will unmute all users with a matching host
+				logger.Debugf(e, "adding task to unmute from %s in %s in %s", nick, channel, elapse.ParseDurationDescription(duration))
 				task := models.NewMuteRemovalTask(time.Now().Add(seconds), channel, nick, user.Mask.Host, isAutoVoiced)
 				err = firestore.Get().AddTask(task)
 				if err != nil {
