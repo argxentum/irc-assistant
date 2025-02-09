@@ -117,7 +117,7 @@ func createNoteOutputMessages(e *irc.Event, nick string, n *models.Note) []strin
 	}
 
 	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("🗒 %s (%s, %s • %s)", style.Bold(n.Content), nick, elapse.PastTimeDescription(n.NotedAt), n.ID))
+	messages = append(messages, fmt.Sprintf("%s %s (%s, %s • %s)", "\U0001F5D2", style.Bold(n.Content), nick, elapse.PastTimeDescription(n.NotedAt), n.ID))
 
 	if len(n.Source) > 0 {
 		messages = append(messages, n.Source)

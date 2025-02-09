@@ -161,10 +161,7 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 		return nil, err
 	}
 
-	requireAllMatch := false
-	if len(keywords) <= 3 {
-		requireAllMatch = true
-	}
+	topMatches := make([]*models.Note, 0)
 
 	sr := make([]noteSearchResult, 0)
 	for _, n := range matching {
@@ -178,9 +175,17 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 			}
 		}
 
-		if score > 0 && (!requireAllMatch || allMatch) {
+		if allMatch {
+			topMatches = append(topMatches, n)
+		}
+
+		if score > 0 {
 			sr = append(sr, noteSearchResult{score, n})
 		}
+	}
+
+	if len(topMatches) > 0 {
+		return topMatches, nil
 	}
 
 	sort.Slice(sr, func(i, j int) bool {
