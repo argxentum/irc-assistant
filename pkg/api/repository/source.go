@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/text"
 	"assistant/pkg/firestore"
 	"assistant/pkg/models"
+	"assistant/pkg/slicesx"
 	"fmt"
 	"regexp"
 	"slices"
@@ -128,7 +129,7 @@ func FullSourceSummary(source *models.Source) string {
 	ratingColor := style.ColorNone
 	if strings.Contains(strings.ToLower(source.Bias), "least biased") {
 		ratingColor = style.ColorGreen
-	} else if slices.Contains(highlyBiased, strings.ToLower(source.Bias)) {
+	} else if slicesx.ContainsAny(highlyBiased, strings.Fields(strings.ReplaceAll(strings.ToLower(source.Bias), "-", " "))) {
 		ratingColor = style.ColorRed
 	} else if strings.ToLower(source.Bias) == "left" || strings.ToLower(source.Bias) == "right" {
 		ratingColor = style.ColorYellow

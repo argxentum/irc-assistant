@@ -77,7 +77,7 @@ func (c *SourceAddCommand) Execute(e *irc.Event) {
 
 	dr := retriever.NewDocumentRetriever(retriever.NewBodyRetriever())
 	params := retriever.DefaultParams(url)
-	params.Timeout = 5000
+	params.Timeout = 2000
 	doc, err := dr.RetrieveDocumentSelection(e, params, "html")
 	if err != nil || doc == nil {
 		if err != nil {
