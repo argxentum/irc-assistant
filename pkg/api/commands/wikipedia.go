@@ -69,7 +69,7 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 	}
 
 	messages := []string{
-		fmt.Sprintf("%s • %s", style.Bold(page.Title), description),
+		fmt.Sprintf("%s • %s", style.Underline(style.Bold(page.Title)), description),
 		fmt.Sprintf(page.URL),
 	}
 
