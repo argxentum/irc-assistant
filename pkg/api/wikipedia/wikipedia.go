@@ -53,7 +53,7 @@ func GetPage(query string) (*page.WikipediaPage, error) {
 	return &p, nil
 }
 
-var wikipediaURLRegex = regexp.MustCompile(`^https?://(?:[a-z0-9-]+\.)*wikipedia\.org/wiki/([^/?]+)$`)
+var wikipediaURLRegex = regexp.MustCompile(`^https?://(?:[a-z0-9-]+\.)*wikipedia\.org/wiki/([^/?]+)(?:\?.*?)?$`)
 
 func GetPageForURL(u string) (*page.WikipediaPage, error) {
 	if !wikipediaURLRegex.MatchString(u) {
