@@ -138,7 +138,7 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 	}
 
 	for _, quote := range quotes {
-		messages = append(messages, fmt.Sprintf("<%s> %s (added by %s %s)", style.Bold(style.Italics(quote.Author)), style.Italics(quote.Quote), quote.QuotedBy, elapse.PastTimeDescription(quote.QuotedAt)))
+		messages = append(messages, fmt.Sprintf("<%s> %s (%s, added by %s)", style.Bold(style.Italics(quote.Author)), style.Italics(quote.Quote), elapse.PastTimeDescription(quote.QuotedAt), quote.QuotedBy))
 	}
 
 	c.SendMessages(e, e.ReplyTarget(), messages)
