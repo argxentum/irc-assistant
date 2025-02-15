@@ -41,7 +41,7 @@ func (c *CurrencyCommand) Description() string {
 }
 
 func (c *CurrencyCommand) Triggers() []string {
-	return []string{"currency", "convert"}
+	return []string{"currency", "exchange"}
 }
 
 func (c *CurrencyCommand) Usages() []string {
