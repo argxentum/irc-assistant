@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -70,7 +71,10 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 
 	messages := []string{
 		fmt.Sprintf("%s • %s", style.Underline(style.Bold(page.Title)), description),
-		fmt.Sprintf(page.URL),
+	}
+
+	if u, err := url.QueryUnescape(page.URL); err == nil {
+		messages = append(messages, u)
 	}
 
 	c.SendMessages(e, e.ReplyTarget(), messages)
