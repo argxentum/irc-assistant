@@ -18,7 +18,7 @@ type QuoteAddCommand struct {
 	*commandStub
 }
 
-func NewQuoteCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
+func NewQuoteAddCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
 	return &QuoteAddCommand{
 		commandStub: defaultCommandStub(ctx, cfg, ircs),
 	}

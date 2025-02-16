@@ -104,9 +104,9 @@ func (c *QuotesSearchCommand) Execute(e *irc.Event) {
 
 	if len(quotes) == 0 {
 		if len(author) > 0 && len(content) > 0 {
-			c.Replyf(e, "No quotes found for %s matching %s.", style.Bold(author), style.Bold(content))
+			c.Replyf(e, "No quotes found from %s matching %s.", style.Bold(author), style.Bold(content))
 		} else if len(author) > 0 {
-			c.Replyf(e, "No quotes found for %s.", style.Bold(author))
+			c.Replyf(e, "No quotes found from %s.", style.Bold(author))
 		} else if len(content) > 0 {
 			c.Replyf(e, "No quotes found matching %s.", style.Bold(content))
 		} else {
