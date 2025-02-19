@@ -31,6 +31,7 @@ const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.15
 const pauseDisinfoMultiplier = 2.5
 const pauseShowWarningAfter = 2
+const disinfoKickThreshold = 3
 
 type summary struct {
 	messages []string
@@ -143,6 +144,10 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				p.disinfoCount++
 			}
 			updatePause(e, p)
+			if p.disinfoCount >= disinfoKickThreshold {
+				c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
+				return
+			}
 			if p.ignoreCount > pauseShowWarningAfter {
 				c.Replyf(e, "%s Slow down, please. I've paused summarizing your links for %s.", "\U0001F975", elapse.FutureTimeDescriptionConcise(p.timeoutAt))
 			}
@@ -286,6 +291,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 			p.disinfoCount++
 		}
 		updatePause(e, p)
+		if p.disinfoCount >= disinfoKickThreshold {
+			c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
+			return
+		}
 		c.userPauses[e.From+"@"+target] = p
 	}
 
