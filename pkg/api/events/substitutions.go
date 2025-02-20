@@ -1,5 +1,9 @@
 package events
 
 var substitutions = map[string]string{
-	".grab": "!quote",
+	".grabrandom": "!quoter",
+	".grabsearch": "!quotes by:",
+	".grabr":      "!quoter",
+	".grabs":      "!quotes by:",
+	".grab":       "!quote",
 }
