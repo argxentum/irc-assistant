@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -83,6 +84,47 @@ func (c *TempBanCommand) Execute(e *irc.Event) {
 				c.Replyf(e, "User %s not found", style.Bold(nick))
 				return
 			}
+
+			// get requested user by nick
+			u, err := repository.GetUserByNick(e, channel, nick, true)
+			if err != nil {
+				logger.Errorf(e, "error retrieving user by nick, %s", err)
+				return
+			}
+
+			if u == nil {
+				logger.Errorf(e, "user %s not found by nick", nick)
+				return
+			}
+
+			users := make([]*models.User, 0)
+			users = append(users, u)
+
+			// get all users with the same host
+			if len(u.Host) > 0 {
+				hus, err := repository.GetUsersByHost(e, channel, user.Mask.Host)
+				if err != nil {
+					logger.Errorf(e, "error getting users by host: %v", err)
+					return
+				}
+
+				for _, hu := range hus {
+					users = append(users, hu)
+				}
+			}
+
+			go func() {
+				//mute and remove auto-voice from all users
+				for _, u := range users {
+					c.irc.Mute(channel, u.Nick)
+
+					u.IsAutoVoiced = false
+					if err = repository.UpdateUserIsAutoVoiced(e, channel, u); err != nil {
+						logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
+					}
+					logger.Debugf(e, "removed auto-voice from user %s", u.Nick)
+				}
+			}()
 
 			if len(reason) == 0 {
 				reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationDescription(duration))
