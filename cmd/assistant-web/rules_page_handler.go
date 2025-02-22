@@ -6,7 +6,7 @@ import (
 )
 
 func (s *server) rulesPageHandler(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("/templates/rules.html")
+	t, err := template.ParseFiles("cmd/assistant-web/templates/rules.html")
 	if err != nil {
 		http.Error(w, "error parsing template", http.StatusInternalServerError)
 		return
