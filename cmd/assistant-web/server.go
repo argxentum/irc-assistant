@@ -28,7 +28,7 @@ func (s *server) start() {
 	http.HandleFunc("/gif/{q}", s.giphySearchHandler)
 
 	// page routes
-	http.HandleFunc("/rules", s.rulesPageHandler)
+	http.HandleFunc("/about", s.aboutPageHandler)
 
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }
