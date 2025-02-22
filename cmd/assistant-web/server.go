@@ -14,6 +14,8 @@ type server struct {
 	cfg *config.Config
 }
 
+var templatesRoot = "cmd/assistant-web/templates"
+
 func (s *server) start() {
 	logger := log.Logger()
 	logger.Rawf(log.Info, "starting %s on :%d", s.cfg.Web.ExternalRootURL, s.cfg.Web.Port)
