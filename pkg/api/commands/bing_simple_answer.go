@@ -75,7 +75,9 @@ func (c *BingSimpleAnswerCommand) Execute(e *irc.Event) {
 	}
 	query := url.QueryEscape(c.query)
 	if len(input) > 0 {
-		query = url.QueryEscape(fmt.Sprintf(c.query, input))
+		if strings.Contains(c.query, "%s") {
+			query = url.QueryEscape(fmt.Sprintf(c.query, input))
+		}
 	}
 
 	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), 3000)

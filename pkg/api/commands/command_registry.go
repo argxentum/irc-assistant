@@ -134,7 +134,7 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s <location>"},
 		"Displays the date and time of the given location.",
 		"time", "current date and time in %s",
-		"%s: %s on %s",
+		"%s: %s",
 		"",
 		1,
 	)
