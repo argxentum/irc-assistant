@@ -116,6 +116,25 @@ func DecrementUserKarma(e *irc.Event, u *models.User) error {
 	return fs.UpdateUser(e.ReplyTarget(), u, map[string]interface{}{"karma": u.Karma, "updated_at": time.Now()})
 }
 
+func GetMostRecentUserKarmaHistoryFromSender(e *irc.Event, channel, recipient, sender string) (*models.KarmaHistory, error) {
+	kh, err := firestore.Get().KarmaHistory(channel, recipient)
+	if err != nil {
+		return nil, err
+	}
+
+	if kh == nil {
+		return nil, nil
+	}
+
+	for _, h := range kh {
+		if h.From == sender {
+			return h, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func AddUserKarmaHistory(e *irc.Event, channel, from, to, operation, reason string) (int, error) {
 	u, err := GetUserByNick(nil, channel, to, true)
 	if err != nil {

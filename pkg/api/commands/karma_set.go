@@ -10,11 +10,14 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const KarmaSetCommandName = "karmaSet"
 
 const maxKarmaReasonLength = 128
+const karmaCooldownMinutes = 5
+const karmaCooldownInterval = karmaCooldownMinutes * time.Minute
 
 type KarmaSetCommand struct {
 	*commandStub
@@ -70,6 +73,18 @@ func (c *KarmaSetCommand) Execute(e *irc.Event) {
 	if strings.ToLower(e.From) == strings.ToLower(to) {
 		logger.Debugf(e, "cannot update own karma: %s", e.Message())
 		c.Replyf(e, "You cannot update your own karma.")
+		return
+	}
+
+	pkh, err := repository.GetMostRecentUserKarmaHistoryFromSender(e, e.ReplyTarget(), to, e.From)
+	if err != nil {
+		logger.Errorf(e, "error getting karma: %s", err)
+		return
+	}
+
+	if pkh != nil && pkh.CreatedAt.Add(karmaCooldownInterval).After(time.Now()) {
+		// enforce 5 minute cooldown
+		c.Replyf(e, "Sorry, but karma updates are limited to once every %d minutes for a given recipient.", karmaCooldownMinutes)
 		return
 	}
 
