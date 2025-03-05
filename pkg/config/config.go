@@ -15,6 +15,7 @@ type Config struct {
 	Commands    CommandsConfig
 	Ignore      IgnoreConfig
 	Giphy       GiphyConfig
+	Imgflip     ImgflipConfig
 }
 
 type IRCConfig struct {
@@ -108,6 +109,11 @@ type IgnoreConfig struct {
 
 type GiphyConfig struct {
 	APIKey string `yaml:"api_key"`
+}
+
+type ImgflipConfig struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type QueueConfig struct {

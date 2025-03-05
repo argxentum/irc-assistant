@@ -95,6 +95,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[NoteAddCommandName] = NewNoteAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[NoteDeleteCommandName] = NewNoteDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[NotesSearchCommandName] = NewNotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[MemeCommandName] = NewMemeCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,
