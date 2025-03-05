@@ -42,7 +42,7 @@ func (c *MemeCommand) Triggers() []string {
 }
 
 func (c *MemeCommand) Usages() []string {
-	return []string{"%s <meme> top:<text> [bottom:<text>]"}
+	return []string{"%s <meme> text:<title> [text:<subtitle>]"}
 }
 
 func (c *MemeCommand) AllowedInPrivateMessages() bool {
@@ -75,7 +75,7 @@ type captionImageResponse struct {
 	} `json:"data"`
 }
 
-var memeRegex = regexp.MustCompile(`^(.*?)\s*(?:top|t|upper|u|t1):(.*?)(?:\s*(?:bottom|b|bot|lower|l|t2):(.*))?$`)
+var memeRegex = regexp.MustCompile(`^(.*?)\s*(?:text|t|t1|top):(.*?)(?:\s*(?:text|t|t2|bottom|b):(.*))?$`)
 
 func (c *MemeCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
@@ -200,7 +200,7 @@ type memeSearchResult struct {
 
 func rankMemeResults(in []meme, keywords []string) (*meme, error) {
 	topMatches := make([]meme, 0)
-	all := append(allTime, in...)
+	all := append(popular, in...)
 
 	sr := make([]memeSearchResult, 0)
 	for _, m := range all {
@@ -245,7 +245,7 @@ func rankMemeResults(in []meme, keywords []string) (*meme, error) {
 }
 
 // https://imgflip.com/popular-meme-ids
-var allTime = []meme{
+var popular = []meme{
 	{ID: "181913649", Name: "Drake Hotline Bling"},
 	{ID: "112126428", Name: "Distracted Boyfriend"},
 	{ID: "87743020", Name: "Two Buttons"},
