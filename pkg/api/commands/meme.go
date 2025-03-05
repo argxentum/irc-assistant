@@ -42,7 +42,7 @@ func (c *MemeCommand) Triggers() []string {
 }
 
 func (c *MemeCommand) Usages() []string {
-	return []string{"%s <meme> text:<title> [text:<subtitle>]"}
+	return []string{"%s <meme> t:<text> [t:<text>...]"}
 }
 
 func (c *MemeCommand) AllowedInPrivateMessages() bool {
@@ -75,7 +75,9 @@ type captionImageResponse struct {
 	} `json:"data"`
 }
 
-var memeRegex = regexp.MustCompile(`^(.*?)\s*(?:text|t|t1|top):(.*?)(?:\s*(?:text|t|t2|bottom|b):(.*))?$`)
+var textLabels = []string{"text", "t", "label", "l"}
+var textLabelsPattern = strings.Join(textLabels, "|")
+var textParamRegex = regexp.MustCompile(fmt.Sprintf(`((?:%s):.*?)$`, textLabelsPattern))
 
 func (c *MemeCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
@@ -83,21 +85,34 @@ func (c *MemeCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.TrimSpace(strings.TrimPrefix(e.Message(), tokens[0]))
 
-	matches := memeRegex.FindStringSubmatch(input)
-	if matches == nil || len(matches) < 3 {
-		logger.Debugf(e, "invalid syntax, matches: %v", matches)
-		usage := fmt.Sprintf(c.Usages()[0], c.Triggers()[0])
-		c.Replyf(e, "Invalid syntax, usage: %s", style.Italics(usage))
+	textParamMatches := textParamRegex.FindStringSubmatch(input)
+	if textParamMatches == nil || len(textParamMatches) < 2 {
+		c.Replyf(e, "Invalid syntax, usage: %s", style.Italics(fmt.Sprintf(c.Usages()[0], c.Triggers()[0])))
 		return
 	}
 
-	query := strings.TrimSpace(strings.ToLower(matches[1]))
-	queryTokens := strings.Split(query, " ")
-	top := matches[2]
-	bottom := ""
-	if len(matches) > 3 {
-		bottom = matches[3]
+	textParamInput := textParamMatches[1]
+	textParamTokens := strings.Split(textParamInput, " ")
+	labels := make([]string, 0)
+	for _, token := range textParamTokens {
+		isNewLabel := false
+		for _, tl := range textLabels {
+			if strings.HasPrefix(token, tl+":") {
+				isNewLabel = true
+				labels = append(labels, strings.TrimPrefix(token, tl+":"))
+				break
+			}
+		}
+
+		if isNewLabel {
+			continue
+		}
+
+		labels[len(labels)-1] = labels[len(labels)-1] + " " + token
 	}
+
+	query := strings.TrimSpace(strings.TrimSuffix(input, textParamMatches[0]))
+	queryTokens := strings.Split(query, " ")
 
 	sres, err := http.Get("https://api.imgflip.com/get_memes")
 	if err != nil {
@@ -149,8 +164,10 @@ func (c *MemeCommand) Execute(e *irc.Event) {
 	sd.Set("template_id", m.ID)
 	sd.Set("username", c.cfg.Imgflip.Username)
 	sd.Set("password", c.cfg.Imgflip.Password)
-	sd.Set("text0", top)
-	sd.Set("text1", bottom)
+
+	for i, l := range labels {
+		sd.Set(fmt.Sprintf("boxes[%d][text]", i), l)
+	}
 
 	creq, err := http.NewRequest(http.MethodPost, "https://api.imgflip.com/caption_image", strings.NewReader(sd.Encode()))
 	if err != nil {
@@ -320,6 +337,7 @@ var popular = []meme{
 	{ID: "99683372", Name: "Sleeping Shaq"},
 	{ID: "61516", Name: "Philosoraptor"},
 	{ID: "100947", Name: "Matrix Morpheus"},
+	{ID: "100947", Name: "What If I Told You"},
 	{ID: "259237855", Name: "Laughing Leo"},
 	{ID: "14230520", Name: "Black Girl Wat"},
 	{ID: "132769734", Name: "Hard To Swallow Pills"},
@@ -346,4 +364,5 @@ var popular = []meme{
 	{ID: "766986", Name: "Aaaaand Its Gone"},
 	{ID: "444501", Name: "Maury Lie Detector"},
 	{ID: "100955", Name: "Confession Bear"},
+	{ID: "442575", Name: "Ain't Nobody Got Time"},
 }
