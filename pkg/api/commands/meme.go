@@ -75,7 +75,7 @@ type captionImageResponse struct {
 	} `json:"data"`
 }
 
-var memeRegex = regexp.MustCompile(`^(.*?)\s*(?:top|t|upper):(.*?)(?:\s*(?:bottom|b|bot|lower):(.*))?$`)
+var memeRegex = regexp.MustCompile(`^(.*?)\s*(?:top|t|upper|u|t1):(.*?)(?:\s*(?:bottom|b|bot|lower|l|t2):(.*))?$`)
 
 func (c *MemeCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
