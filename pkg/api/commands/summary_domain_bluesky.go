@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var blueskyAuthorRegex = regexp.MustCompile(`^(.*?)\s*\(@(.*?)\)$`)
+var blueskyAuthorRegex = regexp.MustCompile(`^(?:(.*?)\s*\(@(.*?)\)|@(.*?))$`)
 
 func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error) {
 	params := retriever.DefaultParams(url)
@@ -76,9 +76,14 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 	messages = append(messages, content)
 
 	m := blueskyAuthorRegex.FindStringSubmatch(title)
-	if len(m) > 2 {
+	if len(m) > 3 {
 		author := m[1]
-		authorHandle := m[2]
+		authorHandlePrimary := m[2]
+		authorHandleSecondary := m[3]
+		authorHandle := authorHandlePrimary
+		if len(authorHandle) == 0 {
+			authorHandle = authorHandleSecondary
+		}
 
 		authorSource, err := repository.FindSource(author)
 		if err != nil {
