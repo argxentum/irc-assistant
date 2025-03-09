@@ -114,5 +114,5 @@ func (c *EnableCommand) Execute(e *irc.Event) {
 		processed = append(processed, cmd)
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Enabled: %s", style.Bold(strings.Join(processed, ", "))))
+	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Enabled %s in %s", style.Bold(strings.Join(processed, ", ")), style.Bold(channel)))
 }
