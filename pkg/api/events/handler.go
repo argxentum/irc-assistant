@@ -85,10 +85,20 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 func (eh *handler) Handle(e *irc.Event) {
 	logger := log.Logger()
 	logger.Default(e, e.Raw)
+	isPrivate := e.IsPrivateMessage()
 
 	if len(e.Arguments) > 0 {
-		for k, v := range substitutions {
-			e.Arguments[len(e.Arguments)-1] = strings.Replace(e.Arguments[len(e.Arguments)-1], k, v, 1)
+		substitutions := false
+		tokens := commands.Tokens(e.Arguments[len(e.Arguments)-1])
+		for i, a := range tokens {
+			if v, ok := silentSubstitutions[a]; ok {
+				substitutions = true
+				logger.Debugf(e, "substituting %s with %s", a, v)
+				tokens[i] = v
+			}
+		}
+		if substitutions {
+			e.Arguments[len(e.Arguments)-1] = strings.Join(tokens, " ")
 		}
 	}
 
@@ -102,7 +112,6 @@ func (eh *handler) Handle(e *irc.Event) {
 		}
 	case irc.CodePrivateMessage:
 		tokens := commands.Tokens(e.Message())
-		isPrivate := e.IsPrivateMessage()
 
 		if eh.isTemporarilyIgnoredUser(e) {
 			logger.Debugf(e, "ignoring message from temporarily ignored user %s", e.Source)
