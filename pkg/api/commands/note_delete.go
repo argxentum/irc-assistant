@@ -9,7 +9,7 @@ import (
 	"assistant/pkg/log"
 )
 
-const NoteDeleteCommandName = "note_delete"
+const NoteDeleteCommandName = "delete_note"
 
 type NoteDeleteCommand struct {
 	*commandStub

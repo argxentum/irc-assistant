@@ -14,7 +14,7 @@ import (
 	"unicode"
 )
 
-const SourceAddCommandName = "source_add"
+const SourceAddCommandName = "add_source"
 
 type SourceAddCommand struct {
 	*commandStub

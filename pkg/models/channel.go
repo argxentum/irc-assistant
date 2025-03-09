@@ -10,6 +10,7 @@ import (
 type Channel struct {
 	Name                      string                     `firestore:"name" json:"name"`
 	AutoVoiced                []string                   `firestore:"auto_voiced" json:"auto_voiced"`
+	DisabledCommands          []string                   `firestore:"disabled_commands" json:"disabled_commands"`
 	VoiceRequests             []VoiceRequest             `firestore:"voice_requests" json:"voice_requests"`
 	IntroMessages             []string                   `firestore:"intro_messages" json:"intro_messages"`
 	VoiceRequestNotifications []VoiceRequestNotification `firestore:"voice_request_notifications" json:"voice_request_notifications"`
@@ -55,6 +56,7 @@ func NewChannel(name string, inactivityDuration string) *Channel {
 	return &Channel{
 		Name:               name,
 		AutoVoiced:         []string{},
+		DisabledCommands:   make([]string, 0),
 		InactivityDuration: inactivityDuration,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),

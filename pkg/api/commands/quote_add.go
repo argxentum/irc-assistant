@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const QuoteAddCommandName = "quote_add"
+const QuoteAddCommandName = "add_quote"
 
 type QuoteAddCommand struct {
 	*commandStub

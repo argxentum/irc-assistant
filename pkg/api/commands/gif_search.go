@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const GIFSearchCommandName = "gifSearch"
+const GIFSearchCommandName = "gif_search"
 
 type GIFSearchCommand struct {
 	*commandStub

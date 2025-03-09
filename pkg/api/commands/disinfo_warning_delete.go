@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const DisinfoWarningDeleteCommandName = "disinfoWarningDelete"
+const DisinfoWarningDeleteCommandName = "delete_disinfo_warning"
 
 type DisinfoWarningDeleteCommand struct {
 	*commandStub

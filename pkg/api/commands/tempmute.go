@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const TempMuteCommandName = "tempmute"
+const TempMuteCommandName = "temp_mute"
 
 type TempMuteCommand struct {
 	*commandStub

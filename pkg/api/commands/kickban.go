@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const KickBanCommandName = "kickban"
+const KickBanCommandName = "kick_ban"
 
 type KickBanCommand struct {
 	*commandStub

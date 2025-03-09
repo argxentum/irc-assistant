@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const TempBanCommandName = "tempban"
+const TempBanCommandName = "temp_ban"
 
 type TempBanCommand struct {
 	*commandStub

@@ -13,7 +13,7 @@ import (
 	"math/rand/v2"
 )
 
-const KarmaGetCommandName = "karmaGet"
+const KarmaGetCommandName = "karma"
 
 type KarmaGetCommand struct {
 	*commandStub

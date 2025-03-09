@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const QuotesSearchCommandName = "quotes_search"
+const QuotesSearchCommandName = "search_quotes"
 const maxResults = 3
 
 type QuotesSearchCommand struct {

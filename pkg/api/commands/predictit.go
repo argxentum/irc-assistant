@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const PredictItCommandName = "predictIt"
+const PredictItCommandName = "predict_it"
 
 const predictItSearchBaseURL = "https://www.predictit.org/api/Browse/Search"
 const predictItMarketURL = "https://www.predictit.org/api/marketdata/markets/%d"

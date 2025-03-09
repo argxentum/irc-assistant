@@ -89,6 +89,18 @@ func UpdateChannelAutoVoiced(e *irc.Event, ch *models.Channel) error {
 	return nil
 }
 
+func UpdateChannelDisabledCommands(e *irc.Event, ch *models.Channel) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if err := fs.UpdateChannel(ch.Name, map[string]any{"disabled_commands": ch.DisabledCommands, "updated_at": time.Now()}); err != nil {
+		logger.Errorf(e, "error updating channel, %s", err)
+		return err
+	}
+
+	return nil
+}
+
 func VoiceRequestExistsForNick(e *irc.Event, ch *models.Channel, nick string) bool {
 	if ch.VoiceRequests == nil || len(ch.VoiceRequests) == 0 {
 		return false

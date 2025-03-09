@@ -65,8 +65,15 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 		}
 	}
 
+	channelDisabled := make([]string, 0)
+	if !e.IsPrivateMessage() {
+		if ch, _ := repository.GetChannel(e, e.ReplyTarget()); ch != nil {
+			channelDisabled = ch.DisabledCommands
+		}
+	}
+
 	for _, f := range eh.registry.CommandsSortedForProcessing() {
-		if f.CanExecute(e) {
+		if !slices.Contains(channelDisabled, f.Name()) && f.CanExecute(e) {
 			eh.updateUserCommandHistory(e)
 			return f
 		}

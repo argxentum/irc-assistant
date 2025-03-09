@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const VoiceRequestManagementCommandName = "voice_request_management"
+const VoiceRequestManagementCommandName = "voice_request_manage"
 const maxVoiceRequestsToShow = 10
 
 type VoiceRequestManagementCommand struct {

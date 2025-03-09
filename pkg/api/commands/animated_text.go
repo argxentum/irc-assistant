@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const AnimatedTextCommandName = "animatedText"
+const AnimatedTextCommandName = "animated_text"
 
 type AnimatedTextCommand struct {
 	*commandStub

@@ -81,8 +81,8 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[MarketsCommandName] = NewMarketsCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[StockCommandName] = NewStockCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[CurrencyCommandName] = NewCurrencyCommand(cr.ctx, cr.cfg, cr.irc)
-	//cr.commands[KarmaSetCommandName] = NewKarmaSetCommand(cr.ctx, cr.cfg, cr.irc)
-	//cr.commands[KarmaGetCommandName] = NewKarmaGetCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[KarmaSetCommandName] = NewKarmaSetCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[KarmaGetCommandName] = NewKarmaGetCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ReminderCommandName] = NewReminderCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[RemindersCommandName] = NewRemindersCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[AnimatedTextCommandName] = NewAnimatedTextCommand(cr.ctx, cr.cfg, cr.irc)
@@ -153,6 +153,8 @@ func (cr *commandRegistry) RegisterCommands() {
 	)
 
 	// commands requiring authorization
+	cr.commands[EnableCommandName] = NewEnableCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[DisableCommandName] = NewDisableCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SourceAddCommandName] = NewSourceAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[EchoCommandName] = NewEchoCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SayCommandName] = NewSayCommand(cr.ctx, cr.cfg, cr.irc)

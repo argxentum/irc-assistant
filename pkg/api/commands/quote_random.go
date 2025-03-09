@@ -12,7 +12,7 @@ import (
 	"math/rand"
 )
 
-const QuoteRandomCommandName = "quote_rand"
+const QuoteRandomCommandName = "random_quote"
 
 type QuoteRandomCommand struct {
 	*commandStub

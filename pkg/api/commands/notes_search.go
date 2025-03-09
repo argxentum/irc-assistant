@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-const NotesSearchCommandName = "notes_search"
+const NotesSearchCommandName = "search_notes"
 const maxNotesToShow = 3
 const noteMaxLength = 300
 const noteListingContentLength = 64

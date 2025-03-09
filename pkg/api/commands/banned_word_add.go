@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const BannedWordAddCommandName = "bannedWordAdd"
+const BannedWordAddCommandName = "add_banned_word"
 
 type BannedWordAddCommand struct {
 	*commandStub

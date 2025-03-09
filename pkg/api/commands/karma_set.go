@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const KarmaSetCommandName = "karmaSet"
+const KarmaSetCommandName = "set_karma"
 
 const maxKarmaReasonLength = 128
 const karmaCooldownMinutes = 5
