@@ -112,5 +112,7 @@ func (c *DisableCommand) Execute(e *irc.Event) {
 		processed = append(processed, cmd)
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Disabled %s in %s", style.Bold(strings.Join(processed, ", ")), style.Bold(channel)))
+	if len(processed) > 0 {
+		c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Disabled %s in %s", style.Bold(strings.Join(processed, ", ")), style.Bold(channel)))
+	}
 }
