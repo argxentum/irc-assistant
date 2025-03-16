@@ -13,6 +13,7 @@ import (
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -207,6 +208,10 @@ func processNotifyVoiceRequests(irc irc.IRC, task *models.Task) error {
 	return nil
 }
 
+const inactivityPostsBuffer = 3
+
+var previousInactivityPostURLs = make([]string, 0)
+
 func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
 	fs := firestore.Get()
@@ -214,7 +219,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 
 	switch task.ID {
 	case models.ChannelInactivityTaskID:
-		posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts)
+		posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts+inactivityPostsBuffer)
 		if err != nil {
 			logger.Errorf(nil, "error getting subreddit category posts, %s", err)
 			return err
@@ -235,18 +240,24 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			return nil
 		}
 
-		message := fmt.Sprintf("🕑 %s of inactivity detected, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+		message := fmt.Sprintf("🕑 %s of inactivity, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		if len(posts) > 1 {
-			message = fmt.Sprintf("🕑 %s of inactivity detected, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+			message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 		}
 		irc.SendMessage(channelName, message)
 
 		time.Sleep(1 * time.Second)
 
 		for i, post := range posts {
+			if slices.Contains(previousInactivityPostURLs, post.Post.URL) {
+				logger.Debugf(nil, "skipping duplicate post %s", post.Post.URL)
+				continue
+			}
+
 			messages := make([]string, 0)
 			messages = append(messages, post.Post.FormattedTitle())
 			messages = append(messages, post.Post.URL)
+			previousInactivityPostURLs = append(previousInactivityPostURLs, post.Post.URL)
 
 			if post.Comment != nil {
 				messages = append(messages, post.Comment.FormattedBody())
@@ -263,6 +274,10 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 
 			irc.SendMessages(channelName, messages)
 			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
+
+			if i+1 == cfg.IRC.Inactivity.Posts {
+				break
+			}
 
 			if i < len(posts)-1 {
 				time.Sleep(3 * time.Second)
