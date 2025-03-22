@@ -275,7 +275,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			irc.SendMessages(channelName, messages)
 			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
 
-			if i+1 == cfg.IRC.Inactivity.Posts {
+			if i+1 >= cfg.IRC.Inactivity.Posts {
 				break
 			}
 
