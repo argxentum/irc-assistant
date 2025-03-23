@@ -240,20 +240,32 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			return nil
 		}
 
-		message := fmt.Sprintf("🕑 %s of inactivity, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
-		if len(posts) > 1 {
-			message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Posts, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
-		}
-		irc.SendMessage(channelName, message)
-
-		time.Sleep(1 * time.Second)
-
-		for i, post := range posts {
+		filteredPosts := make([]reddit.PostWithTopComment, 0)
+		for _, post := range posts {
 			if slices.Contains(previousInactivityPostURLs, post.Post.URL) {
 				logger.Debugf(nil, "skipping duplicate post %s", post.Post.URL)
 				continue
 			}
 
+			filteredPosts = append(filteredPosts, post)
+			if len(filteredPosts) == cfg.IRC.Inactivity.Posts {
+				break
+			}
+		}
+
+		if len(filteredPosts) == 0 {
+			logger.Debugf(nil, "no inactivity posts found for channel %s matching filter requirements", channelName)
+			return nil
+		}
+
+		message := fmt.Sprintf("🕑 %s of inactivity, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+		if len(filteredPosts) > 1 {
+			message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), len(filteredPosts), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+		}
+		irc.SendMessage(channelName, message)
+		time.Sleep(1 * time.Second)
+
+		for i, post := range filteredPosts {
 			messages := make([]string, 0)
 			messages = append(messages, post.Post.FormattedTitle())
 			messages = append(messages, post.Post.URL)
@@ -275,11 +287,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			irc.SendMessages(channelName, messages)
 			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
 
-			if i+1 >= cfg.IRC.Inactivity.Posts {
-				break
-			}
-
-			if i < len(posts)-1 {
+			if i < len(filteredPosts)-1 {
 				time.Sleep(3 * time.Second)
 			}
 		}
