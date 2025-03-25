@@ -137,7 +137,7 @@ func (c *MarketsCommand) retrieveMarketDataMarketSummary(e *irc.Event, region st
 			message += " | "
 		}
 
-		message += fmt.Sprintf("%s: %s %s", style.Bold(fmt.Sprintf("%s (%s)", name, symbol)), style.Underline(fmt.Sprintf("%.02f", price)), styledChange)
+		message += fmt.Sprintf("%s (%s): %s %s", style.Bold(name), symbol, style.Underline(fmt.Sprintf("%.02f", price)), styledChange)
 	}
 
 	return message
