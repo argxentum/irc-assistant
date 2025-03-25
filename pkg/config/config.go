@@ -20,6 +20,7 @@ type Config struct {
 	Finage       APIKeyConfig
 	Finnhub      APIKeyConfig
 	Polygon      APIKeyConfig
+	MarketData   APIKeyConfig `yaml:"market_data"`
 }
 
 type IRCConfig struct {
