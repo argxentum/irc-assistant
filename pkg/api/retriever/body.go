@@ -3,8 +3,10 @@ package retriever
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/log"
+	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -38,11 +40,28 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 	}
 
 	if params.Impersonate {
-		logger.Debugf(e, "adding impersonation request headers")
 		headers := RandomHeaderSet()
 		for k, v := range headers {
 			req.Header.Set(k, v)
 		}
+
+		msg := ""
+		keys := make([]string, 0)
+		for k := range req.Header {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			for _, v := range req.Header[k] {
+				if len(msg) > 0 {
+					msg += ", "
+				}
+				msg += fmt.Sprintf("%v: %v", k, v)
+			}
+		}
+
+		logger.Debugf(e, "added impersonation request headers: [%v]", msg)
 	}
 
 	success := false

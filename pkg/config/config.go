@@ -6,16 +6,20 @@ import (
 )
 
 type Config struct {
-	IRC         IRCConfig
-	Web         WebConfig
-	Queue       QueueConfig
-	Reddit      RedditConfig
-	GoogleCloud GoogleCloudConfig `yaml:"google_cloud"`
-	Currency    CurrencyConfig
-	Commands    CommandsConfig
-	Ignore      IgnoreConfig
-	Giphy       GiphyConfig
-	Imgflip     ImgflipConfig
+	IRC          IRCConfig
+	Web          WebConfig
+	Queue        QueueConfig
+	Reddit       RedditConfig
+	GoogleCloud  GoogleCloudConfig `yaml:"google_cloud"`
+	Currency     APIKeyConfig
+	Commands     CommandsConfig
+	Ignore       IgnoreConfig
+	Giphy        APIKeyConfig
+	Imgflip      ImgflipConfig
+	Alphavantage APIKeyConfig
+	Finage       APIKeyConfig
+	Finnhub      APIKeyConfig
+	Polygon      APIKeyConfig
 }
 
 type IRCConfig struct {
@@ -93,7 +97,7 @@ type GoogleCloudConfig struct {
 	ServiceAccountFilename string `yaml:"service_account_filename"`
 }
 
-type CurrencyConfig struct {
+type APIKeyConfig struct {
 	APIKey string `yaml:"api_key"`
 }
 
@@ -105,10 +109,6 @@ type IgnoreConfig struct {
 	Users         []string
 	Domains       []string
 	TitlePrefixes []string `yaml:"title_prefixes"`
-}
-
-type GiphyConfig struct {
-	APIKey string `yaml:"api_key"`
 }
 
 type ImgflipConfig struct {
