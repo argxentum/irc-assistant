@@ -127,9 +127,9 @@ func (c *MarketsCommand) retrieveMarketDataMarketSummary(e *irc.Event, region st
 		}
 
 		styledChange := fmt.Sprintf("%.02f", change)
-		if change < 0 {
+		if change < 0.01 {
 			styledChange = style.ColorForeground(fmt.Sprintf("▼ %.02f (%.02f%%)", change, changePercent), style.ColorRed)
-		} else if change > 0 {
+		} else if change > 0.01 {
 			styledChange = style.ColorForeground(fmt.Sprintf("▲ %.02f (%.02f%%)", change, changePercent), style.ColorGreen)
 		}
 
