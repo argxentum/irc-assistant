@@ -91,10 +91,11 @@ func (c *MarketsCommand) retrieveMarketDataMarketSummary(e *irc.Event, region st
 	logger := log.Logger()
 	region = strings.TrimSpace(strings.ToUpper(region))
 
-	indices := map[string]string{"DJI": "Dow Jones Industrial Average", "IXIC": "NASDAQ", "SPX": "S&P 500", "VIX": "VIX"}
+	symbols := []string{"DJI", "IXIC", "SPX", "VIX"}
+	names := map[string]string{"DJI": "Dow Jones Industrial Average", "IXIC": "NASDAQ", "SPX": "S&P 500", "VIX": "VIX"}
 	summaries := make([]*marketDataSummary, 0)
 
-	for symbol, _ := range indices {
+	for _, symbol := range symbols {
 		mr, err := c.retrieveSummary(e, symbol)
 		if err != nil {
 			logger.Warningf(e, "unable to retrieve stock market information for %s: %v", symbol, err)
@@ -116,10 +117,10 @@ func (c *MarketsCommand) retrieveMarketDataMarketSummary(e *irc.Event, region st
 
 	for _, s := range summaries {
 		symbol := s.Symbol[0]
-		name := indices[symbol]
+		name := names[symbol]
 		price := s.LastPrice[0]
 		change := s.Change[0]
-		changePercent := s.ChangePercent[0]
+		changePercent := 100.0 * s.ChangePercent[0]
 
 		if len(symbol) == 0 {
 			logger.Warningf(e, "skipping invalid stock market information: %s %.02f %.02f", symbol, price, change)
@@ -127,10 +128,18 @@ func (c *MarketsCommand) retrieveMarketDataMarketSummary(e *irc.Event, region st
 		}
 
 		styledChange := fmt.Sprintf("%.02f", change)
-		if change < 0.01 {
-			styledChange = style.ColorForeground(fmt.Sprintf("▼ %.02f (%.02f%%)", change, changePercent), style.ColorRed)
-		} else if change > 0.01 {
-			styledChange = style.ColorForeground(fmt.Sprintf("▲ %.02f (%.02f%%)", change, changePercent), style.ColorGreen)
+		if change < 0 {
+			if changePercent <= -0.01 {
+				styledChange = style.ColorForeground(fmt.Sprintf("▼ %.02f (%.02f%%)", change, changePercent), style.ColorRed)
+			} else {
+				styledChange = style.ColorForeground(fmt.Sprintf("▼ %.02f", change), style.ColorRed)
+			}
+		} else if change > 0 {
+			if changePercent >= 0.01 {
+				styledChange = style.ColorForeground(fmt.Sprintf("▲ %.02f (%.02f%%)", change, changePercent), style.ColorGreen)
+			} else {
+				styledChange = style.ColorForeground(fmt.Sprintf("▲ %.02f", change), style.ColorGreen)
+			}
 		}
 
 		if len(message) > 0 {
