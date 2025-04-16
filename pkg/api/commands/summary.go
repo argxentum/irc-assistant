@@ -59,6 +59,10 @@ func (s *summary) addMessage(message string) {
 	s.messages = append(s.messages, message)
 }
 
+func (s *summary) addMessages(messages ...string) {
+	s.messages = append(s.messages, messages...)
+}
+
 type SummaryCommand struct {
 	*commandStub
 	bodyRetriever retriever.BodyRetriever

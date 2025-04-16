@@ -125,31 +125,31 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 		return nil, fmt.Errorf("bing search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Find("ol#b_results li h2").First().Text())
+	cTitle := strings.TrimSpace(doc.Find("ol#b_results li h2").First().Text())
 	link := strings.TrimSpace(doc.Find("ol#b_results li h2 a").First().AttrOr("href", ""))
 	site := strings.TrimSpace(doc.Find("ol#b_results li div.tptt").First().Text())
 
-	if len(title) == 0 || len(link) == 0 {
-		logger.Debugf(e, "empty bing search results for %s, title: %s, link: %s", input, title, link)
+	if len(cTitle) == 0 || len(link) == 0 {
+		logger.Debugf(e, "empty bing search results for %s, title: %s, link: %s", input, cTitle, link)
 		return nil, errors.New("empty bing search results data")
 	}
 
-	s := createSummary()
+	title := ""
 
-	if len(title) > 0 && len(site) > 0 {
-		if text.MostlyContains(title, site, 0.9) {
-			if len(title) > len(site) {
-				s.addMessage(style.Bold(title))
+	if len(cTitle) > 0 && len(site) > 0 {
+		if text.MostlyContains(cTitle, site, 0.9) {
+			if len(cTitle) > len(site) {
+				title = style.Bold(cTitle)
 			} else {
-				s.addMessage(style.Bold(site))
+				title = style.Bold(site)
 			}
 		} else {
-			s.addMessage(fmt.Sprintf("%s • %s", style.Bold(title), site))
+			title = fmt.Sprintf("%s • %s", style.Bold(cTitle), site)
 		}
 	} else if len(site) > 0 {
-		s.addMessage(site)
-	} else if len(title) > 0 {
-		s.addMessage(title)
+		title = style.Bold(site)
+	} else if len(cTitle) > 0 {
+		title = style.Bold(cTitle)
 	} else {
 		return nil, summaryTooShortError
 	}
@@ -158,9 +158,7 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 		return nil, summaryTooShortError
 	}
 
-	s.addMessage(link)
-
-	return s, nil
+	return createSearchResultSummary(e, title, link), nil
 }
 
 var searchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
@@ -202,7 +200,7 @@ func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 		return nil, summaryTooShortError
 	}
 
-	return createSummary(style.Bold(title), link), nil
+	return createSearchResultSummary(e, style.Bold(title), link), nil
 }
 
 func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, error) {
@@ -229,5 +227,24 @@ func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, e
 		return nil, summaryTooShortError
 	}
 
-	return createSummary(style.Bold(title), link), nil
+	return createSearchResultSummary(e, style.Bold(title), link), nil
+}
+
+func createSearchResultSummary(e *irc.Event, title, url string) *summary {
+	s := createSummary()
+
+	if sc := registry.Command(SummaryCommandName); sc != nil {
+		dsc := sc.(*SummaryCommand)
+		if ds, err := dsc.domainSummary(e, url); ds != nil && err == nil {
+			s.addMessages(ds.messages...)
+		}
+	}
+
+	if len(s.messages) == 0 {
+		s.addMessage(title)
+	}
+
+	s.addMessage(url)
+
+	return s
 }
