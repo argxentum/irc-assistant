@@ -129,12 +129,16 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	dis := false
+	if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
+		dis = true
+		logger.Debugf(e, "URL is possible disinformation: %s", url)
+	}
+
 	if !e.IsPrivateMessage() && p != nil {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
-			dis := channel != nil && channel.Summarization.IsPossibleDisinformation(url)
 			if dis {
-				logger.Debugf(e, "URL is possible disinformation: %s", url)
 				c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
 			}
 
@@ -144,7 +148,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				p.disinfoCount++
 			}
 			updatePause(e, p)
-			if p.disinfoCount >= disinfoKickThreshold {
+			if dis && p.disinfoCount >= disinfoKickThreshold {
 				c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
 				return
 			}
@@ -181,10 +185,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
 
-			dis := false
-			if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
-				dis = true
-				logger.Debugf(e, "URL is possible disinformation: %s", url)
+			if dis {
 				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
 			}
 			c.completeSummary(e, url, e.ReplyTarget(), ds.messages, dis, p)
@@ -221,7 +222,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
-			c.completeSummary(e, url, e.ReplyTarget(), messages, false, p)
+			c.completeSummary(e, url, e.ReplyTarget(), messages, dis, p)
 			return
 		}
 	}
@@ -234,10 +235,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
-		dis := false
-		if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
-			dis = true
-			logger.Debugf(e, "URL is possible disinformation: %s", url)
+		if dis {
 			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
 		c.completeSummary(e, url, e.ReplyTarget(), s.messages, dis, p)
@@ -291,7 +289,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 			p.disinfoCount++
 		}
 		updatePause(e, p)
-		if p.disinfoCount >= disinfoKickThreshold {
+		if dis && p.disinfoCount >= disinfoKickThreshold {
 			c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
 			return
 		}
