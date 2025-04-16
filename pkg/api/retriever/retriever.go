@@ -58,19 +58,19 @@ var headerSets = []map[string]string{
 		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
 		"Accept-Language": "en-US,en;q=0.9",
 	},
-	//{
-	//	"User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-	//	"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-	//	"Accept-Language":           "en-US,en;q=0.9",
-	//	"Cookie":                    "MUID=17487EC1D02B66F71ED86B78D11F6764; MUIDB=17487EC1D02B66F71ED86B78D11F6764; _EDGE_S=F=1&SID=343961E3431468C313ED745A422069F1; _EDGE_V=1; SRCHD=AF=NOFORM; SRCHUID=V=2&GUID=7CEB4E628FEE4938BCA767E361ACADD8&dmnchg=1; SRCHUSR=DOB=20250324; _SS=SID=343961E3431468C313ED745A422069F1; ak_bmsc=5C12A21850150D7CA36EE3E4BD0ADB1A~000000000000000000000000000000~YAAQCajOFw/lHKqVAQAACi17yhuUMb80e4F2Es+NOo89hsGywq6tMkiibL7LJU3ePgwQzzzIECVZTsLybCCLmkvCkwITIZjVBfulzDAyvtJLbxKe0aKmVHhlJimN/EF3i0TqiHC2yKuDHA/JQYQgycnM3k+iKqa5pZnr7lTYXKqhpPKERY/sUZ95g3I+xR0uDeCTLe0y3H0UjayUN/z2QyWtVcsJ9auyyLJtMdwFHiYSI+j61MkQ0CasvaQtJ2XY0ZN9L5LRM2evjJFlbC8KFt2BWqi6frL5lRBbZSoQkO6AOpKEstNSnI70tmofmpqa+bohBVurbFIjp3NVOXbcsS2OAuxUJFaQQtfgJsVowJY+xqrj5BEe0dkQ+f81YQ==; SRCHHPGUSR=SRCHLANG=en&IG=026F74EF480F4457A9CF099DA04EA89F; bm_sv=05279D4C2401A6EA4B61FB7F51729605~YAAQG6jOF6jdBqiVAQAAG9KlyhsJCYgcb2KZCxMyrB/GU5OZuXA7OIH2vApvs2qX6vDzhaKZjEingtYLCJb9g2MVcCuPrjjQc5PZIQxA501WcH20ZkmFLa4zp+ec6hVjhAtgmTeFladuSW54S6J9GMs+wP0pL5ZII6ovLse/TFh6KACZ+pyRx6hY2InjEbiGOXXcvLTw2J1WWSgNxF8rB3sbG8UDMC5h7gx6sIun+5BAiq+AR7jfWyLzijTxkA==~1",
-	//	"Dnt":                       "1",
-	//	"Priority":                  "u=0, i",
-	//	"Sec-Fetch-Dest":            "document",
-	//	"Sec-Fetch-Mode":            "navigate",
-	//	"Sec-Fetch-Site":            "none",
-	//	"Sec-Fetch-User":            "?1",
-	//	"Upgrade-Insecure-Requests": "1",
-	//},
+	{
+		"User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+		"Accept-Language":           "en-US,en;q=0.9",
+		"Cookie":                    "MUID=17487EC1D02B66F71ED86B78D11F6764; MUIDB=17487EC1D02B66F71ED86B78D11F6764; _EDGE_S=F=1&SID=343961E3431468C313ED745A422069F1; _EDGE_V=1; SRCHD=AF=NOFORM; SRCHUID=V=2&GUID=7CEB4E628FEE4938BCA767E361ACADD8&dmnchg=1; SRCHUSR=DOB=20250324; _SS=SID=343961E3431468C313ED745A422069F1; ak_bmsc=5C12A21850150D7CA36EE3E4BD0ADB1A~000000000000000000000000000000~YAAQCajOFw/lHKqVAQAACi17yhuUMb80e4F2Es+NOo89hsGywq6tMkiibL7LJU3ePgwQzzzIECVZTsLybCCLmkvCkwITIZjVBfulzDAyvtJLbxKe0aKmVHhlJimN/EF3i0TqiHC2yKuDHA/JQYQgycnM3k+iKqa5pZnr7lTYXKqhpPKERY/sUZ95g3I+xR0uDeCTLe0y3H0UjayUN/z2QyWtVcsJ9auyyLJtMdwFHiYSI+j61MkQ0CasvaQtJ2XY0ZN9L5LRM2evjJFlbC8KFt2BWqi6frL5lRBbZSoQkO6AOpKEstNSnI70tmofmpqa+bohBVurbFIjp3NVOXbcsS2OAuxUJFaQQtfgJsVowJY+xqrj5BEe0dkQ+f81YQ==; SRCHHPGUSR=SRCHLANG=en&IG=026F74EF480F4457A9CF099DA04EA89F; bm_sv=05279D4C2401A6EA4B61FB7F51729605~YAAQG6jOF6jdBqiVAQAAG9KlyhsJCYgcb2KZCxMyrB/GU5OZuXA7OIH2vApvs2qX6vDzhaKZjEingtYLCJb9g2MVcCuPrjjQc5PZIQxA501WcH20ZkmFLa4zp+ec6hVjhAtgmTeFladuSW54S6J9GMs+wP0pL5ZII6ovLse/TFh6KACZ+pyRx6hY2InjEbiGOXXcvLTw2J1WWSgNxF8rB3sbG8UDMC5h7gx6sIun+5BAiq+AR7jfWyLzijTxkA==~1",
+		"Dnt":                       "1",
+		"Priority":                  "u=0, i",
+		"Sec-Fetch-Dest":            "document",
+		"Sec-Fetch-Mode":            "navigate",
+		"Sec-Fetch-Site":            "none",
+		"Sec-Fetch-User":            "?1",
+		"Upgrade-Insecure-Requests": "1",
+	},
 }
 
 var allowedContentTypePrefixes = []string{
