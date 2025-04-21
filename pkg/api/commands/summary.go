@@ -30,7 +30,7 @@ const startPauseTimeoutSeconds = 20
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.05
 const pauseDisinfoMultiplier = 2.5
-const pauseShowWarningAfter = 2
+const pauseShowWarningAfter = 5
 const disinfoKickThreshold = 3
 
 type summary struct {
