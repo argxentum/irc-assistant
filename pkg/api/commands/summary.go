@@ -46,21 +46,33 @@ type UserPause struct {
 	ignoreCount  int
 }
 
-func createSummary(message ...string) *summary {
+func createSummary(messages ...string) *summary {
 	m := make([]string, 0)
-	if len(message) > 0 {
-		m = append(m, message...)
+	for i := 0; i < len(messages); i++ {
+		messages[i] = html.UnescapeString(messages[i])
+		if len(messages[i]) > 0 {
+			m = append(m, messages[i])
+		}
 	}
 
 	return &summary{messages: m}
 }
 
 func (s *summary) addMessage(message string) {
-	s.messages = append(s.messages, message)
+	s.messages = append(s.messages, html.UnescapeString(message))
 }
 
 func (s *summary) addMessages(messages ...string) {
-	s.messages = append(s.messages, messages...)
+	m := make([]string, 0)
+	for i := 0; i < len(messages); i++ {
+		messages[i] = html.UnescapeString(messages[i])
+		if len(messages[i]) > 0 {
+			m = append(m, messages[i])
+		}
+	}
+	if len(m) > 0 {
+		s.messages = append(s.messages, m...)
+	}
 }
 
 type SummaryCommand struct {
