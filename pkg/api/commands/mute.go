@@ -26,11 +26,11 @@ func (c *MuteCommand) Name() string {
 }
 
 func (c *MuteCommand) Description() string {
-	return "Mutes the specified user in the channel."
+	return "Mutes the specified user in the channel and removes auto-voice, if applicable."
 }
 
 func (c *MuteCommand) Triggers() []string {
-	return []string{"mute", "m"}
+	return []string{"mute", "m", "uv"}
 }
 
 func (c *MuteCommand) Usages() []string {
