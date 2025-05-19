@@ -170,6 +170,25 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 
 func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summary, error) {
 	logger := log.Logger()
+
+	if reddit.IsJWTExpired(c.ctx.Session().Reddit.JWT) {
+		logger.Debug(e, "reddit JWT token expired, logging in")
+		result, err := reddit.Login(c.cfg.Reddit.Username, c.cfg.Reddit.Password)
+		if err != nil {
+			logger.Errorf(e, "error logging into reddit: %s", err)
+			return nil, err
+		}
+
+		if result == nil {
+			logger.Errorf(e, "unable to login to reddit")
+			return nil, err
+		}
+
+		c.ctx.Session().Reddit.JWT = result.JWT
+		c.ctx.Session().Reddit.Modhash = result.Modhash
+		c.ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
+	}
+
 	logger.Infof(e, "reddit media request for %s", url)
 
 	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
