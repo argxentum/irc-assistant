@@ -1,12 +1,9 @@
 package commands
 
 import (
-	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
-	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"bytes"
@@ -16,12 +13,10 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 )
 
-const redditBaseURL = "https://www.reddit.com"
+const redditWebURL = "https://www.reddit.com"
 
 var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
 var redditMediaPattern = regexp.MustCompile(`https://(?:www\.)?reddit\.com/media\?url=https.+`)
@@ -104,9 +99,58 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 	logger := log.Logger()
 	logger.Infof(e, "reddit shortlink request for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	if reddit.IsJWTExpired(c.ctx.Session().Reddit.JWT) {
+		logger.Debug(e, "reddit JWT token expired, logging in")
+		result, err := reddit.Login(c.cfg.Reddit.Username, c.cfg.Reddit.Password)
+		if err != nil {
+			logger.Errorf(e, "error logging into reddit: %s", err)
+			return nil, err
+		}
+
+		if result == nil {
+			logger.Errorf(e, "unable to login to reddit")
+			return nil, err
+		}
+
+		c.ctx.Session().Reddit.JWT = result.JWT
+		c.ctx.Session().Reddit.Modhash = result.Modhash
+		c.ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
+	}
+
+	logger.Infof(e, "reddit media request for %s", url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		logger.Debugf(e, "unable to retrieve reddit shortlink for %s: %s", url, err)
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: c.ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Debugf(nil, "error fetching %s, %s", url, err)
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, errors.New("no response")
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Debugf(e, "unable to read reddit media link for %s: %s", url, err)
+		return nil, err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		logger.Debugf(e, "unable to retrieve reddit media link for %s: %s", url, err)
 		return nil, err
 	}
 
@@ -115,61 +159,11 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 		return nil, fmt.Errorf("reddit shortlink doc nil")
 	}
 
+	// <shreddit-post permalink="/r/Weird/comments/1kqbrm3/my_right_hand_randomly_turned_orangish_brown_in/" ... >
 	post := doc.Find("shreddit-post").First()
-	title := strings.TrimSpace(post.AttrOr("post-title", ""))
-	author := strings.TrimSpace(post.AttrOr("author", ""))
-	link := strings.TrimSpace(post.AttrOr("content-href", ""))
-	subreddit := strings.TrimSpace(post.AttrOr("subreddit-prefixed-name", ""))
-	created := strings.TrimSpace(post.AttrOr("created-timestamp", ""))
+	permalink := strings.TrimSpace(post.AttrOr("permalink", ""))
 
-	var createdAt time.Time
-	if len(created) > 0 {
-		createdAt, err = time.Parse("2006-01-02T15:04:05+0000", created)
-		if err != nil {
-			logger.Debugf(e, "unable to parse created timestamp: %s", err)
-		}
-	}
-
-	comments := 0
-	comments, err = strconv.Atoi(strings.TrimSpace(post.AttrOr("comment-count", "")))
-	if err != nil {
-		logger.Debugf(e, "unable to parse comment count: %s", err)
-	}
-
-	score := 0
-	score, err = strconv.Atoi(strings.TrimSpace(post.AttrOr("score", "")))
-	if err != nil {
-		logger.Debugf(e, "unable to parse score: %s", err)
-	}
-
-	if len(title) == 0 {
-		logger.Debugf(e, "reddit shortlink title empty")
-		return nil, summaryTooShortError
-	}
-
-	if len(link) == 0 {
-		logger.Debugf(e, "reddit shortlink link empty")
-		return nil, summaryTooShortError
-	}
-
-	created = ""
-	if !createdAt.IsZero() {
-		created = fmt.Sprintf(" %s", elapse.TimeDescription(createdAt))
-	}
-
-	messages := make([]string, 0)
-	messages = append(messages, fmt.Sprintf("%s (Posted%s in %s by u/%s • %s points and %s comments)", style.Bold(strings.TrimSpace(title)), created, subreddit, author, text.DecorateNumberWithCommas(score), text.DecorateNumberWithCommas(comments)))
-
-	source, err := repository.FindSource(link)
-	if err != nil {
-		logger.Errorf(nil, "error finding source, %s", err)
-	}
-
-	if source != nil {
-		messages = append(messages, repository.ShortSourceSummary(source))
-	}
-
-	return createSummary(messages...), nil
+	return c.parseReddit(e, redditWebURL+permalink)
 }
 
 func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summary, error) {
@@ -235,11 +229,11 @@ func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summar
 		return nil, fmt.Errorf("reddit media link doc nil")
 	}
 
-	// <post-bottom-bar permalink="/r/funny/comments/1kpzega/those_rules_seem_awfully_broad/" comment-count="54" source-name="funny" title="Those rules seem awfully broad…">
+	// <post-bottom-bar permalink="/r/funny/comments/1kpzega/those_rules_seem_awfully_broad/" ...>
 	bottomBar := doc.Find("post-bottom-bar").First()
 	permalink := strings.TrimSpace(bottomBar.AttrOr("permalink", ""))
 
-	updatedUrl := redditBaseURL + permalink
+	updatedUrl := redditWebURL + permalink
 	s, err := c.parseReddit(e, updatedUrl)
 	if s != nil {
 		s.addMessage(updatedUrl)
