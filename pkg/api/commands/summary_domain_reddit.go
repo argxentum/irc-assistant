@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const redditAPIBaseURL = "https://api.reddit.com"
+const redditBaseURL = "https://www.reddit.com"
 
 var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
 var redditMediaPattern = regexp.MustCompile(`https://(?:www\.)?reddit\.com/media\?url=https.+`)
@@ -239,5 +239,11 @@ func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summar
 	bottomBar := doc.Find("post-bottom-bar").First()
 	permalink := strings.TrimSpace(bottomBar.AttrOr("permalink", ""))
 
-	return c.parseReddit(e, redditAPIBaseURL+permalink)
+	updatedUrl := redditBaseURL + permalink
+	s, err := c.parseReddit(e, updatedUrl)
+	if s != nil {
+		s.addMessage(updatedUrl)
+	}
+
+	return s, err
 }
