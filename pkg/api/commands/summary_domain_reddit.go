@@ -9,8 +9,12 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -191,7 +195,36 @@ func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summar
 
 	logger.Infof(e, "reddit media request for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
+
+	client := &http.Client{
+		Jar: c.ctx.Session().Reddit.CookieJar,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Debugf(nil, "error fetching %s, %s", url, err)
+		return nil, err
+	}
+
+	if resp == nil {
+		return nil, errors.New("no response")
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Debugf(e, "unable to read reddit media link for %s: %s", url, err)
+		return nil, err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve reddit media link for %s: %s", url, err)
 		return nil, err
