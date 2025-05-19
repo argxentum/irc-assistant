@@ -17,11 +17,18 @@ import (
 	"time"
 )
 
+const redditAPIBaseURL = "https://api.reddit.com"
+
 var redditCompleteDomainPattern = regexp.MustCompile(`https?://((?:.*?\.)?reddit\.com)/`)
+var redditMediaPattern = regexp.MustCompile(`https://(?:www\.)?reddit\.com/media\?url=https.+`)
 
 func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error) {
 	if strings.Contains(url, "/s/") {
 		return c.parseRedditShortlink(e, url)
+	}
+
+	if redditMediaPattern.MatchString(url) {
+		return c.parseRedditMediaLink(e, url)
 	}
 
 	if strings.HasPrefix(url, "https://old.reddit.com/") {
@@ -159,4 +166,26 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 	}
 
 	return createSummary(messages...), nil
+}
+
+func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summary, error) {
+	logger := log.Logger()
+	logger.Infof(e, "reddit media request for %s", url)
+
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	if err != nil {
+		logger.Debugf(e, "unable to retrieve reddit media link for %s: %s", url, err)
+		return nil, err
+	}
+
+	if doc == nil {
+		logger.Debugf(e, "unable to retrieve reddit media link for %s", url)
+		return nil, fmt.Errorf("reddit media link doc nil")
+	}
+
+	// <post-bottom-bar permalink="/r/funny/comments/1kpzega/those_rules_seem_awfully_broad/" comment-count="54" source-name="funny" title="Those rules seem awfully broad…">
+	bottomBar := doc.Find("post-bottom-bar").First()
+	permalink := strings.TrimSpace(bottomBar.AttrOr("permalink", ""))
+
+	return c.parseReddit(e, redditAPIBaseURL+permalink)
 }
