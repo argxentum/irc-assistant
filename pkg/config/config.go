@@ -74,9 +74,10 @@ type ChanServConfig struct {
 }
 
 type PostConnectConfig struct {
-	Code     string
-	Commands []string
-	AutoJoin []string `yaml:"auto_join"`
+	Code      string
+	Commands  []string
+	AutoJoin  []string `yaml:"auto_join"`
+	AutoLeave []string `yaml:"auto_leave"`
 }
 
 type InactivityConfig struct {

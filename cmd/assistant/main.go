@@ -38,7 +38,7 @@ func main() {
 	svc := irc.NewIRC(ctx)
 	err = svc.Connect(cfg, initializeAssistant, func(channel string, mask *irc.Mask) {
 		if mask.Nick == cfg.IRC.Nick {
-			initializeChannel(ctx, cfg, channel)
+			initializeChannel(ctx, cfg, svc, channel)
 		} else {
 			initializeChannelUser(ctx, cfg, svc, channel, mask)
 		}

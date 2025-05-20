@@ -65,8 +65,15 @@ func initializeAssistant(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 	processTasks(ctx, cfg, irc)
 }
 
-func initializeChannel(ctx context.Context, cfg *config.Config, channel string) {
+func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, channel string) {
 	logger := log.Logger()
+
+	if slices.Contains(cfg.IRC.PostConnect.AutoLeave, channel) {
+		logger.Debugf(nil, "channel %s is in auto leave list, leaving...", channel)
+		irc.Part(channel)
+		return
+	}
+
 	fs := firestore.Get()
 	logger.Rawf(log.Debug, "loading banned words for channel %s", channel)
 
