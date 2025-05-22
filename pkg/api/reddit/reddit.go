@@ -107,7 +107,30 @@ func IsJWTExpired(tok string) bool {
 	return time.Now().Unix() > exp.Unix()
 }
 
-func Login(username, password string) (*LoginResult, error) {
+func Login(ctx context.Context, cfg *config.Config) error {
+	logger := log.Logger()
+
+	if IsJWTExpired(ctx.Session().Reddit.JWT) {
+		logger.Debug(nil, "reddit JWT token expired, logging in")
+
+		result, err := login(cfg.Reddit.Username, cfg.Reddit.Password)
+		if err != nil {
+			return fmt.Errorf("error logging into reddit, %s", err)
+		}
+
+		if result == nil {
+			return errors.New("unable to login to reddit")
+		}
+
+		ctx.Session().Reddit.JWT = result.JWT
+		ctx.Session().Reddit.Modhash = result.Modhash
+		ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
+	}
+
+	return nil
+}
+
+func login(username, password string) (*LoginResult, error) {
 	data := url.Values{}
 	data.Set("user", username)
 	data.Set("passwd", password)
@@ -160,29 +183,6 @@ func Login(username, password string) (*LoginResult, error) {
 	return result, nil
 }
 
-func loginIfNeeded(ctx context.Context, cfg *config.Config) error {
-	logger := log.Logger()
-
-	if IsJWTExpired(ctx.Session().Reddit.JWT) {
-		logger.Debug(nil, "reddit JWT token expired, logging in")
-
-		result, err := Login(cfg.Reddit.Username, cfg.Reddit.Password)
-		if err != nil {
-			return fmt.Errorf("error logging into reddit, %s", err)
-		}
-
-		if result == nil {
-			return errors.New("unable to login to reddit")
-		}
-
-		ctx.Session().Reddit.JWT = result.JWT
-		ctx.Session().Reddit.Modhash = result.Modhash
-		ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
-	}
-
-	return nil
-}
-
 const redditBaseURL = "https://api.reddit.com"
 const searchSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
 const searchPostsForURL = "%s/search.json?limit=1&restrict_sr=on&q=url:%s"
@@ -192,7 +192,7 @@ const maxRedditPosts = 5
 
 func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]PostWithTopComment, error) {
 	logger := log.Logger()
-	if err := loginIfNeeded(ctx, cfg); err != nil {
+	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 
@@ -225,7 +225,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	posts := make([]PostWithTopComment, 0)
 	for _, child := range listing.Data.Children {
 		post := child.Data
-		comment, err := getTopComment(ctx, post.Permalink)
+		comment, err := getTopComment(ctx, cfg, post.Permalink)
 		if err != nil {
 			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 		}
@@ -237,7 +237,7 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 
 func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) ([]PostWithTopComment, error) {
 	logger := log.Logger()
-	if err := loginIfNeeded(ctx, cfg); err != nil {
+	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 
@@ -282,7 +282,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 			continue
 		}
 
-		comment, err := getTopComment(ctx, post.Permalink)
+		comment, err := getTopComment(ctx, cfg, post.Permalink)
 		if err != nil {
 			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 		}
@@ -294,7 +294,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 
 func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Config, subreddit, category string, n int) ([]PostWithTopComment, error) {
 	logger := log.Logger()
-	if err := loginIfNeeded(ctx, cfg); err != nil {
+	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 
@@ -344,7 +344,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 			continue
 		}
 
-		comment, err := getTopComment(ctx, post.Permalink)
+		comment, err := getTopComment(ctx, cfg, post.Permalink)
 		if err != nil {
 			logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 		}
@@ -356,7 +356,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 }
 
 func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL string) (*PostWithTopComment, error) {
-	if err := loginIfNeeded(ctx, cfg); err != nil {
+	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 
@@ -400,7 +400,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 	}
 
 	post := listings[0].Data.Children[0].Data
-	comment, err := getTopComment(ctx, post.Permalink)
+	comment, err := getTopComment(ctx, cfg, post.Permalink)
 	if err != nil {
 		logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
 	}
@@ -408,7 +408,11 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 	return &PostWithTopComment{Post: post, Comment: comment}, nil
 }
 
-func getTopComment(ctx context.Context, permalink string) (*Comment, error) {
+func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*Comment, error) {
+	if err := Login(ctx, cfg); err != nil {
+		return nil, err
+	}
+
 	client := &http.Client{
 		Jar: ctx.Session().Reddit.CookieJar,
 	}
