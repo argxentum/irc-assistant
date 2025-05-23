@@ -46,7 +46,7 @@ func (c *ArchiveCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-const submissionURL = "https://archive.today/submit?url=%s"
+const submissionURL = "https://archive.today/submit/?url=%s"
 const shortcutURL = "%s/s/%s"
 
 func (c *ArchiveCommand) Execute(e *irc.Event) {
