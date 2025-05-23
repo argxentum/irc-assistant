@@ -26,6 +26,7 @@ func (s *server) start() {
 	http.HandleFunc("/animated/{text}", s.giphyAnimatedTextHandler)
 	http.HandleFunc("/gifs/{q}", s.giphySearchHandler)
 	http.HandleFunc("/gif/{q}", s.giphySearchHandler)
+	http.HandleFunc("/s/{id}", s.shortcutHandler)
 
 	// page routes
 	http.HandleFunc("/about", s.aboutPageHandler)

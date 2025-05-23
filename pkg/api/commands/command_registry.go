@@ -96,6 +96,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[NoteDeleteCommandName] = NewNoteDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[NotesSearchCommandName] = NewNotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[MemeCommandName] = NewMemeCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[ArchiveCommandName] = NewArchiveCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,
@@ -177,5 +178,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[DisinfoWarningDeleteCommandName] = NewDisinfoWarningDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SleepCommandName] = NewSleepCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[WakeCommandName] = NewWakeCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[ShortcutAddCommandName] = NewShortcutAddCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[ShortcutDeleteCommandName] = NewShortcutDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	//cr.commands[ReconnectCommandName] = NewReconnectCommand(cr.ctx, cr.cfg, cr.irc)
 }

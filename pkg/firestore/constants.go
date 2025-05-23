@@ -11,4 +11,5 @@ const (
 	pathTasks          = "tasks"
 	pathSources        = "sources"
 	pathDisinformation = "disinformation"
+	pathShortcuts      = "shortcuts"
 )
