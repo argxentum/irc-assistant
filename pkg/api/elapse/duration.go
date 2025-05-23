@@ -4,15 +4,45 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
-var timeOffsetRegexp = regexp.MustCompile(`^(\d+(?:\.\d+)?)([a-zA-Z]+)$`)
+var timeOffsetRegexp = regexp.MustCompile(`^\+?(\d+(?:\.\d+)?)([a-zA-Z]+)$`)
+
+func IsDuration(offset string) bool {
+	matches := timeOffsetRegexp.FindStringSubmatch(offset)
+	if len(matches) != 3 {
+		return false
+	}
+
+	quantity, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return false
+	}
+
+	if quantity == 0 {
+		return false
+	}
+
+	unit := strings.ToLower(matches[2])
+
+	supportedUnits := []string{
+		"s", "sec", "secs", "second", "seconds",
+		"m", "min", "mins", "minute", "minutes",
+		"h", "hr", "hrs", "hour", "hours",
+		"d", "day", "days",
+		"w", "week", "weeks",
+		"mo", "mos", "month", "months",
+		"y", "yr", "yrs", "year", "years",
+	}
+
+	return slices.Contains(supportedUnits, unit)
+}
 
 func ParseDuration(offset string) (time.Duration, error) {
-	offset = strings.TrimPrefix(offset, "+")
 	matches := timeOffsetRegexp.FindStringSubmatch(offset)
 	if len(matches) != 3 {
 		return time.Duration(0), fmt.Errorf("invalid duration, %s", offset)
@@ -48,7 +78,6 @@ func ParseDuration(offset string) (time.Duration, error) {
 }
 
 func ParseDurationDescription(offset string) string {
-	offset = strings.TrimPrefix(offset, "+")
 	matches := timeOffsetRegexp.FindStringSubmatch(offset)
 	if len(matches) != 3 {
 		return "invalid duration"

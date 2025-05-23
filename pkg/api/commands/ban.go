@@ -2,9 +2,11 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"strings"
 )
 
 const BanCommandName = "ban"
@@ -24,7 +26,7 @@ func (c *BanCommand) Name() string {
 }
 
 func (c *BanCommand) Description() string {
-	return "Bans the given user mask from the channel."
+	return "Bans the given user mask from the channel. If a duration is specified, it will be a temporary ban; otherwise, the ban is permanent."
 }
 
 func (c *BanCommand) Triggers() []string {
@@ -32,7 +34,7 @@ func (c *BanCommand) Triggers() []string {
 }
 
 func (c *BanCommand) Usages() []string {
-	return []string{"%s <mask>"}
+	return []string{"%s [<duration>] <mask> [<reason>]"}
 }
 
 func (c *BanCommand) AllowedInPrivateMessages() bool {
@@ -44,12 +46,9 @@ func (c *BanCommand) CanExecute(e *irc.Event) bool {
 }
 
 func (c *BanCommand) Execute(e *irc.Event) {
-	tokens := Tokens(e.Message())
-	mask := tokens[1]
-	channel := e.ReplyTarget()
-
 	logger := log.Logger()
-	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, mask)
+	channel := e.ReplyTarget()
+	tokens := Tokens(e.Message())
 
 	c.isBotAuthorizedByChannelStatus(channel, irc.ChannelStatusHalfOperator, func(authorized bool) {
 		if !authorized {
@@ -58,7 +57,41 @@ func (c *BanCommand) Execute(e *irc.Event) {
 			return
 		}
 
-		c.irc.Ban(channel, mask)
-		logger.Infof(e, "banned %s in %s", mask, channel)
+		// check if user is trying to issue a temp ban, which uses the syntax: !ban <duration> <nick> [<reason>]
+		if len(tokens) > 2 && elapse.IsDuration(tokens[1]) {
+			c.authorizer.GetUser(channel, tokens[2], func(user *irc.User) {
+				// check if attempting to permanently ban a user whose nick happens to match the duration pattern
+				if user != nil {
+					registry.Command(TempBanCommandName).Execute(e)
+				} else {
+					c.ban(e, channel, tokens[1])
+				}
+			})
+		} else {
+			mask := tokens[1]
+			c.ban(e, channel, mask)
+		}
 	})
+}
+
+func (c *BanCommand) ban(e *irc.Event, channel, mask string) {
+	logger := log.Logger()
+	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, mask)
+	tokens := Tokens(e.Message())
+
+	// if mask is actually a user nick, also kick if the user is in the channel
+	c.authorizer.GetUser(channel, mask, func(user *irc.User) {
+		reason := ""
+		if len(tokens) > 2 {
+			reason = strings.Join(tokens[2:], " ")
+		}
+
+		if user != nil {
+			c.irc.Kick(channel, mask, reason)
+			logger.Infof(e, "kicked %s from %s: %s", mask, channel, reason)
+		}
+	})
+
+	c.irc.Ban(channel, mask)
+	logger.Infof(e, "banned %s in %s", mask, channel)
 }
