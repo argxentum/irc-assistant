@@ -16,7 +16,7 @@ type EchoCommand struct {
 
 func NewEchoCommand(ctx context.Context, cfg *config.Config, ircSvc irc.IRC) Command {
 	return &EchoCommand{
-		commandStub: newCommandStub(ctx, cfg, ircSvc, RoleAdmin, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircSvc, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 

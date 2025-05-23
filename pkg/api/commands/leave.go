@@ -16,7 +16,7 @@ type LeaveCommand struct {
 
 func NewLeaveCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
 	return &LeaveCommand{
-		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 

@@ -16,7 +16,7 @@ type SayCommand struct {
 
 func NewSayCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
 	return &SayCommand{
-		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 

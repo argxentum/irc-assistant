@@ -67,6 +67,8 @@ func (fs *Firestore) DueTasks() ([]*models.Task, error) {
 
 func (fs *Firestore) taskPath(task *models.Task) string {
 	switch task.Type {
+	case models.TaskTypeReconnect:
+		return fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, task.ID)
 	case models.TaskTypeReminder:
 		data := task.Data.(models.ReminderTaskData)
 		return fmt.Sprintf("%s/%s", fs.tasksPath(data.User, data.Destination, task.Type), task.ID)
@@ -105,13 +107,18 @@ func (fs *Firestore) AddTask(task *models.Task) error {
 	logger := log.Logger()
 
 	path := fs.taskPath(task)
-	scheduled := models.NewScheduledTask(task.ID, path, task.DueAt)
+	scheduled := models.NewScheduledTask(task.ID, task.Type, path, task.DueAt)
 	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, scheduled.ID)
 	logger.Debugf(nil, "creating scheduled task %s: %s", task.Type, scheduledPath)
 
 	if err := create[models.ScheduledTask](fs.ctx, fs.client, scheduledPath, scheduled); err != nil {
 		logger.Warningf(nil, "error creating task, %s", err)
 		return err
+	}
+
+	if path == scheduledPath {
+		logger.Debugf(nil, "scheduled task only: %s", path)
+		return nil
 	}
 
 	logger.Debugf(nil, "creating task %s: %s", task.Type, path)
@@ -135,6 +142,11 @@ func (fs *Firestore) RemoveScheduledTaskAndUpdateTask(task *models.Task) error {
 	if err = remove(fs.ctx, fs.client, scheduledPath); err != nil {
 		logger.Warningf(nil, "error removing scheduled task, %s", err)
 		return err
+	}
+
+	if scheduled.Path == scheduledPath {
+		logger.Debugf(nil, "scheduled task only: %s", scheduledPath)
+		return nil
 	}
 
 	return update(fs.ctx, fs.client, scheduled.Path, map[string]interface{}{"status": task.Status, "runs": task.Runs})

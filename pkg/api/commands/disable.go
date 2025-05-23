@@ -20,7 +20,7 @@ type DisableCommand struct {
 
 func NewDisableCommand(ctx context.Context, cfg *config.Config, ircSvc irc.IRC) Command {
 	return &DisableCommand{
-		commandStub: newCommandStub(ctx, cfg, ircSvc, RoleAdmin, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircSvc, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 

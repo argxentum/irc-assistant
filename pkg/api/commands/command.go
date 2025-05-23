@@ -49,7 +49,7 @@ func newCommandStub(ctx context.Context, cfg *config.Config, ircs irc.IRC, requi
 }
 
 func defaultCommandStub(ctx context.Context, cfg *config.Config, ircs irc.IRC) *commandStub {
-	return newCommandStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNormal)
+	return newCommandStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNone)
 }
 
 func (cs *commandStub) Authorizer() CommandAuthorizer {

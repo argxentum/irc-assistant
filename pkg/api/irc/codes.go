@@ -5,6 +5,8 @@ const (
 	CodeJoin           = "JOIN"
 	CodeInvite         = "INVITE"
 	CodePrivateMessage = "PRIVMSG"
+	CodeQuit           = "QUIT"
+	CodeError          = "ERROR"
 )
 
 const (
@@ -14,4 +16,11 @@ const (
 	CodeEndOfWho   = "315"
 	CodeWhoIsReply = "311"
 	CodeEndOfWhoIs = "318"
+	CodeBanned     = "474"
+)
+
+const (
+	MessageServerShuttingDown = "server shutting down"
+	MessageClosingLink        = "closing link"
+	MessageNetSplit           = "*.net *.split"
 )

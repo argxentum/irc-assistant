@@ -177,4 +177,5 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[DisinfoWarningDeleteCommandName] = NewDisinfoWarningDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SleepCommandName] = NewSleepCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[WakeCommandName] = NewWakeCommand(cr.ctx, cr.cfg, cr.irc)
+	//cr.commands[ReconnectCommandName] = NewReconnectCommand(cr.ctx, cr.cfg, cr.irc)
 }

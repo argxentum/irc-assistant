@@ -15,6 +15,7 @@ const (
 	TaskTypeMuteRemoval         = "mute_removal"
 	TaskTypeNotifyVoiceRequests = "notify_voice_requests"
 	TaskTypePersistentChannel   = "persistent_channel"
+	TaskTypeReconnect           = "reconnect"
 )
 
 const (

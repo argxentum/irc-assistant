@@ -27,7 +27,7 @@ type BingSimpleAnswerCommand struct {
 
 func NewBingSimpleAnswerCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC, triggers []string, usages []string, description, subject, query, reply, footnote string, minTokens int) Command {
 	return &BingSimpleAnswerCommand{
-		commandStub: newCommandStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircs, RoleUnprivileged, irc.ChannelStatusNone),
 		triggers:    triggers,
 		usages:      usages,
 		description: description,

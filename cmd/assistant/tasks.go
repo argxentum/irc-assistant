@@ -29,6 +29,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			var err error
 
 			switch task.Type {
+			case models.TaskTypeReconnect:
+				isScheduledTask = true
+				err = connect(ctx, irc, cfg)
 			case models.TaskTypeReminder:
 				isScheduledTask = true
 				err = processReminder(irc, task)

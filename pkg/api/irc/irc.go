@@ -18,7 +18,7 @@ const (
 	ChannelStatusOperator     ChannelStatus = "@"
 	ChannelStatusHalfOperator ChannelStatus = "%"
 	ChannelStatusVoice        ChannelStatus = "+"
-	ChannelStatusNormal       ChannelStatus = ""
+	ChannelStatusNone         ChannelStatus = ""
 )
 
 type User struct {
@@ -34,7 +34,7 @@ func UserByTrimmingStatusPrefix(u string) *User {
 	} else if strings.HasPrefix(u, string(ChannelStatusVoice)) {
 		return &User{Mask: &Mask{Nick: strings.TrimPrefix(u, string(ChannelStatusVoice))}, Status: ChannelStatusVoice}
 	} else {
-		return &User{Mask: &Mask{Nick: u}, Status: ChannelStatusNormal}
+		return &User{Mask: &Mask{Nick: u}, Status: ChannelStatusNone}
 	}
 }
 
@@ -58,7 +58,7 @@ func IsStatusAtLeast(status, required ChannelStatus) bool {
 		return status == ChannelStatusOperator || status == ChannelStatusHalfOperator
 	case ChannelStatusVoice:
 		return status == ChannelStatusOperator || status == ChannelStatusHalfOperator || status == ChannelStatusVoice
-	case ChannelStatusNormal:
+	case ChannelStatusNone:
 		return true
 	}
 	return false

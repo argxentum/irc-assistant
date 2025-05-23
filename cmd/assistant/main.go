@@ -36,13 +36,7 @@ func main() {
 	defer queue.Get().Close()
 
 	svc := irc.NewIRC(ctx)
-	err = svc.Connect(cfg, initializeAssistant, func(channel string, mask *irc.Mask) {
-		if mask.Nick == cfg.IRC.Nick {
-			initializeChannel(ctx, cfg, svc, channel)
-		} else {
-			initializeChannelUser(ctx, cfg, svc, channel, mask)
-		}
-	})
+	err = connect(ctx, svc, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -55,4 +49,17 @@ func main() {
 		e := <-ech
 		h.Handle(e)
 	}
+}
+
+func connect(ctx context.Context, svc irc.IRC, cfg *config.Config) error {
+	logger := log.Logger()
+	logger.Debug(nil, "processing reconnect task")
+
+	return svc.Connect(cfg, initializeAssistant, func(channel string, mask *irc.Mask) {
+		if mask.Nick == cfg.IRC.Nick {
+			initializeChannel(ctx, cfg, svc, channel)
+		} else {
+			initializeChannelUser(ctx, cfg, svc, channel, mask)
+		}
+	})
 }

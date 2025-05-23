@@ -22,7 +22,7 @@ type SourceAddCommand struct {
 
 func NewSourceAddCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
 	return &SourceAddCommand{
-		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNormal),
+		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 

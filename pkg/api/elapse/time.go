@@ -139,6 +139,9 @@ func FutureTimeDescription(t time.Time) string {
 		if seconds == 1 {
 			return "a second from now"
 		}
+		if seconds == 0 {
+			return "as soon as possible"
+		}
 		return fmt.Sprintf("%d seconds from now", seconds)
 	}
 }
@@ -180,6 +183,9 @@ func FutureTimeDescriptionConcise(t time.Time) string {
 	} else {
 		if seconds == 1 {
 			return "a second"
+		}
+		if seconds == 0 {
+			return "as soon as possible"
 		}
 		return fmt.Sprintf("%d seconds", seconds)
 	}
