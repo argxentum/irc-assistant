@@ -1,30 +1,23 @@
 package commands
 
 import (
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
-	if strings.Contains(url, "/shorts/") {
-		return c.parseYouTubeShort(e, url)
-	} else {
-		return c.parseYouTubeVideo(e, url)
-	}
-}
-
-func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, error) {
 	var ytData struct {
 		EngagementPanels []struct {
 			EngagementPanelSectionListRenderer struct {
@@ -42,7 +35,13 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 										Text string
 									}
 								}
+								Channel struct {
+									SimpleText string
+								}
 								Views struct {
+									SimpleText string
+								}
+								PublishDate struct {
 									SimpleText string
 								}
 							}
@@ -73,31 +72,61 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 		return nil, fmt.Errorf("unable to unmarshal ytInitialData for %s: %s", url, err)
 	}
 
-	if len(ytData.EngagementPanels) < 2 {
-		return nil, fmt.Errorf("unable to parse YouTube short data for %s", url)
-	}
+	title := ""
+	channel := ""
+	views := ""
+	published := ""
+	username := ""
 
-	items := ytData.EngagementPanels[1].EngagementPanelSectionListRenderer.Content.StructuredDescriptionContentRenderer.Items
-	if len(items) == 0 {
-		return nil, fmt.Errorf("no YouTube items found for %s", url)
-	}
+	for _, panel := range ytData.EngagementPanels {
+		if len(panel.EngagementPanelSectionListRenderer.Content.StructuredDescriptionContentRenderer.Items) == 0 {
+			continue
+		}
 
-	title := strings.TrimSpace(items[0].VideoDescriptionHeaderRenderer.Title.Runs[0].Text)
-	views := strings.TrimSpace(items[0].VideoDescriptionHeaderRenderer.Views.SimpleText)
-	views = strings.TrimSuffix(views, " views")
-	author := strings.TrimPrefix(items[0].VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
+		for _, item := range panel.EngagementPanelSectionListRenderer.Content.StructuredDescriptionContentRenderer.Items {
+			if len(item.VideoDescriptionHeaderRenderer.Title.Runs) == 0 {
+				continue
+			}
+
+			title = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Title.Runs[0].Text)
+			channel = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Channel.SimpleText)
+			views = shortenViewCount(strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Views.SimpleText))
+			username = strings.TrimPrefix(item.VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
+
+			p := strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
+			t, err := time.Parse("Jan 2, 2006", p)
+			if err == nil {
+				published = elapse.PastTimeDescription(t)
+			}
+		}
+
+		if len(title) > 0 && len(channel) > 0 {
+			break
+		}
+	}
 
 	messages := make([]string, 0)
-	if len(title) > 0 && len(views) > 0 && len(author) > 0 {
-		messages = append(messages, fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, views))
-	} else if len(title) > 0 && len(views) > 0 {
-		messages = append(messages, fmt.Sprintf("%s • %s views", style.Bold(title), views))
-	} else if len(title) > 0 {
-		messages = append(messages, fmt.Sprintf("%s", style.Bold(title)))
+	message := ""
+	if len(title) > 0 {
+		message = style.Bold(title)
+	} else {
+		return createSummary(), nil
 	}
 
-	if len(author) > 0 {
-		source, err := repository.FindSource(strings.TrimPrefix(author, "@"))
+	if len(channel) > 0 {
+		message += fmt.Sprintf(" • %s", channel)
+	}
+	if len(views) > 0 {
+		message += fmt.Sprintf(" • %s views", views)
+	}
+	if len(published) > 0 {
+		message += fmt.Sprintf(" • %s", published)
+	}
+
+	messages = append(messages, message)
+
+	if len(username) > 0 {
+		source, err := repository.FindSource(strings.TrimPrefix(username, "@"))
 		if err != nil {
 			log.Logger().Errorf(nil, "error finding source, %s", err)
 		}
@@ -110,167 +139,18 @@ func (c *SummaryCommand) parseYouTubeShort(e *irc.Event, url string) (*summary, 
 	return createSummary(messages...), nil
 }
 
-func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, url string) (*summary, error) {
-	var ytData struct {
-		Contents struct {
-			TwoColumnWatchNextResults struct {
-				Results struct {
-					Results struct {
-						Contents []any
-					}
-				}
-			}
-		}
-	}
-
-	var primaryInfo struct {
-		Title struct {
-			Runs []struct {
-				Text string
-			}
-		}
-		ViewCount struct {
-			VideoViewCountRenderer struct {
-				ViewCount struct {
-					SimpleText string
-				}
-				ShortViewCount struct {
-					SimpleText string
-				}
-				ExtraShortViewCount struct {
-					SimpleText string
-				}
-				OriginalViewCount string
-			}
-		}
-	}
-
-	var secondaryInfo struct {
-		Owner struct {
-			VideoOwnerRenderer struct {
-				Title struct {
-					Runs []struct {
-						Text string
-					}
-				}
-				NavigationEndpoint struct {
-					BrowseEndpoint struct {
-						CanonicalBaseUrl string
-					}
-				}
-			}
-		}
-	}
-
-	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+func shortenViewCount(input string) string {
+	views, err := strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(strings.ReplaceAll(input, ",", ""), "views")))
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
-	} else if body == nil {
-		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
+		return input
 	}
 
-	html := string(body)
-	matches := ytInitialDataRegexp.FindStringSubmatch(html)
-	if len(matches) < 2 {
-		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)
+	if views < 1000 {
+		return fmt.Sprintf("%d", views)
+	} else if views < 1000000 {
+		return fmt.Sprintf("%.1fK", float64(views)/1000)
+	} else if views < 1000000000 {
+		return fmt.Sprintf("%.1fM", float64(views)/1000000)
 	}
-
-	err = json.Unmarshal([]byte(matches[1]), &ytData)
-	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal ytInitialData for %s: %s", url, err)
-	}
-
-	ytResults := ytData.Contents.TwoColumnWatchNextResults.Results.Results.Contents
-	if len(ytResults) == 0 {
-		return nil, fmt.Errorf("no YouTube results found for %s", url)
-	}
-
-	title := ""
-	viewCount := ""
-	author := ""
-	authorHandle := ""
-	for _, result := range ytResults {
-		if _, ok := result.(map[string]interface{})["videoPrimaryInfoRenderer"]; ok {
-			j, err := json.Marshal(result.(map[string]interface{})["videoPrimaryInfoRenderer"])
-			if err != nil {
-				continue
-			}
-			err = json.Unmarshal(j, &primaryInfo)
-			if err != nil {
-				continue
-			}
-			titles := primaryInfo.Title.Runs
-			if len(titles) == 0 {
-				continue
-			}
-			title = titles[0].Text
-
-			viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ShortViewCount.SimpleText
-			if len(viewCount) == 0 {
-				viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ExtraShortViewCount.SimpleText
-			}
-			if len(viewCount) == 0 {
-				viewCount = primaryInfo.ViewCount.VideoViewCountRenderer.ViewCount.SimpleText
-			}
-			if len(viewCount) == 0 {
-				n, err := strconv.Atoi(primaryInfo.ViewCount.VideoViewCountRenderer.OriginalViewCount)
-				if err == nil {
-					viewCount = text.DecorateNumberWithCommas(n)
-				}
-			}
-		}
-		if _, ok := result.(map[string]interface{})["videoSecondaryInfoRenderer"]; ok {
-			j, err := json.Marshal(result.(map[string]interface{})["videoSecondaryInfoRenderer"])
-			if err != nil {
-				continue
-			}
-			err = json.Unmarshal(j, &secondaryInfo)
-			if err != nil {
-				continue
-			}
-			authors := secondaryInfo.Owner.VideoOwnerRenderer.Title.Runs
-			if len(authors) == 0 {
-				continue
-			}
-			author = authors[0].Text
-			authorHandle = strings.TrimPrefix(secondaryInfo.Owner.VideoOwnerRenderer.NavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
-		}
-
-		if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-			break
-		}
-	}
-
-	messages := make([]string, 0)
-	viewCount = strings.TrimSuffix(viewCount, " views")
-
-	if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 && len(authorHandle) > 0 {
-		messages = append(messages, fmt.Sprintf("%s • %s (%s) • %s views", style.Bold(title), author, authorHandle, viewCount))
-	} else if len(title) > 0 && len(viewCount) > 0 && len(author) > 0 {
-		messages = append(messages, fmt.Sprintf("%s • %s • %s views", style.Bold(title), author, viewCount))
-	} else if len(title) > 0 && len(viewCount) > 0 {
-		messages = append(messages, fmt.Sprintf("%s • %s views", style.Bold(title), viewCount))
-	} else if len(title) > 0 {
-		messages = append(messages, fmt.Sprintf("%s", style.Bold(title)))
-	}
-
-	if len(author) > 0 {
-		authorSource, err := repository.FindSource(strings.TrimPrefix(author, "@"))
-		if err != nil {
-			log.Logger().Errorf(nil, "error finding source, %s", err)
-		}
-
-		authorHandleSource, err := repository.FindSource(strings.TrimPrefix(authorHandle, "@"))
-		if err != nil {
-			log.Logger().Errorf(nil, "error finding source, %s", err)
-		}
-
-		if authorSource != nil {
-			messages = append(messages, repository.ShortSourceSummary(authorSource))
-		} else if authorHandleSource != nil {
-			messages = append(messages, repository.ShortSourceSummary(authorHandleSource))
-		}
-	}
-
-	return createSummary(messages...), nil
+	return fmt.Sprintf("%.1fB", float64(views)/1000000000)
 }
