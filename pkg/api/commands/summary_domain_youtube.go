@@ -16,6 +16,7 @@ import (
 )
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
+var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
 
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
 	var ytData struct {
@@ -40,6 +41,9 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 								}
 								Views struct {
 									SimpleText string
+									Runs       []struct {
+										Text string
+									}
 								}
 								PublishDate struct {
 									SimpleText string
@@ -90,13 +94,34 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 
 			title = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Title.Runs[0].Text)
 			channel = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Channel.SimpleText)
-			views = shortenViewCount(strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Views.SimpleText))
 			username = strings.TrimPrefix(item.VideoDescriptionHeaderRenderer.ChannelNavigationEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
+
+			views = shortenViewCount(strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Views.SimpleText))
+			if len(views) == 0 {
+				for _, run := range item.VideoDescriptionHeaderRenderer.Views.Runs {
+					if len(views) > 0 {
+						views += " "
+					}
+					views += run.Text
+				}
+
+				views = strings.TrimSpace(views)
+				if len(views) > 0 {
+					m := numberRegexp.FindStringSubmatch(views)
+					if len(m) > 1 {
+						views = strings.Replace(views, m[1], shortenViewCount(m[1]), 1)
+					}
+				}
+			} else {
+				views = views + " views"
+			}
 
 			p := strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
 			t, err := time.Parse("Jan 2, 2006", p)
 			if err == nil {
 				published = elapse.PastTimeDescription(t)
+			} else {
+				published = p
 			}
 		}
 
@@ -117,7 +142,7 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 		message += fmt.Sprintf(" • %s", channel)
 	}
 	if len(views) > 0 {
-		message += fmt.Sprintf(" • %s views", views)
+		message += fmt.Sprintf(" • %s", views)
 	}
 	if len(published) > 0 {
 		message += fmt.Sprintf(" • %s", published)
