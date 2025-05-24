@@ -7,7 +7,6 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
-	"net/url"
 )
 
 const ArchiveCommandName = "archive"
@@ -46,8 +45,6 @@ func (c *ArchiveCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
 
-const submissionURL = "https://archive.today/submit/?url=%s"
-
 func (c *ArchiveCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] ", c.Name(), e.From, e.ReplyTarget())
@@ -60,13 +57,12 @@ func (c *ArchiveCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	redirect := fmt.Sprintf(submissionURL, url.PathEscape(source))
-	s, err := repository.GetOrCreateShortcut(source, redirect)
+	id, err := repository.GetArchiveShortcutID(source)
 	if err != nil {
-		logger.Errorf(e, "failed to create shortcut %s: %v", redirect, err)
+		logger.Errorf(e, "failed to create shortcut %s: %v", source, err)
 		c.Replyf(e, "Sorry, but I can't archive %s", source)
 		return
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL)+s.ID)
+	c.SendMessage(e, e.ReplyTarget(), "\U0001F513 "+fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL)+id)
 }

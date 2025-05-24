@@ -13,6 +13,7 @@ type Source struct {
 	Credibility string    `firestore:"credibility"`
 	Reviews     []string  `firestore:"reviews"`
 	URLs        []string  `firestore:"urls"`
+	Paywall     bool      `firestore:"paywall"`
 	Keywords    []string  `firestore:"keywords"`
 	CreatedAt   time.Time `firestore:"created_at"`
 	UpdatedAt   time.Time `firestore:"updated_at"`

@@ -9,7 +9,9 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"errors"
+	"fmt"
 	"html"
 	"math"
 	"net/http"
@@ -137,6 +139,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	source, err := repository.FindSource(url)
+	if err != nil {
+		logger.Errorf(nil, "error finding source, %s", err)
+	}
+
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
 
 	// prefetch url directly to do an initial check whether the content type is allowed
@@ -204,7 +211,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			if dis {
 				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
 			}
-			c.completeSummary(e, url, e.ReplyTarget(), ds.messages, dis, p)
+			c.completeSummary(e, source, url, e.ReplyTarget(), ds.messages, dis, p)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
 		}
@@ -229,16 +236,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if s != nil {
 			messages := s.messages
 
-			source, err := repository.FindSource(url)
-			if err != nil {
-				logger.Errorf(nil, "error finding source, %s", err)
-			}
-
 			if source != nil {
 				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
-			c.completeSummary(e, url, e.ReplyTarget(), messages, dis, p)
+			c.completeSummary(e, source, url, e.ReplyTarget(), messages, dis, p)
 			return
 		}
 	}
@@ -254,7 +256,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if dis {
 			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
 		}
-		c.completeSummary(e, url, e.ReplyTarget(), s.messages, dis, p)
+		c.completeSummary(e, source, url, e.ReplyTarget(), s.messages, dis, p)
 	}
 }
 
@@ -292,7 +294,7 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
-func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messages []string, dis bool, p *UserPause) {
+func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, url, target string, messages []string, dis bool, p *UserPause) {
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -321,13 +323,15 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, url, target string, messa
 		}
 	}
 
-	source, err := repository.FindSource(url)
-	if err != nil {
-		log.Logger().Errorf(nil, "error finding source, %s", err)
-	}
-
 	if source != nil {
-		unescapedMessages = append(unescapedMessages, repository.ShortSourceSummary(source))
+		sourceSummary := repository.ShortSourceSummary(source)
+		if source.Paywall && c.isRootDomainIn(url, source.URLs) {
+			id, err := repository.GetArchiveShortcutID(url)
+			if err == nil && len(id) > 0 {
+				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
+			}
+		}
+		unescapedMessages = append(unescapedMessages, sourceSummary)
 	}
 
 	c.SendMessages(e, target, unescapedMessages)

@@ -58,7 +58,7 @@ func (c *ShortcutAddCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	s, err := repository.GetOrCreateShortcut(url, url)
+	s, err := repository.GetShortcut(url, url)
 	if err != nil {
 		logger.Errorf(e, "failed to create shortcut %s: %v", url, err)
 		c.Replyf(e, "Failed to create shortcut for %s", url)
