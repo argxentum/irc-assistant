@@ -5,10 +5,10 @@ import (
 	"assistant/pkg/models"
 )
 
-func GetOrCreateShortcut(url string) (*models.Shortcut, error) {
+func GetOrCreateShortcut(sourceURL, redirectURL string) (*models.Shortcut, error) {
 	fs := firestore.Get()
 
-	shortcut := models.NewShortcut(url)
+	shortcut := models.NewShortcut(sourceURL, redirectURL)
 
 	existing, err := fs.Shortcut(shortcut.ID)
 	if err != nil {
@@ -21,6 +21,21 @@ func GetOrCreateShortcut(url string) (*models.Shortcut, error) {
 	}
 
 	return shortcut, fs.CreateShortcut(shortcut)
+}
+
+func GetShortcutSource(id string) (string, error) {
+	fs := firestore.Get()
+
+	shortcut, err := fs.Shortcut(id)
+	if err != nil {
+		return "", err
+	}
+
+	if shortcut == nil {
+		return "", nil
+	}
+
+	return shortcut.SourceURL, nil
 }
 
 func RemoveShortcut(id string) error {

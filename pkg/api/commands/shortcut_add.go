@@ -58,13 +58,13 @@ func (c *ShortcutAddCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	s, err := repository.GetOrCreateShortcut(url)
+	s, err := repository.GetOrCreateShortcut(url, url)
 	if err != nil {
 		logger.Errorf(e, "failed to create shortcut %s: %v", url, err)
 		c.Replyf(e, "Failed to create shortcut for %s", url)
 		return
 	}
 
-	scu := fmt.Sprintf(shortcutURL, c.cfg.Web.ExternalRootURL, s.ID)
+	scu := fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + s.ID
 	c.SendMessage(e, e.ReplyTarget(), scu)
 }

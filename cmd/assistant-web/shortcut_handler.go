@@ -18,5 +18,5 @@ func (s *server) shortcutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, sc.URL, http.StatusPermanentRedirect)
+	http.Redirect(w, r, sc.RedirectURL, http.StatusPermanentRedirect)
 }

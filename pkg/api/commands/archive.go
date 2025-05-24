@@ -47,27 +47,26 @@ func (c *ArchiveCommand) CanExecute(e *irc.Event) bool {
 }
 
 const submissionURL = "https://archive.today/submit/?url=%s"
-const shortcutURL = "%s/s/%s"
 
 func (c *ArchiveCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] ", c.Name(), e.From, e.ReplyTarget())
 	tokens := Tokens(e.Message())
 
-	input := tokens[1]
-	if !urlRegex.MatchString(input) {
-		logger.Debugf(e, "invalid URL: %s", input)
-		c.Replyf(e, "Sorry, but I can't archive %s", input)
+	source := tokens[1]
+	if !urlRegex.MatchString(source) {
+		logger.Debugf(e, "invalid URL: %s", source)
+		c.Replyf(e, "Sorry, but I can't archive %s", source)
 		return
 	}
 
-	eu := fmt.Sprintf(submissionURL, url.PathEscape(input))
-	s, err := repository.GetOrCreateShortcut(eu)
+	redirect := fmt.Sprintf(submissionURL, url.PathEscape(source))
+	s, err := repository.GetOrCreateShortcut(source, redirect)
 	if err != nil {
-		logger.Errorf(e, "failed to create shortcut %s: %v", eu, err)
-		c.Replyf(e, "Sorry, but I can't archive %s", input)
+		logger.Errorf(e, "failed to create shortcut %s: %v", redirect, err)
+		c.Replyf(e, "Sorry, but I can't archive %s", source)
 		return
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf(shortcutURL, c.cfg.Web.ExternalRootURL, s.ID))
+	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL)+s.ID)
 }

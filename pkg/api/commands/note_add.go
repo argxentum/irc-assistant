@@ -8,7 +8,6 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
-	"regexp"
 	"strings"
 )
 
@@ -47,8 +46,6 @@ func (c *NoteAddCommand) AllowedInPrivateMessages() bool {
 func (c *NoteAddCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 1)
 }
-
-var urlRegex = regexp.MustCompile(`(https?://\S+)`)
 
 func (c *NoteAddCommand) Execute(e *irc.Event) {
 	logger := log.Logger()

@@ -10,13 +10,14 @@ var dsf map[string]func(e *irc.Event, url string) (*summary, error)
 func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
 	if dsf == nil {
 		dsf = map[string]func(e *irc.Event, url string) (*summary, error){
-			"youtube.com":   c.parseYouTube,
-			"youtu.be":      c.parseYouTube,
-			"reddit.com":    c.parseReddit,
-			"twitter.com":   c.parseTwitter,
-			"x.com":         c.parseTwitter,
-			"bsky.app":      c.parseBlueSky,
-			"wikipedia.org": c.parseWikipedia,
+			c.cfg.Web.Domain: c.parseShortcut,
+			"youtube.com":    c.parseYouTube,
+			"youtu.be":       c.parseYouTube,
+			"reddit.com":     c.parseReddit,
+			"twitter.com":    c.parseTwitter,
+			"x.com":          c.parseTwitter,
+			"bsky.app":       c.parseBlueSky,
+			"wikipedia.org":  c.parseWikipedia,
 		}
 	}
 
