@@ -212,6 +212,7 @@ func processNotifyVoiceRequests(irc irc.IRC, task *models.Task) error {
 }
 
 const inactivityPostsBuffer = 3
+const shortcutURLPattern = "%s/s/"
 
 var previousInactivityPostURLs = make([]string, 0)
 
@@ -284,7 +285,12 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			}
 
 			if source != nil {
-				messages = append(messages, repository.ShortSourceSummary(source))
+				sourceSummary := repository.ShortSourceSummary(source)
+				id, err := repository.GetArchiveShortcutID(post.Post.URL)
+				if err == nil && len(id) > 0 {
+					sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, cfg.Web.ExternalRootURL) + id
+				}
+				messages = append(messages, sourceSummary)
 			}
 
 			irc.SendMessages(channelName, messages)
