@@ -60,7 +60,7 @@ func (c *BanCommand) Execute(e *irc.Event) {
 		// check if user is trying to issue a temp ban, which uses the syntax: !ban <duration> <nick> [<reason>]
 		if len(tokens) > 2 && elapse.IsDuration(tokens[1]) {
 			c.authorizer.GetUser(channel, tokens[2], func(user *irc.User) {
-				// check if attempting to permanently ban a user whose nick happens to match the duration pattern
+				// if the second token is a duration and the third token is a user found in the channel, treat as temp ban
 				if user != nil {
 					registry.Command(TempBanCommandName).Execute(e)
 				} else {
@@ -68,8 +68,7 @@ func (c *BanCommand) Execute(e *irc.Event) {
 				}
 			})
 		} else {
-			mask := tokens[1]
-			c.ban(e, channel, mask)
+			c.ban(e, channel, tokens[1])
 		}
 	})
 }

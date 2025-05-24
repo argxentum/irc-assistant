@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
@@ -26,7 +27,7 @@ func (c *MuteCommand) Name() string {
 }
 
 func (c *MuteCommand) Description() string {
-	return "Mutes the specified user in the channel and removes auto-voice, if applicable."
+	return "Mutes the specified user in the channel and removes auto-voice, if applicable. If duration is specified, the user will be temporarily muted for that duration."
 }
 
 func (c *MuteCommand) Triggers() []string {
@@ -34,7 +35,7 @@ func (c *MuteCommand) Triggers() []string {
 }
 
 func (c *MuteCommand) Usages() []string {
-	return []string{"%s <nick>"}
+	return []string{"%s [<duration>] <nick>"}
 }
 
 func (c *MuteCommand) AllowedInPrivateMessages() bool {
@@ -47,9 +48,24 @@ func (c *MuteCommand) CanExecute(e *irc.Event) bool {
 
 func (c *MuteCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
-	nick := tokens[1]
 	channel := e.ReplyTarget()
 
+	// check if user is trying to issue a temp mute, which uses the syntax: !mute <duration> <nick>
+	if len(tokens) > 2 && elapse.IsDuration(tokens[1]) {
+		c.authorizer.GetUser(channel, tokens[2], func(user *irc.User) {
+			// if the second token is a duration and the third token is a user found in the channel, treat as temp mute
+			if user != nil {
+				registry.Command(TempMuteCommandName).Execute(e)
+			} else {
+				c.mute(e, channel, tokens[1])
+			}
+		})
+	} else {
+		c.mute(e, channel, tokens[1])
+	}
+}
+
+func (c *MuteCommand) mute(e *irc.Event, channel, nick string) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
 
