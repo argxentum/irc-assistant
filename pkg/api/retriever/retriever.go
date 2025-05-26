@@ -2,6 +2,7 @@ package retriever
 
 import (
 	"errors"
+	"github.com/bobesa/go-domain-util/domainutil"
 	"io"
 	"math/rand/v2"
 	"net/http"
@@ -50,7 +51,6 @@ type retrieved struct {
 }
 
 var domainRegexp = regexp.MustCompile(`https?://([^/]+)`)
-var rootDomainRegexp = regexp.MustCompile(`https?://.*?([^.]+\.[a-z]+)(?:/|$)`)
 
 var headerSets = []map[string]string{
 	{
@@ -121,11 +121,7 @@ func RandomHeaderSet() map[string]string {
 }
 
 func RootDomain(url string) string {
-	matches := rootDomainRegexp.FindStringSubmatch(url)
-	if len(matches) > 1 {
-		return matches[1]
-	}
-	return url
+	return domainutil.Domain(url)
 }
 
 func Domain(url string) string {
