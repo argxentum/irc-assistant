@@ -435,12 +435,12 @@ func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*
 
 	defer resp.Body.Close()
 
-	if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && detail[1].Data.Children[0].Data.Author == "AutoModerator") {
+	if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && (detail[1].Data.Children[0].Data.Author == "AutoModerator" || detail[1].Data.Children[0].Data.Body == "[deleted]")) {
 		return nil, nil
 	}
 
 	for _, comment := range detail[1].Data.Children {
-		if comment.Data.Author != "AutoModerator" && !comment.Data.IsFromModerator() && len(comment.Data.Body) > 0 {
+		if comment.Data.Author != "AutoModerator" && !comment.Data.IsFromModerator() && comment.Data.Body != "[deleted]" && len(comment.Data.Body) > 0 {
 			return &comment.Data, nil
 		}
 	}
