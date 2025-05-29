@@ -34,6 +34,7 @@ const pauseSummaryMultiplier = 1.025
 const pauseDisinfoMultiplier = 2.5
 const pauseShowWarningAfter = 5
 const disinfoKickThreshold = 3
+const disinfoTempMuteDuration = "5m"
 
 type summary struct {
 	messages []string
@@ -172,7 +173,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 			updatePause(e, p)
 			if dis && p.disinfoCount >= disinfoKickThreshold {
-				c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
+				c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s", disinfoTempMuteDuration, e.From))
 				return
 			}
 			if p.ignoreCount > pauseShowWarningAfter {
@@ -308,7 +309,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 		}
 		updatePause(e, p)
 		if dis && p.disinfoCount >= disinfoKickThreshold {
-			c.irc.Kick(e.ReplyTarget(), e.From, "disinformation threshold reached")
+			c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s", disinfoTempMuteDuration, e.From))
 			return
 		}
 		c.userPauses[e.From+"@"+target] = p

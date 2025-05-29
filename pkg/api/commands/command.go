@@ -175,6 +175,23 @@ func (cs *commandStub) UnauthorizedReply(e *irc.Event) {
 	cs.Replyf(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)))
 }
 
+func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload string) {
+	cmd := registry.Command(command)
+	args := orig.Arguments
+	args[1] = cs.cfg.Commands.Prefix + cmd.Triggers()[0] + " " + payload
+
+	modified := &irc.Event{
+		ID:        orig.ID,
+		Raw:       fmt.Sprintf("%s %s", command, args[1]),
+		Code:      orig.Code,
+		From:      orig.From,
+		Source:    orig.Source,
+		Arguments: args,
+	}
+
+	cmd.Execute(modified)
+}
+
 // Tokens splits the input string into sanitized Tokens
 func Tokens(input string) []string {
 	return strings.Split(text.SanitizeToMaxLength(input, 512), " ")
