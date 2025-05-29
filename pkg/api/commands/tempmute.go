@@ -40,7 +40,7 @@ func (c *TempMuteCommand) Triggers() []string {
 }
 
 func (c *TempMuteCommand) Usages() []string {
-	return []string{"%s <duration> <nick>"}
+	return []string{"%s <duration> <nick> [<reason>]"}
 }
 
 func (c *TempMuteCommand) AllowedInPrivateMessages() bool {
@@ -85,10 +85,9 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 				return
 			}
 
-			if len(reason) == 0 {
-				reason = fmt.Sprintf("temporarily muted for %s", elapse.ParseDurationDescription(duration))
-			} else {
-				reason = fmt.Sprintf("%s - temporarily muted for %s", reason, elapse.ParseDurationDescription(duration))
+			msg := fmt.Sprintf("\U0001F507 Temporarily muting %s for %s", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
+			if len(reason) > 0 {
+				msg = fmt.Sprintf("\U0001F507 Temporarily muting %s for %s: %s", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)), reason)
 			}
 
 			ch, err := repository.GetChannel(e, channel)
@@ -131,7 +130,7 @@ func (c *TempMuteCommand) Execute(e *irc.Event) {
 			}
 
 			go func() {
-				c.Replyf(e, "Temporarily muting %s for %s.", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
+				c.SendMessage(e, e.ReplyTarget(), msg)
 				isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || u.IsAutoVoiced
 
 				//mute and remove auto-voice from all users
