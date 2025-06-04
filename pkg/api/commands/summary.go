@@ -165,7 +165,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	// check for <link rel="canonical" href="...">=
 	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
-	if len(canonicalLink) > 0 && canonicalLink != url {
+	if isValidCanonicalLink(url, canonicalLink) {
 		url = canonicalLink
 		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
 		if err != nil {
@@ -274,6 +274,10 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 		c.completeSummary(e, source, url, e.ReplyTarget(), s.messages, dis, p)
 	}
+}
+
+func isValidCanonicalLink(original, canonical string) bool {
+	return len(canonical) > 0 && canonical != original && strings.HasPrefix(strings.ToLower(canonical), "https://")
 }
 
 func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time.Duration) *UserPause {
