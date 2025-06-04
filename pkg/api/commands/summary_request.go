@@ -18,10 +18,10 @@ func (c *SummaryCommand) requestChain() []func(e *irc.Event, url string) (*summa
 			c.redditRequest,
 			c.directRequest,
 			c.impersonatedRequest,
-			c.nuggetizeRequest,
+			c.startPageRequest,
 			c.duckduckgoRequest,
 			c.bingRequest,
-			c.startPageRequest,
+			c.nuggetizeRequest,
 		}
 	}
 
