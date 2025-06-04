@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-var csf map[string]func(e *irc.Event, url string) (*summary, error)
+var csf map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error)
 
-func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	if csf == nil {
-		csf = map[string]func(e *irc.Event, url string) (*summary, error){
+		csf = map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error){
 			"https://joinmastodon.org/apps": c.parseMastodon,
 		}
 	}
@@ -18,21 +18,12 @@ func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, ur
 	return csf
 }
 
-func (c *SummaryCommand) contentSummary(e *irc.Event, url string) (func(e *irc.Event, url string) (*summary, error), error) {
-	if len(url) == 0 {
+func (c *SummaryCommand) contentSummary(e *irc.Event, doc *retriever.Document) (func(e *irc.Event, doc *retriever.Document) (*summary, error), error) {
+	if doc == nil || doc.Body == nil {
 		return nil, nil
 	}
 
-	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url).WithTimeout(500))
-	if err != nil {
-		return nil, err
-	}
-
-	if body == nil {
-		return nil, nil
-	}
-
-	payload := string(body.Data)
+	payload := string(doc.Body.Data)
 
 	for content, cmd := range c.contentSummarization() {
 		if strings.Contains(payload, content) {

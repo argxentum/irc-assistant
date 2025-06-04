@@ -10,24 +10,9 @@ import (
 	"strings"
 )
 
-func (c *SummaryCommand) directRequest(e *irc.Event, url string) (*summary, error) {
-	return c.request(e, url, false)
-}
-
-func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*summary, error) {
+func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	logger := log.Logger()
-	logger.Infof(e, "request for %s (impersonated: %t)", url, impersonated)
-
-	params := retriever.DefaultParams(url)
-	params.Impersonate = impersonated
-
-	doc, err := c.docRetriever.RetrieveDocument(e, params)
-	if err != nil {
-		return nil, err
-	}
-	if doc == nil {
-		return nil, fmt.Errorf("unable to retrieve %s", url)
-	}
+	logger.Infof(e, "request for %s", doc.URL)
 
 	title := strings.TrimSpace(doc.Root.Find("title").First().Text())
 	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")

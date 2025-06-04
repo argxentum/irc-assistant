@@ -3,12 +3,14 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"errors"
 )
 
-func (c *SummaryCommand) redditRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+	url := doc.URL
 	logger := log.Logger()
 	logger.Infof(e, "reddit request for %s", url)
 

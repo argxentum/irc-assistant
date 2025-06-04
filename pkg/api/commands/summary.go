@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"html"
 	"math"
-	"net/http"
 	"regexp"
 	"slices"
 	"strings"
@@ -147,8 +146,13 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
 
-	// prefetch url directly to do an initial check whether the content type is allowed
-	if isDirectDisallowedContentType(e, url) {
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
+	if err != nil {
+		logger.Debugf(e, "error retrieving document for %s: %v", url, err)
+		return
+	}
+
+	if !retriever.IsContentTypeAllowed(doc.Body.Response.Header.Get("Content-Type")) {
 		logger.Debugf(e, "direct prefetch, disallowed content type for %s", url)
 		return
 	}
@@ -157,6 +161,17 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
 		dis = true
 		logger.Debugf(e, "URL is possible disinformation: %s", url)
+	}
+
+	// check for <link rel="canonical" href="...">=
+	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
+	if len(canonicalLink) > 0 && canonicalLink != url {
+		url = canonicalLink
+		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
+		if err != nil {
+			logger.Debugf(e, "error retrieving canonical document for %s: %v", url, err)
+			return
+		}
 	}
 
 	if !e.IsPrivateMessage() && p != nil {
@@ -219,7 +234,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	cs, err := c.contentSummary(e, url)
+	contentSummarizer, err := c.contentSummary(e, doc)
 	if err != nil {
 		if errors.Is(err, retriever.DisallowedContentTypeError) {
 			logger.Debugf(e, "disallowed content type for %s", url)
@@ -227,10 +242,10 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	if cs != nil {
+	if contentSummarizer != nil {
 		logger.Debugf(e, "performing content summarization for %s", url)
 
-		s, err := cs(e, url)
+		s, err := contentSummarizer(e, doc)
 		if err != nil {
 			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
 		}
@@ -246,7 +261,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	s, err := c.summarize(e, url)
+	s, err := c.summarize(e, doc)
 	if err != nil {
 		logger.Debugf(e, "unable to summarize %s: %s", url, err)
 	}
@@ -259,18 +274,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 		c.completeSummary(e, source, url, e.ReplyTarget(), s.messages, dis, p)
 	}
-}
-
-func isDirectDisallowedContentType(e *irc.Event, url string) bool {
-	logger := log.Logger()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		logger.Debugf(e, "error attempting to get response content type, %s", err)
-		return false
-	}
-
-	return !retriever.IsContentTypeAllowed(resp.Header.Get("Content-Type"))
 }
 
 func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time.Duration) *UserPause {

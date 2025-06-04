@@ -9,7 +9,8 @@ import (
 	"strings"
 )
 
-func (c *SummaryCommand) startPageRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+	url := doc.URL
 	logger := log.Logger()
 	logger.Infof(e, "trying startpage for %s", url)
 
@@ -34,6 +35,10 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, url string) (*summary, e
 	if len(title) == 0 {
 		logger.Debugf(e, "startpage title empty")
 		return nil, summaryTooShortError
+	}
+
+	if c.isRejectedTitle(title) {
+		return nil, fmt.Errorf("rejected title: %s", title)
 	}
 
 	return createSummary(style.Bold(title)), nil

@@ -17,6 +17,7 @@ type DocumentRetriever interface {
 }
 
 type Document struct {
+	URL  string
 	Root *goquery.Document
 	Body *Body
 }
@@ -47,6 +48,7 @@ func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*
 
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body.Data))
 	return &Document{
+		URL:  params.URL,
 		Root: doc,
 		Body: body,
 	}, err

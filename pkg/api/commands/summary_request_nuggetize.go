@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+	url := doc.URL
 	logger := log.Logger()
 	logger.Infof(e, "nuggetize request for %s", url)
 
