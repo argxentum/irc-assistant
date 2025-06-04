@@ -65,7 +65,7 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
 	}
 
-	html := string(body)
+	html := string(body.Data)
 	matches := ytInitialDataRegexp.FindStringSubmatch(html)
 	if len(matches) < 2 {
 		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)

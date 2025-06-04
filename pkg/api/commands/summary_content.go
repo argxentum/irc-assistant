@@ -32,7 +32,7 @@ func (c *SummaryCommand) contentSummary(e *irc.Event, url string) (func(e *irc.E
 		return nil, nil
 	}
 
-	payload := string(body)
+	payload := string(body.Data)
 
 	for content, cmd := range c.contentSummarization() {
 		if strings.Contains(payload, content) {

@@ -87,7 +87,7 @@ func (c *BingSimpleAnswerCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	node := doc.Find("ol#b_results li.b_ans").First()
+	node := doc.Root.Find("ol#b_results li.b_ans").First()
 	label := node.Find("div.b_focusLabel").First().Text()
 	answer1 := node.Find("div.b_focusTextLarge").First().Text()
 	answer2 := node.Find("div.b_focusTextMedium").First().Text()

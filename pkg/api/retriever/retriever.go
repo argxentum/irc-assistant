@@ -50,6 +50,11 @@ func (params RetrievalParams) WithTimeout(timeout time.Duration) RetrievalParams
 	return params
 }
 
+func (params RetrievalParams) WithImpersonation(impersonation bool) RetrievalParams {
+	params.Impersonate = impersonation
+	return params
+}
+
 type retrieved struct {
 	response *http.Response
 	err      error

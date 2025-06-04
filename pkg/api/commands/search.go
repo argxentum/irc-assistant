@@ -125,9 +125,9 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 		return nil, fmt.Errorf("bing search results doc nil")
 	}
 
-	cTitle := strings.TrimSpace(doc.Find("ol#b_results li h2").First().Text())
-	link := strings.TrimSpace(doc.Find("ol#b_results li h2 a").First().AttrOr("href", ""))
-	site := strings.TrimSpace(doc.Find("ol#b_results li div.tptt").First().Text())
+	cTitle := strings.TrimSpace(doc.Root.Find("ol#b_results li h2").First().Text())
+	link := strings.TrimSpace(doc.Root.Find("ol#b_results li h2 a").First().AttrOr("href", ""))
+	site := strings.TrimSpace(doc.Root.Find("ol#b_results li div.tptt").First().Text())
 
 	if len(cTitle) == 0 || len(link) == 0 {
 		logger.Debugf(e, "empty bing search results for %s, title: %s, link: %s", input, cTitle, link)
@@ -180,8 +180,8 @@ func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 		return nil, fmt.Errorf("duckduckgo search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Find("div.result__body h2.result__title").First().Text())
-	linkRaw := strings.TrimSpace(doc.Find("div.result__body h2.result__title a.result__a").First().AttrOr("href", ""))
+	title := strings.TrimSpace(doc.Root.Find("div.result__body h2.result__title").First().Text())
+	linkRaw := strings.TrimSpace(doc.Root.Find("div.result__body h2.result__title a.result__a").First().AttrOr("href", ""))
 
 	match := searchResultURLRegex.FindStringSubmatch(linkRaw)
 	if len(match) < 2 {
@@ -219,8 +219,8 @@ func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, e
 		return nil, fmt.Errorf("startpage search results doc nil")
 	}
 
-	link := doc.Find("section#main a.result-link").First().AttrOr("href", "")
-	title := strings.TrimSpace(doc.Find("section#main h2").First().Text())
+	link := doc.Root.Find("section#main a.result-link").First().AttrOr("href", "")
+	title := strings.TrimSpace(doc.Root.Find("section#main h2").First().Text())
 
 	if len(title) == 0 || len(link) == 0 {
 		logger.Debugf(e, "empty startpage search results for %s", input)

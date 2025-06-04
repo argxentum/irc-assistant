@@ -24,7 +24,7 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, url string) (*summary, 
 		return nil, fmt.Errorf("duckduckgo search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Find("div.result__body").First().Find("h2.result__title").First().Text())
+	title := strings.TrimSpace(doc.Root.Find("div.result__body").First().Find("h2.result__title").First().Text())
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "duckduckgo title contains url: %s", title)

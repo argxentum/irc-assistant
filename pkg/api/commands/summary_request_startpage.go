@@ -24,7 +24,7 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, url string) (*summary, e
 		return nil, fmt.Errorf("startpage search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Find("section#main h2").First().Text())
+	title := strings.TrimSpace(doc.Root.Find("section#main h2").First().Text())
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "startpage title contains url: %s", title)

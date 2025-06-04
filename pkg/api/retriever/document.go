@@ -11,9 +11,14 @@ import (
 )
 
 type DocumentRetriever interface {
-	RetrieveDocument(e *irc.Event, params RetrievalParams) (*goquery.Document, error)
+	RetrieveDocument(e *irc.Event, params RetrievalParams) (*Document, error)
 	RetrieveDocumentSelection(e *irc.Event, params RetrievalParams, selector string) (*goquery.Selection, error)
 	Parse(e *irc.Event, doc *goquery.Document, selectors ...string) []*goquery.Selection
+}
+
+type Document struct {
+	Root *goquery.Document
+	Body *Body
 }
 
 func NewDocumentRetriever(bodyRetriever BodyRetriever) DocumentRetriever {
@@ -31,7 +36,7 @@ type docResult struct {
 	err error
 }
 
-func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*goquery.Document, error) {
+func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*Document, error) {
 	body, err := r.bodyRetriever.RetrieveBody(e, params)
 	if err != nil {
 		return nil, err
@@ -40,7 +45,11 @@ func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*
 		return nil, errors.New("empty body")
 	}
 
-	return goquery.NewDocumentFromReader(bytes.NewReader(body))
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body.Data))
+	return &Document{
+		Root: doc,
+		Body: body,
+	}, err
 }
 
 func (r *docRetriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalParams, selector string) (*goquery.Selection, error) {
@@ -80,7 +89,7 @@ func (r *docRetriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalP
 				return
 			}
 
-			node := doc.Find(selector)
+			node := doc.Root.Find(selector)
 			if node.Nodes == nil {
 				logger.Debugf(e, "no nodes found for selector %s", selector)
 				return

@@ -32,10 +32,10 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 		}
 	}
 
-	atAttr, _ := doc.Find("meta[name='article:published_time']").First().Attr("content")
-	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
+	atAttr, _ := doc.Root.Find("meta[name='article:published_time']").First().Attr("content")
+	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
 	title := strings.TrimSpace(titleAttr)
-	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
+	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
 	description := strings.TrimSpace(descriptionAttr)
 
 	if len(description) > standardMaximumDescriptionLength {
@@ -43,7 +43,7 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 	}
 
 	if len(title) == 0 {
-		title = strings.TrimSpace(doc.Find("title").First().Text())
+		title = strings.TrimSpace(doc.Root.Find("title").First().Text())
 	}
 
 	if c.isRejectedTitle(title) {

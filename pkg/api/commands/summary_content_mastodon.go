@@ -16,18 +16,18 @@ func (c *SummaryCommand) parseMastodon(e *irc.Event, url string) (*summary, erro
 		return nil, err
 	}
 
-	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
+	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
 	title := strings.TrimSpace(titleAttr)
-	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
+	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
 	description := strings.TrimSpace(descriptionAttr)
-	published := doc.Find("meta[property='og:published_time']").First().AttrOr("content", "")
+	published := doc.Root.Find("meta[property='og:published_time']").First().AttrOr("content", "")
 
 	if len(description) > standardMaximumDescriptionLength {
 		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
 	if len(title) == 0 {
-		title = strings.TrimSpace(doc.Find("title").First().Text())
+		title = strings.TrimSpace(doc.Root.Find("title").First().Text())
 	}
 
 	if c.isRejectedTitle(title) {

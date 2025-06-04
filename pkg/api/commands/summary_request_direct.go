@@ -29,12 +29,12 @@ func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 		return nil, fmt.Errorf("unable to retrieve %s", url)
 	}
 
-	title := strings.TrimSpace(doc.Find("title").First().Text())
-	titleAttr, _ := doc.Find("meta[property='og:title']").First().Attr("content")
+	title := strings.TrimSpace(doc.Root.Find("title").First().Text())
+	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
 	titleMeta := strings.TrimSpace(titleAttr)
-	descriptionAttr, _ := doc.Find("html meta[property='og:description']").First().Attr("content")
+	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
 	description := strings.TrimSpace(descriptionAttr)
-	h1 := strings.TrimSpace(doc.Find("html body h1").First().Text())
+	h1 := strings.TrimSpace(doc.Root.Find("html body h1").First().Text())
 
 	if len(description) > standardMaximumDescriptionLength {
 		description = description[:standardMaximumDescriptionLength] + "..."

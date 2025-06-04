@@ -11,7 +11,12 @@ import (
 )
 
 type BodyRetriever interface {
-	RetrieveBody(e *irc.Event, params RetrievalParams) ([]byte, error)
+	RetrieveBody(e *irc.Event, params RetrievalParams) (*Body, error)
+}
+
+type Body struct {
+	Data     []byte
+	Response *http.Response
 }
 
 func NewBodyRetriever() BodyRetriever {
@@ -24,7 +29,7 @@ type bodyRetriever struct {
 	//
 }
 
-func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) ([]byte, error) {
+func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) (*Body, error) {
 	logger := log.Logger()
 
 	translated := translateURL(params.URL)
@@ -114,5 +119,9 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) ([]by
 		return nil, DisallowedContentTypeError
 	}
 
-	return io.ReadAll(ret.response.Body)
+	body, err := io.ReadAll(ret.response.Body)
+	return &Body{
+		Data:     body,
+		Response: ret.response,
+	}, err
 }

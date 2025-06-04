@@ -25,7 +25,7 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, url string) (*summary, error)
 		return nil, errors.New("bing search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Find("ol#b_results").First().Find("h2").First().Text())
+	title := strings.TrimSpace(doc.Root.Find("ol#b_results").First().Find("h2").First().Text())
 
 	if c.isRejectedTitle(title) {
 		logger.Debugf(e, "rejected title: %s", title)
