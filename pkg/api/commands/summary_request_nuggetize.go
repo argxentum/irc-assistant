@@ -14,7 +14,7 @@ func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, url string) (*summary, e
 	logger := log.Logger()
 	logger.Infof(e, "nuggetize request for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)), retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf("https://nug.zip/%s", url)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve nuggetize summary for %s: %s", url, err)
 		return nil, err

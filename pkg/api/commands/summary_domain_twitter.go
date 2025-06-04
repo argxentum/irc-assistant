@@ -22,7 +22,7 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 
-	doc, err := c.docRetriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, params)
 	if err != nil || doc == nil {
 		if err != nil {
 			if errors.Is(err, retriever.DisallowedContentTypeError) {

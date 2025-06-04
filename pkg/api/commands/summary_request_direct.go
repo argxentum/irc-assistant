@@ -21,7 +21,7 @@ func (c *SummaryCommand) request(e *irc.Event, url string, impersonated bool) (*
 	params := retriever.DefaultParams(url)
 	params.Impersonate = impersonated
 
-	doc, err := c.docRetriever.RetrieveDocument(e, params, retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, params)
 	if err != nil {
 		return nil, err
 	}

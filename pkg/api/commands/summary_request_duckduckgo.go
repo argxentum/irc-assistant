@@ -13,7 +13,7 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, url string) (*summary, 
 	logger := log.Logger()
 	logger.Infof(e, "trying duckduckgo for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)), retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
 		return nil, err

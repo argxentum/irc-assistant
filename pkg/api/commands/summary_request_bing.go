@@ -14,7 +14,7 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, url string) (*summary, error)
 	logger := log.Logger()
 	logger.Infof(e, "bing request for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)), retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
 		return nil, err

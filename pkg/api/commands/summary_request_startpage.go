@@ -13,7 +13,7 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, url string) (*summary, e
 	logger := log.Logger()
 	logger.Infof(e, "trying startpage for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(startPageSearchURL, url)), retriever.DefaultTimeout)
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(startPageSearchURL, url)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve startpage search results for %s: %s", url, err)
 		return nil, err

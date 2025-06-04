@@ -114,7 +114,7 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 	logger.Debugf(e, "searching bing for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)), retriever.DefaultTimeout)
+	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, query)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve bing search results for %s: %s", input, err)
 		return nil, err
@@ -169,7 +169,7 @@ func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 	logger.Infof(e, "searching duckduckgo for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, query)), retriever.DefaultTimeout)
+	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, query)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", input, err)
 		return nil, err
@@ -208,7 +208,7 @@ func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, e
 	logger.Infof(e, "searching startpage for %s", input)
 	query := url.QueryEscape(input)
 
-	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(startPageSearchURL, query)), retriever.DefaultTimeout)
+	doc, err := c.retriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(startPageSearchURL, query)))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve startpage search results for %s: %s", input, err)
 		return nil, err

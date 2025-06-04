@@ -45,6 +45,11 @@ func DefaultParams(url string) RetrievalParams {
 	return params
 }
 
+func (params RetrievalParams) WithTimeout(timeout time.Duration) RetrievalParams {
+	params.Timeout = timeout
+	return params
+}
+
 type retrieved struct {
 	response *http.Response
 	err      error

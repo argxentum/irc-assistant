@@ -56,7 +56,7 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 		}
 	}
 
-	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url), retriever.DefaultTimeout)
+	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
 	}

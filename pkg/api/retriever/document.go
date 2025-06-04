@@ -11,7 +11,7 @@ import (
 )
 
 type DocumentRetriever interface {
-	RetrieveDocument(e *irc.Event, params RetrievalParams, timeout time.Duration) (*goquery.Document, error)
+	RetrieveDocument(e *irc.Event, params RetrievalParams) (*goquery.Document, error)
 	RetrieveDocumentSelection(e *irc.Event, params RetrievalParams, selector string) (*goquery.Selection, error)
 	Parse(e *irc.Event, doc *goquery.Document, selectors ...string) []*goquery.Selection
 }
@@ -31,8 +31,8 @@ type docResult struct {
 	err error
 }
 
-func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams, timeout time.Duration) (*goquery.Document, error) {
-	body, err := r.bodyRetriever.RetrieveBody(e, params, timeout)
+func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*goquery.Document, error) {
+	body, err := r.bodyRetriever.RetrieveBody(e, params)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (r *docRetriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalP
 		logger.Debugf(e, "%s %s, attempt %d", params.Method, params.URL, attempts)
 
 		go func() {
-			doc, err := r.RetrieveDocument(e, params, DefaultTimeout)
+			doc, err := r.RetrieveDocument(e, params)
 			if err != nil {
 				if errors.Is(err, DisallowedContentTypeError) {
 					logger.Debugf(e, "exiting due to disallowed content type")

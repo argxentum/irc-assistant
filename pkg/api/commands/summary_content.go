@@ -23,7 +23,7 @@ func (c *SummaryCommand) contentSummary(e *irc.Event, url string) (func(e *irc.E
 		return nil, nil
 	}
 
-	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url), 500)
+	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url).WithTimeout(500))
 	if err != nil {
 		return nil, err
 	}

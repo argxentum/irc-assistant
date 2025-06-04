@@ -11,7 +11,7 @@ import (
 )
 
 type BodyRetriever interface {
-	RetrieveBody(e *irc.Event, params RetrievalParams, timeout time.Duration) ([]byte, error)
+	RetrieveBody(e *irc.Event, params RetrievalParams) ([]byte, error)
 }
 
 func NewBodyRetriever() BodyRetriever {
@@ -24,7 +24,7 @@ type bodyRetriever struct {
 	//
 }
 
-func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeout time.Duration) ([]byte, error) {
+func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) ([]byte, error) {
 	logger := log.Logger()
 
 	translated := translateURL(params.URL)
@@ -69,7 +69,7 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams, timeo
 	var rc = make(chan retrieved)
 	go func() {
 		go func() {
-			time.Sleep(timeout * time.Millisecond)
+			time.Sleep(params.Timeout * time.Millisecond)
 			if !success {
 				logger.Debugf(e, "timing out request")
 			}
