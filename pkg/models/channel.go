@@ -13,13 +13,8 @@ type Channel struct {
 	IntroMessages             []string                   `firestore:"intro_messages" json:"intro_messages"`
 	VoiceRequestNotifications []VoiceRequestNotification `firestore:"voice_request_notifications" json:"voice_request_notifications"`
 	InactivityDuration        string                     `firestore:"inactivity_duration" json:"inactivity_duration"`
-	Summarization             ChannelSummarization       `firestore:"summarization" json:"summarization"`
 	CreatedAt                 time.Time                  `firestore:"created_at" json:"created_at"`
 	UpdatedAt                 time.Time                  `firestore:"updated_at" json:"updated_at"`
-}
-
-type ChannelSummarization struct {
-	DisinformationWarnings []string `firestore:"disinformation_warnings" json:"disinformation_warnings"`
 }
 
 type VoiceRequest struct {

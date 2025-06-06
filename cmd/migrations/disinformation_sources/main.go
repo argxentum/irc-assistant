@@ -70,11 +70,13 @@ func createDisinformationSources(channel string) error {
 		return fmt.Errorf("error getting channel %s, %v", channel, err)
 	}
 
-	for _, dw := range ch.Summarization.DisinformationWarnings {
-		if err := fs.AddDisinformationSource(channel, dw); err != nil {
-			logger.Warningf(nil, "error adding disinformation source %s for channel %s, %v", dw, channel, err)
+	/*
+		for _, dw := range ch.Summarization.DisinformationWarnings {
+			if err := fs.AddDisinformationSource(channel, dw); err != nil {
+				logger.Warningf(nil, "error adding disinformation source %s for channel %s, %v", dw, channel, err)
+			}
 		}
-	}
+	*/
 
 	return nil
 }
