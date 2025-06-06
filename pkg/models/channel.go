@@ -2,8 +2,6 @@ package models
 
 import (
 	"assistant/pkg/api/irc"
-	"slices"
-	"strings"
 	"time"
 )
 
@@ -44,12 +42,6 @@ func (vr VoiceRequest) Mask() string {
 	}
 
 	return mask.String()
-}
-
-func (cs ChannelSummarization) IsPossibleDisinformation(url string) bool {
-	return slices.ContainsFunc(cs.DisinformationWarnings, func(warning string) bool {
-		return strings.HasPrefix(strings.ToLower(url), strings.ToLower(warning))
-	})
 }
 
 func NewChannel(name string, inactivityDuration string) *Channel {

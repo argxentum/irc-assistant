@@ -158,12 +158,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	}
 
 	dis := false
-	if channel != nil && channel.Summarization.IsPossibleDisinformation(url) {
+	if channel != nil && fs.IsDisinformationSource(channel.Name, url) {
 		dis = true
 		logger.Debugf(e, "URL is possible disinformation: %s", url)
 	}
 
-	// check for <link rel="canonical" href="...">=
 	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
 	if isValidCanonicalLink(url, canonicalLink) {
 		url = canonicalLink
