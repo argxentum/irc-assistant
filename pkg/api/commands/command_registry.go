@@ -75,6 +75,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[AboutCommandName] = NewAboutCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[PollsCommandName] = NewPollsCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[PredictItCommandName] = NewPredictItCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[PolymarketCommandName] = NewPolymarketCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SearchCommandName] = NewSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SummaryCommandName] = NewSummaryCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SourceCommandName] = NewSourceCommand(cr.ctx, cr.cfg, cr.irc)

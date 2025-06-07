@@ -39,7 +39,7 @@ func (c *PredictItCommand) Description() string {
 }
 
 func (c *PredictItCommand) Triggers() []string {
-	return []string{"predictit", "betting"}
+	return []string{"predictit"}
 }
 
 func (c *PredictItCommand) Usages() []string {
@@ -185,7 +185,7 @@ func (c *PredictItCommand) Execute(e *irc.Event) {
 
 		trades := ""
 		if contract.Trades > 0 {
-			trades = fmt.Sprintf("(%s trades)", text.DecorateNumberWithCommas(contract.Trades))
+			trades = fmt.Sprintf("(%s trades)", text.DecorateIntWithCommas(contract.Trades))
 		}
 
 		if contract.Price == maxYes {
