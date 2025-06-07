@@ -76,7 +76,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 			views = shortenViewCount(strings.TrimSpace(item.VideoDescriptionHeaderRenderer.Views.SimpleText))
 			if len(views) == 0 {
 				for _, run := range item.VideoDescriptionHeaderRenderer.Views.Runs {
-					if len(views) > 0 {
+					if len(views) > 0 && !strings.HasSuffix(views, " ") {
 						views += " "
 					}
 					views += run.Text
@@ -187,8 +187,14 @@ func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, 
 
 	description := ""
 	if len(post.ContentText.Runs) > 0 {
-		description = strings.TrimSpace(post.ContentText.Runs[0].Text)
+		for _, run := range post.ContentText.Runs {
+			if len(description) > 0 && !strings.HasSuffix(description, " ") {
+				description += " "
+			}
+			description += run.Text
+		}
 	}
+	description = strings.TrimSpace(description)
 
 	published := ""
 	if len(post.PublishedTimeText.Runs) > 0 {
