@@ -19,43 +19,6 @@ var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>
 var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
 
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
-	var ytData struct {
-		EngagementPanels []struct {
-			EngagementPanelSectionListRenderer struct {
-				Content struct {
-					StructuredDescriptionContentRenderer struct {
-						Items []struct {
-							VideoDescriptionHeaderRenderer struct {
-								ChannelNavigationEndpoint struct {
-									BrowseEndpoint struct {
-										CanonicalBaseUrl string
-									}
-								}
-								Title struct {
-									Runs []struct {
-										Text string
-									}
-								}
-								Channel struct {
-									SimpleText string
-								}
-								Views struct {
-									SimpleText string
-									Runs       []struct {
-										Text string
-									}
-								}
-								PublishDate struct {
-									SimpleText string
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
 	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
@@ -71,18 +34,32 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error
 		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)
 	}
 
-	err = json.Unmarshal([]byte(matches[1]), &ytData)
+	var data ytData
+	err = json.Unmarshal([]byte(matches[1]), &data)
 	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal ytInitialData for %s: %s", url, err)
+		return nil, fmt.Errorf("unable to unmarshal post JSON for %s: %s", url, err)
 	}
 
+	if strings.Contains(url, "/post/") {
+		s, err := c.parseYouTubePost(e, data)
+		if s == nil || err != nil {
+			log.Logger().Debugf(e, "error parsing JSON as YouTube post: %v", err)
+		} else {
+			return s, nil
+		}
+	}
+
+	return c.parseYouTubeVideo(e, data)
+}
+
+func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary, error) {
 	title := ""
 	channel := ""
 	views := ""
 	published := ""
 	username := ""
 
-	for _, panel := range ytData.EngagementPanels {
+	for _, panel := range data.EngagementPanels {
 		if len(panel.EngagementPanelSectionListRenderer.Content.StructuredDescriptionContentRenderer.Items) == 0 {
 			continue
 		}
@@ -178,4 +155,160 @@ func shortenViewCount(input string) string {
 		return fmt.Sprintf("%.1fM", float64(views)/1000000)
 	}
 	return fmt.Sprintf("%.1fB", float64(views)/1000000000)
+}
+
+func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, error) {
+	tabs := data.Contents.TwoColumnBrowseResultsRenderer.Tabs
+	if len(tabs) == 0 {
+		return nil, nil
+	}
+
+	sectionListRenderers := tabs[0].TabRenderer.Content.SectionListRenderer.Contents
+	if len(sectionListRenderers) == 0 {
+		return nil, nil
+	}
+
+	itemSectionRenderers := sectionListRenderers[0].ItemSectionRenderer.Contents
+	if len(itemSectionRenderers) == 0 {
+		return nil, nil
+	}
+
+	post := itemSectionRenderers[0].BackstagePostThreadRenderer.Post.BackstagePostRenderer
+
+	author := ""
+	if len(post.AuthorText.Runs) > 0 {
+		author = strings.TrimSpace(post.AuthorText.Runs[0].Text)
+	}
+
+	username := ""
+	if len(post.AuthorEndpoint.BrowseEndpoint.CanonicalBaseUrl) > 0 {
+		username = strings.TrimPrefix(post.AuthorEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
+	}
+
+	description := ""
+	if len(post.ContentText.Runs) > 0 {
+		description = strings.TrimSpace(post.ContentText.Runs[0].Text)
+	}
+
+	published := ""
+	if len(post.PublishedTimeText.Runs) > 0 {
+		published = strings.TrimSpace(post.PublishedTimeText.Runs[0].Text)
+	}
+
+	if len(description) > standardMaximumDescriptionLength {
+		description = description[:standardMaximumDescriptionLength] + "..."
+	}
+
+	messages := make([]string, 0)
+	message := ""
+
+	if len(description) > 0 {
+		message = style.Bold(description)
+	} else {
+		return nil, nil
+	}
+
+	if len(author) > 0 {
+		message = fmt.Sprintf("%s • %s", message, author)
+	}
+
+	if len(published) > 0 {
+		message = fmt.Sprintf("%s • %s", message, published)
+	}
+
+	messages = append(messages, message)
+
+	if len(username) > 0 {
+		source, err := repository.FindSource(strings.TrimPrefix(username, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			messages = append(messages, repository.ShortSourceSummary(source))
+		}
+	}
+
+	return createSummary(messages...), nil
+}
+
+type ytData struct {
+	EngagementPanels []struct {
+		EngagementPanelSectionListRenderer struct {
+			Content struct {
+				StructuredDescriptionContentRenderer struct {
+					Items []struct {
+						VideoDescriptionHeaderRenderer struct {
+							ChannelNavigationEndpoint struct {
+								BrowseEndpoint struct {
+									CanonicalBaseUrl string
+								}
+							}
+							Title struct {
+								Runs []struct {
+									Text string
+								}
+							}
+							Channel struct {
+								SimpleText string
+							}
+							Views struct {
+								SimpleText string
+								Runs       []struct {
+									Text string
+								}
+							}
+							PublishDate struct {
+								SimpleText string
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	Contents struct {
+		TwoColumnBrowseResultsRenderer struct {
+			Tabs []struct {
+				TabRenderer struct {
+					Content struct {
+						SectionListRenderer struct {
+							Contents []struct {
+								ItemSectionRenderer struct {
+									Contents []struct {
+										BackstagePostThreadRenderer struct {
+											Post struct {
+												BackstagePostRenderer struct {
+													AuthorText struct {
+														Runs []struct {
+															Text string
+														}
+													}
+													AuthorEndpoint struct {
+														BrowseEndpoint struct {
+															CanonicalBaseUrl string
+														}
+													}
+													ContentText struct {
+														Runs []struct {
+															Text string
+														}
+													}
+													PublishedTimeText struct {
+														Runs []struct {
+															Text string
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
