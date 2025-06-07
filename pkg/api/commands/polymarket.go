@@ -20,7 +20,7 @@ const PolymarketCommandName = "polymarket"
 
 const PolymarketGammaAPIBaseURL = "https://gamma-api.polymarket.com/markets?active=true&closed=false&order=endDate&ascending=false&limit=%d&offset=%d"
 const PolymarketEventPublicURL = "https://polymarket.com/event/%s"
-const MaxSearchResults = 50000
+const MaxSearchResults = 10000
 const SearchResultLimit = 500
 
 type PolymarketCommand struct {
@@ -95,7 +95,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 
 	if result == nil {
 		logger.Warningf(e, "no Polymarket results found for query: %s", query)
-		c.Replyf(e, "No Polymarket results found for query: %s", style.Bold(query))
+		c.Replyf(e, "No Polymarket results found for %s", style.Bold(query))
 		return
 	}
 
@@ -166,6 +166,10 @@ func findPolymarketResult(offset int, queryTerms []string) (*polymarketResult, e
 
 	var match *polymarketResult
 	for _, result := range results {
+		if len(result.Outcomes) == 0 || len(result.OutcomePrices) == 0 {
+			continue
+		}
+
 		matches := 0
 		for _, term := range queryTerms {
 			if strings.Contains(strings.ToLower(result.Question), strings.ToLower(term)) {
@@ -181,9 +185,13 @@ func findPolymarketResult(offset int, queryTerms []string) (*polymarketResult, e
 }
 
 func parseOutcomePrices(raw string) []float64 {
+	if len(raw) == 0 {
+		return nil
+	}
+
 	var rawPrices []string
 	if err := json.Unmarshal([]byte(raw), &rawPrices); err != nil {
-		log.Logger().Errorf(nil, "error parsing outcome prices: %s", err)
+		log.Logger().Errorf(nil, "error parsing outcome prices (%s): %s", raw, err)
 		return nil
 	}
 
