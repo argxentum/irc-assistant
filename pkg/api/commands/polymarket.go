@@ -68,6 +68,10 @@ type polymarketResult struct {
 	OutcomePricesRaw string    `json:"outcomePrices"`
 	OutcomePrices    []float64 `json:"-"`
 	Volume           float64   `json:"volumeNum"`
+	Events           []struct {
+		ID   string `json:"id"`
+		Slug string `json:"slug"`
+	}
 }
 
 func (c *PolymarketCommand) Execute(e *irc.Event) {
@@ -139,7 +143,14 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	c.irc.SendMessages(e.ReplyTarget(), []string{message, fmt.Sprintf(PolymarketEventPublicURL, result.Slug)})
+	messages := make([]string, 0)
+	messages = append(messages, message)
+
+	if len(result.Events) > 0 && len(result.Events[0].Slug) > 0 {
+		messages = append(messages, fmt.Sprintf(PolymarketEventPublicURL, result.Events[0].Slug))
+	}
+
+	c.irc.SendMessages(e.ReplyTarget(), messages)
 }
 
 func findPolymarketResult(offset int, queryTerms []string) (*polymarketResult, error) {
