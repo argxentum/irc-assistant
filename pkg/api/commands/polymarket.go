@@ -20,7 +20,7 @@ const PolymarketCommandName = "polymarket"
 
 const PolymarketGammaAPIBaseURL = "https://gamma-api.polymarket.com/markets?active=true&closed=false&order=endDate&ascending=false&limit=%d&offset=%d"
 const PolymarketEventPublicURL = "https://polymarket.com/event/%s"
-const MaxSearchResults = 5000
+const MaxSearchResults = 50000
 const SearchResultLimit = 500
 
 type PolymarketCommand struct {
