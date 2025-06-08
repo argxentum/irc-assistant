@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
@@ -12,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
@@ -93,12 +91,17 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 				views = views + " views"
 			}
 
-			p := strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
-			t, err := time.Parse("Jan 2, 2006", p)
-			if err == nil {
-				published = elapse.PastTimeDescription(t)
-			} else {
-				published = p
+			if len(item.VideoDescriptionHeaderRenderer.Factoid) > 0 {
+				for _, factoid := range item.VideoDescriptionHeaderRenderer.Factoid {
+					if len(factoid.UploadTimeFactoidRenderer.Factoid.FactoidRenderer.AccessibilityText) > 0 {
+						published = strings.TrimSpace(factoid.UploadTimeFactoidRenderer.Factoid.FactoidRenderer.AccessibilityText)
+						break
+					}
+				}
+			}
+
+			if len(published) == 0 && len(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText) > 0 {
+				published = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
 			}
 		}
 
@@ -266,6 +269,15 @@ type ytData struct {
 							}
 							PublishDate struct {
 								SimpleText string
+							}
+							Factoid []struct {
+								UploadTimeFactoidRenderer struct {
+									Factoid struct {
+										FactoidRenderer struct {
+											AccessibilityText string
+										}
+									}
+								}
 							}
 						}
 					}
