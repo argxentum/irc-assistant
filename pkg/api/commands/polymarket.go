@@ -89,7 +89,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 		result, err = findPolymarketResult(offset, queryTerms)
 		if err != nil {
 			logger.Errorf(e, "error fetching Polymarket results: %s", err)
-			c.Replyf(e, "Error fetching Polymarket results")
+			c.Replyf(e, "Error fetching Polymarket data")
 			return
 		}
 		if result == nil {
@@ -99,7 +99,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 
 	if result == nil {
 		logger.Warningf(e, "no Polymarket results found for query: %s", query)
-		c.Replyf(e, "No Polymarket results found for %s", style.Bold(query))
+		c.Replyf(e, "No active Polymarket results found for %s", style.Bold(query))
 		return
 	}
 
@@ -114,18 +114,28 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 
 	message := style.Bold(result.Question)
 
-	for i, outcome := range result.Outcomes {
-		if i == 0 {
-			message += " •"
-		} else {
-			message += " |"
+	if len(result.Outcomes) == 1 {
+		outcome := result.Outcomes[0]
+		price := result.OutcomePrices[0]
+		trade := fmt.Sprintf("%s $%s", style.Underline(outcome), text.DecorateFloatWithCommas(price))
+		if price > 0.5 {
+			trade = style.ColorForeground(trade, style.ColorGreen)
 		}
-		price := result.OutcomePrices[i]
-		trade := fmt.Sprintf(" %s $%s", style.Underline(outcome), text.DecorateFloatWithCommas(price))
-		if price == maxPrice {
-			message += style.ColorForeground(trade, style.ColorGreen)
-		} else {
-			message += trade
+		message += " • " + trade
+	} else {
+		for i, outcome := range result.Outcomes {
+			if i == 0 {
+				message += " •"
+			} else {
+				message += " |"
+			}
+			price := result.OutcomePrices[i]
+			trade := fmt.Sprintf(" %s $%s", style.Underline(outcome), text.DecorateFloatWithCommas(price))
+			if price == maxPrice {
+				message += style.ColorForeground(trade, style.ColorGreen)
+			} else {
+				message += trade
+			}
 		}
 	}
 

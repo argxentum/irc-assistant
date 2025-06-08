@@ -180,18 +180,28 @@ func (c *PredictItCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	for _, contract := range marketResult.Contracts {
-		message := fmt.Sprintf("%s: $%.02f", style.Underline(contract.Name), contract.Price)
-
-		trades := ""
-		if contract.Trades > 0 {
-			trades = fmt.Sprintf("(%s trades)", text.DecorateIntWithCommas(contract.Trades))
-		}
-
-		if contract.Price == maxYes {
-			contracts = append(contracts, fmt.Sprintf("%s%s", style.ColorForeground(message, style.ColorGreen), trades))
+	if len(marketResult.Contracts) == 1 {
+		price := marketResult.Contracts[0].Price
+		contract := fmt.Sprintf("%s: $%.02f", style.Underline("Yes"), marketResult.Contracts[0].Price)
+		if price > 0.5 {
+			contracts = append(contracts, style.ColorForeground(contract, style.ColorGreen))
 		} else {
-			contracts = append(contracts, fmt.Sprintf("%s%s", message, trades))
+			contracts = append(contracts, contract)
+		}
+	} else {
+		for _, contract := range marketResult.Contracts {
+			message := fmt.Sprintf("%s: $%.02f", style.Underline(contract.Name), contract.Price)
+
+			trades := ""
+			if contract.Trades > 0 {
+				trades = fmt.Sprintf("(%s trades)", text.DecorateIntWithCommas(contract.Trades))
+			}
+
+			if contract.Price == maxYes {
+				contracts = append(contracts, fmt.Sprintf("%s%s", style.ColorForeground(message, style.ColorGreen), trades))
+			} else {
+				contracts = append(contracts, fmt.Sprintf("%s%s", message, trades))
+			}
 		}
 	}
 
