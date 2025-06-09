@@ -13,9 +13,8 @@ func TimeDescription(t time.Time) string {
 		return FutureTimeDescription(t)
 	}
 }
-
-func PastTimeDescription(t time.Time) string {
-	elapsed := time.Now().Sub(t)
+func PastTimeDescriptionFromTime(t time.Time, from time.Time) string {
+	elapsed := from.Sub(t)
 	years, months, weeks, days, hours, minutes, seconds := units(elapsed)
 
 	if years > 0 {
@@ -57,6 +56,10 @@ func PastTimeDescription(t time.Time) string {
 		}
 		return fmt.Sprintf("%d seconds ago", seconds)
 	}
+}
+
+func PastTimeDescription(t time.Time) string {
+	return PastTimeDescriptionFromTime(t, time.Now())
 }
 
 func PastTimeDescriptionConcise(t time.Time) string {

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
@@ -101,7 +103,15 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 			}
 
 			if len(published) == 0 && len(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText) > 0 {
-				published = strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
+				p := strings.TrimSpace(item.VideoDescriptionHeaderRenderer.PublishDate.SimpleText)
+				t, err := time.Parse("Jan 2, 2006", p)
+				if err == nil && t.Before(time.Now().Add(-24*time.Hour)) {
+					now := time.Now()
+					from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+					published = elapse.PastTimeDescriptionFromTime(t, from)
+				} else {
+					published = p
+				}
 			}
 		}
 
