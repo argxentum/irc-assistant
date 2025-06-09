@@ -98,6 +98,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[NotesSearchCommandName] = NewNotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[MemeCommandName] = NewMemeCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ArchiveCommandName] = NewArchiveCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[TimeCommandName] = NewTimeCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,
@@ -131,16 +132,18 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s <topic>"},
 	)
 
-	cr.commands["bing/simple/time"] = NewBingSimpleAnswerCommand(
-		cr.ctx, cr.cfg, cr.irc,
-		[]string{"time"},
-		[]string{"%s <location>"},
-		"Displays the date and time of the given location.",
-		"time", "current date and time in %s",
-		"%s: %s",
-		"",
-		1,
-	)
+	/*
+		cr.commands["bing/simple/time"] = NewBingSimpleAnswerCommand(
+			cr.ctx, cr.cfg, cr.irc,
+			[]string{"time"},
+			[]string{"%s <location>"},
+			"Displays the date and time of the given location.",
+			"time", "current date and time in %s",
+			"%s: %s",
+			"",
+			1,
+		)
+	*/
 
 	cr.commands["bing/simple/election"] = NewBingSimpleAnswerCommand(
 		cr.ctx, cr.cfg, cr.irc,

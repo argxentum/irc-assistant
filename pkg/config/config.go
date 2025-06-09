@@ -98,6 +98,7 @@ type RedditConfig struct {
 type GoogleCloudConfig struct {
 	ProjectID              string `yaml:"project_id"`
 	ServiceAccountFilename string `yaml:"service_account_filename"`
+	MappingAPIKey          string `yaml:"mapping_api_key"`
 }
 
 type APIKeyConfig struct {
