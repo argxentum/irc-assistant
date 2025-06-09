@@ -92,7 +92,7 @@ func (c *TimeCommand) Execute(e *irc.Event) {
 	c.SendMessage(e, e.ReplyTarget(), formattedTime)
 }
 
-func (c *TimeCommand) fetchGeocodingResponse(location string) (*GeocodingResponse, error) {
+func (c *TimeCommand) fetchGeocodingResponse(location string) (*geocodingResponse, error) {
 	res, err := http.Get(fmt.Sprintf(geocodingAPIURL, location, c.cfg.GoogleCloud.MappingAPIKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch geocoding data, %v", err)
@@ -104,12 +104,12 @@ func (c *TimeCommand) fetchGeocodingResponse(location string) (*GeocodingRespons
 
 	defer res.Body.Close()
 
-	var response GeocodingResponse
+	var response geocodingResponse
 	err = json.NewDecoder(res.Body).Decode(&response)
 	return &response, err
 }
 
-func (c *TimeCommand) fetchTimeZoneResponse(lat, lng float64) (*TimeZoneResponse, error) {
+func (c *TimeCommand) fetchTimeZoneResponse(lat, lng float64) (*timeZoneResponse, error) {
 	res, err := http.Get(fmt.Sprintf(timeZoneAPIURL, lat, lng, time.Now().Unix(), c.cfg.GoogleCloud.MappingAPIKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch timezone data, %v", err)
@@ -121,12 +121,12 @@ func (c *TimeCommand) fetchTimeZoneResponse(lat, lng float64) (*TimeZoneResponse
 
 	defer res.Body.Close()
 
-	var response TimeZoneResponse
+	var response timeZoneResponse
 	err = json.NewDecoder(res.Body).Decode(&response)
 	return &response, err
 }
 
-func (c *TimeCommand) formatDateTimeResponse(formattedLocation string, tz *TimeZoneResponse) (string, error) {
+func (c *TimeCommand) formatDateTimeResponse(formattedLocation string, tz *timeZoneResponse) (string, error) {
 	if tz == nil {
 		return "", fmt.Errorf("timezone data not found for location: %s", formattedLocation)
 	}
@@ -135,7 +135,7 @@ func (c *TimeCommand) formatDateTimeResponse(formattedLocation string, tz *TimeZ
 	return currentTime.Format(fmt.Sprintf("%s: %s on %s", style.Underline(formattedLocation), style.Bold("3:04 PM"), style.Bold("Monday, January 2, 2006"))), nil
 }
 
-type GeocodingResponse struct {
+type geocodingResponse struct {
 	Results []struct {
 		FormattedAddress string `json:"formatted_address"`
 		Geometry         struct {
@@ -147,7 +147,7 @@ type GeocodingResponse struct {
 	} `json:"results"`
 }
 
-type TimeZoneResponse struct {
+type timeZoneResponse struct {
 	DstOffset    int    `json:"dstOffset"`
 	RawOffset    int    `json:"rawOffset"`
 	Status       string `json:"status"`
