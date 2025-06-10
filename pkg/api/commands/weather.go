@@ -45,7 +45,7 @@ func (c *WeatherCommand) Triggers() []string {
 }
 
 func (c *WeatherCommand) Usages() []string {
-	return []string{"%s <location>"}
+	return []string{"%s <location>", "%s (uses previous location)"}
 }
 
 func (c *WeatherCommand) AllowedInPrivateMessages() bool {
@@ -128,7 +128,7 @@ func (c *WeatherCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s: %s", style.Underline(style.Bold(formattedLocation)), message))
+	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s - %s", style.Underline(style.Bold(formattedLocation)), message))
 }
 
 func (c *WeatherCommand) fetchGeocodingResponse(location string) (*geocodingResponse, error) {
@@ -148,7 +148,7 @@ func (c *WeatherCommand) fetchGeocodingResponse(location string) (*geocodingResp
 	return &response, err
 }
 
-func (c *WeatherCommand) fetchCurrentConditions(lat, lng float64) (*currentConditionsResponse, error) {
+func (c *WeatherCommand) fetchCurrentConditions(lat, lng float64) (*WeatherConditions, error) {
 	res, err := http.Get(fmt.Sprintf(currentConditionsAPIURL, lat, lng, c.cfg.GoogleCloud.MappingAPIKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch current conditions data, %v", err)
@@ -160,12 +160,12 @@ func (c *WeatherCommand) fetchCurrentConditions(lat, lng float64) (*currentCondi
 
 	defer res.Body.Close()
 
-	var response currentConditionsResponse
+	var response WeatherConditions
 	err = json.NewDecoder(res.Body).Decode(&response)
 	return &response, err
 }
 
-func (c *WeatherCommand) createCurrentConditionsMessage(e *irc.Event, conditions *currentConditionsResponse) string {
+func (c *WeatherCommand) createCurrentConditionsMessage(e *irc.Event, conditions *WeatherConditions) string {
 	m := "Currently "
 
 	if len(conditions.WeatherCondition.Description.Text) > 0 {
@@ -241,7 +241,7 @@ func convertKilometersToMiles(kilometersPerHour int) int {
 	return int(math.Round(float64(kilometersPerHour) * 0.621371))
 }
 
-type currentConditionsResponse struct {
+type WeatherConditions struct {
 	WeatherCondition struct {
 		Type        string
 		Description struct {
