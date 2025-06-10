@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -93,7 +94,7 @@ func (c *TimeCommand) Execute(e *irc.Event) {
 }
 
 func (c *TimeCommand) fetchGeocodingResponse(location string) (*geocodingResponse, error) {
-	res, err := http.Get(fmt.Sprintf(geocodingAPIURL, location, c.cfg.GoogleCloud.MappingAPIKey))
+	res, err := http.Get(fmt.Sprintf(geocodingAPIURL, url.QueryEscape(location), c.cfg.GoogleCloud.MappingAPIKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch geocoding data, %v", err)
 	}

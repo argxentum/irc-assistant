@@ -99,6 +99,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[MemeCommandName] = NewMemeCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ArchiveCommandName] = NewArchiveCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[TimeCommandName] = NewTimeCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[WeatherCommandName] = NewWeatherCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditCommand(
 		cr.ctx, cr.cfg, cr.irc,

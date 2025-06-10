@@ -12,6 +12,7 @@ type User struct {
 	UserID         string          `firestore:"user_id"`
 	Host           string          `firestore:"host"`
 	Karma          int             `firestore:"karma"`
+	Location       string          `firestore:"location"`
 	IsAutoVoiced   bool            `firestore:"is_auto_voiced"`
 	RecentMessages []RecentMessage `firestore:"recent_messages"`
 	CreatedAt      time.Time       `firestore:"created_at"`
