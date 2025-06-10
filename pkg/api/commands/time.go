@@ -132,8 +132,8 @@ func (c *TimeCommand) formatDateTimeResponse(formattedLocation string, tz *timeZ
 		return "", fmt.Errorf("timezone data not found for location: %s", formattedLocation)
 	}
 
-	currentTime := time.Now().In(time.FixedZone(tz.TimezoneName, tz.RawOffset+tz.DstOffset))
-	return currentTime.Format(fmt.Sprintf("%s: %s on %s", style.Underline(formattedLocation), style.Bold("3:04 PM"), style.Bold("Monday, January 2, 2006"))), nil
+	currentTime := time.Now().In(time.FixedZone(tz.TimeZoneName, tz.RawOffset+tz.DstOffset))
+	return currentTime.Format(fmt.Sprintf("%s - %s on %s", style.Underline(style.Bold(formattedLocation)), style.Bold("3:04 PM"), style.Bold("Monday, January 2, 2006"))), nil
 }
 
 type geocodingResponse struct {
@@ -141,17 +141,17 @@ type geocodingResponse struct {
 		FormattedAddress string `json:"formatted_address"`
 		Geometry         struct {
 			Location struct {
-				Lat float64 `json:"lat"`
-				Lng float64 `json:"lng"`
-			} `json:"location"`
-		} `json:"geometry"`
-	} `json:"results"`
+				Lat float64
+				Lng float64
+			}
+		}
+	}
 }
 
 type timeZoneResponse struct {
-	DstOffset    int    `json:"dstOffset"`
-	RawOffset    int    `json:"rawOffset"`
-	Status       string `json:"status"`
-	TimezoneID   string `json:"timeZoneId"`
-	TimezoneName string `json:"timeZoneName"`
+	DstOffset    int
+	RawOffset    int
+	Status       string
+	TimeZoneID   string
+	TimeZoneName string
 }
