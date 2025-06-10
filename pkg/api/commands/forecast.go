@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -76,7 +77,7 @@ func (c *ForecastCommand) Execute(e *irc.Event) {
 		if user != nil {
 			location = user.Location
 		} else {
-			c.Replyf(e, "No previous location found. Please specify a location: %s", fmt.Sprintf(c.Usages()[0], tokens[0]))
+			c.Replyf(e, "No previous location found. Please specify a location: %s", style.Italics(fmt.Sprintf(c.Usages()[0], tokens[0])))
 			return
 		}
 	}
@@ -132,7 +133,14 @@ func (c *ForecastCommand) Execute(e *irc.Event) {
 }
 
 func (c *ForecastCommand) fetchGeocodingResponse(location string) (*geocodingResponse, error) {
-	res, err := http.Get(fmt.Sprintf(geocodingAPIURL, url.QueryEscape(location), c.cfg.GoogleCloud.MappingAPIKey))
+	if match, err := regexp.MatchString(zipCodeRegex, location); match && err == nil {
+		location += ", USA"
+	}
+
+	u := fmt.Sprintf(geocodingAPIURL, url.QueryEscape(location), c.cfg.GoogleCloud.MappingAPIKey)
+	log.Logger().Debugf(nil, "Fetching geocoding data, %s", u)
+
+	res, err := http.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch geocoding data, %v", err)
 	}
@@ -149,7 +157,10 @@ func (c *ForecastCommand) fetchGeocodingResponse(location string) (*geocodingRes
 }
 
 func (c *ForecastCommand) fetchForecast(lat, lng float64) (*forecastDaysResponse, error) {
-	res, err := http.Get(fmt.Sprintf(forecastAPIURL, lat, lng, c.cfg.GoogleCloud.MappingAPIKey))
+	u := fmt.Sprintf(forecastAPIURL, lat, lng, c.cfg.GoogleCloud.MappingAPIKey)
+	log.Logger().Debugf(nil, "Fetching forecast data, %s", u)
+
+	res, err := http.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch forecast data, %v", err)
 	}
@@ -188,27 +199,27 @@ func (c *ForecastCommand) createForecastMessage(e *irc.Event, forecast *forecast
 		m += style.Bold("Tonight") + ": " + n
 	}
 
-	if len(f.SunEvents.Sunrise) > 0 {
-		t, _ := time.Parse(time.RFC3339Nano, f.SunEvents.Sunrise)
+	if len(f.SunEvents.SunriseTime) > 0 {
+		t, _ := time.Parse(time.RFC3339Nano, f.SunEvents.SunriseTime)
 		if !t.IsZero() {
 			if !strings.HasSuffix(m, ".") {
 				m += ". "
 			} else {
 				m += " "
 			}
-			m += fmt.Sprintf("Sunrise: %s", t.Format("3:04 PM"))
+			m += style.Bold("Sunrise") + ": " + t.Local().Format("3:04 PM")
 		}
 	}
 
-	if len(f.SunEvents.Sunset) > 0 {
-		t, _ := time.Parse(time.RFC3339Nano, f.SunEvents.Sunset)
+	if len(f.SunEvents.SunsetTime) > 0 {
+		t, _ := time.Parse(time.RFC3339Nano, f.SunEvents.SunsetTime)
 		if !t.IsZero() {
 			if !strings.HasSuffix(m, ".") {
 				m += ". "
 			} else {
 				m += " "
 			}
-			m += fmt.Sprintf("Sunset: %s", t.Format("3:04 PM"))
+			m += style.Bold("Sunset") + ": " + t.Local().Format("3:04 PM")
 		}
 	}
 
@@ -219,9 +230,9 @@ func (c *ForecastCommand) createForecastMessage(e *irc.Event, forecast *forecast
 			m += " "
 		}
 		if phase, ok := moonphases[f.MoonEvents.MoonPhase]; ok {
-			m += fmt.Sprintf("Moon: %s", strings.ToLower(phase))
+			m += style.Bold("Moon") + ": " + strings.ToLower(phase)
 		} else {
-			m += fmt.Sprintf("Moon: %s", strings.ToLower(strings.Replace(f.MoonEvents.MoonPhase, "_", " ", -1)))
+			m += style.Bold("Moon") + ": " + strings.ToLower(strings.Replace(f.MoonEvents.MoonPhase, "_", " ", -1))
 		}
 	}
 
@@ -301,14 +312,17 @@ type forecastDaysResponse struct {
 			Unit    string
 		}
 		SunEvents struct {
-			Sunrise string
-			Sunset  string
+			SunriseTime string
+			SunsetTime  string
 		}
 		MoonEvents struct {
 			MoonriseTimes []string
 			MoonsetTimes  []string
 			MoonPhase     string
 		}
+	}
+	TimeZone struct {
+		ID string `json:"id"`
 	}
 }
 

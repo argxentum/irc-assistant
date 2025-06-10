@@ -15,6 +15,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -76,7 +77,7 @@ func (c *WeatherCommand) Execute(e *irc.Event) {
 		if user != nil {
 			location = user.Location
 		} else {
-			c.Replyf(e, "No previous location found. Please specify a location: %s", fmt.Sprintf(c.Usages()[0], tokens[0]))
+			c.Replyf(e, "No previous location found. Please specify a location: %s", style.Italics(fmt.Sprintf(c.Usages()[0], tokens[0])))
 			return
 		}
 	}
@@ -131,8 +132,17 @@ func (c *WeatherCommand) Execute(e *irc.Event) {
 	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s - %s", style.Underline(style.Bold(formattedLocation)), message))
 }
 
+var zipCodeRegex = `^\d{5}(-\d{4})?$`
+
 func (c *WeatherCommand) fetchGeocodingResponse(location string) (*geocodingResponse, error) {
-	res, err := http.Get(fmt.Sprintf(geocodingAPIURL, url.QueryEscape(location), c.cfg.GoogleCloud.MappingAPIKey))
+	if match, err := regexp.MatchString(zipCodeRegex, location); match && err == nil {
+		location += ", USA"
+	}
+
+	u := fmt.Sprintf(geocodingAPIURL, url.QueryEscape(location), c.cfg.GoogleCloud.MappingAPIKey)
+	log.Logger().Debugf(nil, "Fetching geocoding data, %s", u)
+
+	res, err := http.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch geocoding data, %v", err)
 	}
@@ -149,7 +159,10 @@ func (c *WeatherCommand) fetchGeocodingResponse(location string) (*geocodingResp
 }
 
 func (c *WeatherCommand) fetchCurrentConditions(lat, lng float64) (*WeatherConditions, error) {
-	res, err := http.Get(fmt.Sprintf(currentConditionsAPIURL, lat, lng, c.cfg.GoogleCloud.MappingAPIKey))
+	u := fmt.Sprintf(currentConditionsAPIURL, lat, lng, c.cfg.GoogleCloud.MappingAPIKey)
+	log.Logger().Debugf(nil, "Fetching current conditions data, %s", u)
+
+	res, err := http.Get(u)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch current conditions data, %v", err)
 	}
