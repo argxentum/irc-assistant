@@ -193,7 +193,7 @@ func (c *WeatherCommand) createCurrentConditionsMessage(e *irc.Event, conditions
 		m += fmt.Sprintf(". Temperature: %.0f°F / %.0f°C", fahrenheit, celsius)
 	}
 
-	if conditions.FeelsLikeTemperature.Degrees != 0 {
+	if conditions.FeelsLikeTemperature.Degrees != 0 && conditions.FeelsLikeTemperature.Degrees != conditions.Temperature.Degrees {
 		celsius := conditions.FeelsLikeTemperature.Degrees
 		fahrenheit := convertCelsiusToFahrenheit(celsius)
 		m += fmt.Sprintf(", feels like %.0f°F / %.0f°C", fahrenheit, celsius)
