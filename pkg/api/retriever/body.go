@@ -3,6 +3,8 @@ package retriever
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/log"
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -44,19 +46,26 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) (*Bod
 		return nil, err
 	}
 
-	if params.Impersonate {
-		headers := RandomHeaderSet()
+	headers := params.Headers
+	if len(headers) == 0 && params.Impersonate {
+		headers = RandomHeaderSet()
+	}
+
+	if len(headers) > 0 {
 		for k, v := range headers {
-			req.Header.Set(k, v)
+			if len(v) == 0 {
+				continue
+			}
+			req.Header.Add(k, v)
 		}
 
-		msg := ""
 		keys := make([]string, 0)
-		for k := range req.Header {
+		for k := range headers {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 
+		msg := ""
 		for _, k := range keys {
 			for _, v := range req.Header[k] {
 				if len(msg) > 0 {
@@ -94,8 +103,49 @@ func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) (*Bod
 			logger.Debugf(e, "retrieval error")
 			rc <- retrieved{nil, NoResponseError}
 		}
-		rc <- retrieved{resp, nil}
-		success = true
+
+		// check if response is encoded and decode
+		if resp.Header.Get("Content-Encoding") == "gzip" {
+			logger.Debugf(e, "response is gzipped, decompressing")
+			gzippedBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				logger.Debugf(e, "error reading gzipped body: %s", err)
+				rc <- retrieved{nil, err}
+				success = false
+				return
+			}
+
+			// Create a new reader to decompress the gzipped body
+			resp.Body.Close() // Close the original body before replacing it
+			gzippedReader, err := gzip.NewReader(bytes.NewReader(gzippedBody))
+			if err != nil {
+				logger.Debugf(e, "error creating gzip reader: %s", err)
+				rc <- retrieved{nil, err}
+				success = false
+				return
+			}
+
+			defer gzippedReader.Close()
+
+			// Read the decompressed body
+			decompressedBody, err := io.ReadAll(gzippedReader)
+			if err != nil {
+				logger.Debugf(e, "error reading decompressed body: %s", err)
+				rc <- retrieved{nil, err}
+				success = false
+				return
+			}
+
+			// Replace the response body with the decompressed body
+			resp.Body.Close()
+			resp.Body = io.NopCloser(bytes.NewReader(decompressedBody))
+			resp.Header.Del("Content-Encoding")
+			resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(gzippedBody)))
+			success = true
+		} else {
+			rc <- retrieved{resp, nil}
+			success = true
+		}
 	}()
 
 	ret := <-rc

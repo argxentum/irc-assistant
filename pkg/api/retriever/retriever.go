@@ -29,6 +29,7 @@ type RetrievalParams struct {
 	RetryDelay  int
 	Timeout     time.Duration
 	Impersonate bool
+	Headers     map[string]string
 }
 
 var DefaultRetrievalParams = RetrievalParams{
@@ -37,6 +38,7 @@ var DefaultRetrievalParams = RetrievalParams{
 	RetryDelay:  DefaultRetryDelay,
 	Timeout:     DefaultTimeout,
 	Impersonate: true,
+	Headers:     make(map[string]string),
 }
 
 func DefaultParams(url string) RetrievalParams {
