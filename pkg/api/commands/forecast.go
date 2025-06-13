@@ -63,7 +63,7 @@ func (c *ForecastCommand) Execute(e *irc.Event) {
 
 	location := ""
 	if len(tokens) > 1 {
-		location = strings.Join(tokens[1:], " ")
+		location = strings.TrimSpace(strings.Join(tokens[1:], " "))
 	}
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), location)
@@ -74,7 +74,7 @@ func (c *ForecastCommand) Execute(e *irc.Event) {
 	}
 
 	if len(location) == 0 {
-		if user != nil {
+		if user != nil && len(user.Location) > 0 {
 			location = user.Location
 		} else {
 			c.Replyf(e, "No previous location found. Please specify a location: %s", style.Italics(fmt.Sprintf(c.Usages()[0], tokens[0])))
