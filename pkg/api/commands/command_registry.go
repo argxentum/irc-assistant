@@ -79,7 +79,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[SearchCommandName] = NewSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SummaryCommandName] = NewSummaryCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SourceCommandName] = NewSourceCommand(cr.ctx, cr.cfg, cr.irc)
-	cr.commands[MarketsCommandName] = NewMarketsCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[GoogleFinanceMarketsCommandName] = NewGoogleFinanceMarketsCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[StockCommandName] = NewStockCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[CurrencyCommandName] = NewCurrencyCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[KarmaSetCommandName] = NewKarmaSetCommand(cr.ctx, cr.cfg, cr.irc)
