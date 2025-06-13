@@ -21,7 +21,7 @@ import (
 
 const ForecastCommandName = "forecast"
 
-const forecastAPIURL = "https://weather.googleapis.com/v1/forecast/days:lookup?location.latitude=%f&location.longitude=%f&key=%s&days=1"
+const forecastAPIURL = "https://weather.googleapis.com/v1/forecast/days:lookup?location.latitude=%f&location.longitude=%f&key=%s&days=2"
 
 type ForecastCommand struct {
 	*commandStub
@@ -181,23 +181,43 @@ func (c *ForecastCommand) createForecastMessage(e *irc.Event, forecast *forecast
 		return ""
 	}
 
-	f := forecast.ForecastDays[0]
-	m := style.Bold("High") + ": " + fmt.Sprintf("%.0f°F / %.0f°C", convertCelsiusToFahrenheit(f.MaxTemperature.Degrees), f.MaxTemperature.Degrees) + ". " + style.Bold("Low") + ": " + fmt.Sprintf("%.0f°F / %.0f°C", convertCelsiusToFahrenheit(f.MinTemperature.Degrees), f.MinTemperature.Degrees) + ". "
+	firstLabel := "Today"
+	firstForecast := forecast.ForecastDays[0].DaytimeForecast
+	secondLabel := "Tonight"
+	secondForecast := forecast.ForecastDays[0].NighttimeForecast
 
-	d := c.createConditionsMessage(e, f.DaytimeForecast)
-	if len(d) > 0 {
-		m += style.Bold("Today") + ": " + d
+	// if current time in local timezone is after 6 PM, use the next day's forecast
+	if loc, err := time.LoadLocation(forecast.TimeZone.ID); err == nil {
+		if time.Now().In(loc).Hour() >= 18 {
+			if len(forecast.ForecastDays) < 2 {
+				return ""
+			}
+			firstLabel = "Tonight"
+			firstForecast = forecast.ForecastDays[0].NighttimeForecast
+			secondLabel = "Tomorrow"
+			secondForecast = forecast.ForecastDays[1].DaytimeForecast
+		}
 	}
 
-	n := c.createConditionsMessage(e, f.NighttimeForecast)
+	m := ""
+
+	d := c.createConditionsMessage(e, firstForecast)
+	if len(d) > 0 {
+		m += style.Bold(firstLabel) + ": " + d
+	}
+
+	n := c.createConditionsMessage(e, secondForecast)
 	if len(n) > 0 {
 		if !strings.HasSuffix(m, ".") {
 			m += ". "
 		} else {
 			m += " "
 		}
-		m += style.Bold("Tonight") + ": " + n
+		m += style.Bold(secondLabel) + ": " + n
 	}
+
+	f := forecast.ForecastDays[0]
+	m += style.Bold(" High") + ": " + fmt.Sprintf("%.0f°F / %.0f°C", convertCelsiusToFahrenheit(f.MaxTemperature.Degrees), f.MaxTemperature.Degrees) + ". " + style.Bold("Low") + ": " + fmt.Sprintf("%.0f°F / %.0f°C", convertCelsiusToFahrenheit(f.MinTemperature.Degrees), f.MinTemperature.Degrees) + "."
 
 	if len(f.SunEvents.SunriseTime) > 0 {
 		t, _ := time.Parse(time.RFC3339Nano, f.SunEvents.SunriseTime)
@@ -246,46 +266,46 @@ func (c *ForecastCommand) createForecastMessage(e *irc.Event, forecast *forecast
 func (c *ForecastCommand) createConditionsMessage(e *irc.Event, conditions WeatherConditions) string {
 	m := ""
 
-	if len(conditions.WeatherCondition.Description.Text) > 0 {
-		m += strings.ToLower(conditions.WeatherCondition.Description.Text)
+	if cnd, ok := weatherConditionTypes[conditions.WeatherCondition.Type]; ok {
+		m += cnd
 	} else {
-		m += strings.ToLower(text.Capitalize(strings.Replace(conditions.WeatherCondition.Type, "_", " ", -1), true))
+		m += text.Capitalize(strings.Replace(conditions.WeatherCondition.Type, "_", " ", -1), true)
 	}
 
 	if conditions.Temperature.Degrees != 0 {
 		celsius := conditions.Temperature.Degrees
 		fahrenheit := convertCelsiusToFahrenheit(celsius)
-		m += fmt.Sprintf(". Temperature: %.0f°F / %.0f°C", fahrenheit, celsius)
+		m += fmt.Sprintf(", %.0f°F / %.0f°C", fahrenheit, celsius)
 	}
 
 	if conditions.FeelsLikeTemperature.Degrees != 0 && conditions.FeelsLikeTemperature.Degrees != conditions.Temperature.Degrees {
 		celsius := conditions.FeelsLikeTemperature.Degrees
 		fahrenheit := convertCelsiusToFahrenheit(celsius)
-		m += fmt.Sprintf(", feels like %.0f°F / %.0f°C", fahrenheit, celsius)
+		m += fmt.Sprintf(" (feels like %.0f°F / %.0f°C)", fahrenheit, celsius)
 	}
 
 	if conditions.Precipitation.Probability.Percent > 0 {
 		if precipitationType, ok := precipitationTypes[conditions.Precipitation.Probability.Type]; ok {
-			m += fmt.Sprintf(". Chance of %s: %d%%", strings.ToLower(precipitationType), conditions.Precipitation.Probability.Percent)
+			m += fmt.Sprintf(". Chance of %s %d%%", strings.ToLower(precipitationType), conditions.Precipitation.Probability.Percent)
 		} else {
-			m += fmt.Sprintf(". Chance of %s: %d%%", strings.ToLower(strings.Replace(conditions.Precipitation.Probability.Type, "_", " ", -1)), conditions.Precipitation.Probability.Percent)
+			m += fmt.Sprintf(". Chance of %s %d%%", strings.ToLower(strings.Replace(conditions.Precipitation.Probability.Type, "_", " ", -1)), conditions.Precipitation.Probability.Percent)
 		}
 	}
 
 	if conditions.Wind.Direction.Cardinal != "" {
 		if direction, ok := directionCardinalsShort[conditions.Wind.Direction.Cardinal]; ok {
-			m += fmt.Sprintf(". Wind: %s at %d %s (%d %s)", direction, convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
+			m += fmt.Sprintf(". Wind %s at %d %s (%d %s)", direction, convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
 		} else {
-			m += fmt.Sprintf(". Wind: %s at %d %s (%d %s)", text.Capitalize(strings.Replace(conditions.Wind.Direction.Cardinal, "_", " ", -1), true), convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
+			m += fmt.Sprintf(". Wind %s at %d %s (%d %s)", text.Capitalize(strings.Replace(conditions.Wind.Direction.Cardinal, "_", " ", -1), true), convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
 		}
 	}
 
 	if conditions.RelativeHumidity > 0 {
-		m += fmt.Sprintf(". Humidity: %.0f%%", conditions.RelativeHumidity)
+		m += fmt.Sprintf(". Humidity %.0f%%", conditions.RelativeHumidity)
 	}
 
 	if conditions.UVIndex > 0 {
-		m += fmt.Sprintf(". UV index: %d", conditions.UVIndex)
+		m += fmt.Sprintf(". UV index %d", conditions.UVIndex)
 	}
 
 	if len(m) == 0 {

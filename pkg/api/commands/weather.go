@@ -179,59 +179,48 @@ func (c *WeatherCommand) fetchCurrentConditions(lat, lng float64) (*WeatherCondi
 }
 
 func (c *WeatherCommand) createCurrentConditionsMessage(e *irc.Event, conditions *WeatherConditions) string {
-	m := "Currently "
+	m := ""
 
-	if len(conditions.WeatherCondition.Description.Text) > 0 {
-		m += strings.ToLower(conditions.WeatherCondition.Description.Text)
+	if cnd, ok := weatherConditionTypes[conditions.WeatherCondition.Type]; ok {
+		m += cnd
 	} else {
-		m += strings.ToLower(text.Capitalize(strings.Replace(conditions.WeatherCondition.Type, "_", " ", -1), true))
+		m += text.Capitalize(strings.Replace(conditions.WeatherCondition.Type, "_", " ", -1), true)
 	}
 
 	if conditions.Temperature.Degrees != 0 {
 		celsius := conditions.Temperature.Degrees
 		fahrenheit := convertCelsiusToFahrenheit(celsius)
-		m += fmt.Sprintf(". Temperature: %.0f°F / %.0f°C", fahrenheit, celsius)
+		m += fmt.Sprintf(",  %.0f°F / %.0f°C", fahrenheit, celsius)
 	}
 
 	if conditions.FeelsLikeTemperature.Degrees != 0 && conditions.FeelsLikeTemperature.Degrees != conditions.Temperature.Degrees {
 		celsius := conditions.FeelsLikeTemperature.Degrees
 		fahrenheit := convertCelsiusToFahrenheit(celsius)
-		m += fmt.Sprintf(", feels like %.0f°F / %.0f°C", fahrenheit, celsius)
+		m += fmt.Sprintf(" (feels like %.0f°F / %.0f°C)", fahrenheit, celsius)
 	}
-
-	/*
-		if conditions.CurrentConditionsHistory.TemperatureChange.Degrees != 0 {
-			change := conditions.CurrentConditionsHistory.TemperatureChange.Degrees
-			if change < 0 {
-				m += fmt.Sprintf(" (colder than yesterday by %.0f°F / %.0f°C)", convertCentigradeToFahrenheitDegrees(-change), -change)
-			} else if change > 0 {
-				m += fmt.Sprintf(" (warmer than yesterday by %.0f°F / %.0f°C)", convertCentigradeToFahrenheitDegrees(change), change)
-			}
-		}
-	*/
 
 	if conditions.Precipitation.Probability.Percent > 0 {
 		if precipitationType, ok := precipitationTypes[conditions.Precipitation.Probability.Type]; ok {
-			m += fmt.Sprintf(". Chance of %s: %d%%", strings.ToLower(precipitationType), conditions.Precipitation.Probability.Percent)
+			m += fmt.Sprintf(". Chance of %s %d%%", strings.ToLower(precipitationType), conditions.Precipitation.Probability.Percent)
 		} else {
-			m += fmt.Sprintf(". Chance of %s: %d%%", strings.ToLower(strings.Replace(conditions.Precipitation.Probability.Type, "_", " ", -1)), conditions.Precipitation.Probability.Percent)
+			m += fmt.Sprintf(". Chance of %s %d%%", strings.ToLower(strings.Replace(conditions.Precipitation.Probability.Type, "_", " ", -1)), conditions.Precipitation.Probability.Percent)
 		}
 	}
 
 	if conditions.Wind.Direction.Cardinal != "" {
 		if direction, ok := directionCardinalsShort[conditions.Wind.Direction.Cardinal]; ok {
-			m += fmt.Sprintf(". Wind: %s at %d %s (%d %s)", direction, convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
+			m += fmt.Sprintf(". Wind %s at %d %s (%d %s)", direction, convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
 		} else {
-			m += fmt.Sprintf(". Wind: %s at %d %s (%d %s)", text.Capitalize(strings.Replace(conditions.Wind.Direction.Cardinal, "_", " ", -1), true), convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
+			m += fmt.Sprintf(". Wind %s at %d %s (%d %s)", text.Capitalize(strings.Replace(conditions.Wind.Direction.Cardinal, "_", " ", -1), true), convertKilometersToMiles(conditions.Wind.Speed.Value), "mph", conditions.Wind.Speed.Value, "km/h")
 		}
 	}
 
 	if conditions.RelativeHumidity > 0 {
-		m += fmt.Sprintf(". Humidity: %.0f%%", conditions.RelativeHumidity)
+		m += fmt.Sprintf(". Humidity %.0f%%", conditions.RelativeHumidity)
 	}
 
 	if conditions.UVIndex > 0 {
-		m += fmt.Sprintf(". UV index: %d", conditions.UVIndex)
+		m += fmt.Sprintf(". UV index %d", conditions.UVIndex)
 	}
 
 	if !strings.HasSuffix(m, ".") {
