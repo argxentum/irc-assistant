@@ -125,9 +125,9 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 		return nil, fmt.Errorf("bing search results doc nil")
 	}
 
-	cTitle := strings.TrimSpace(doc.Root.Find("ol#b_results li h2").First().Text())
-	link := strings.TrimSpace(doc.Root.Find("ol#b_results li h2 a").First().AttrOr("href", ""))
-	site := strings.TrimSpace(doc.Root.Find("ol#b_results li div.tptt").First().Text())
+	cTitle := strings.TrimSpace(doc.Root.Find("ol#b_results li.b_algo h2").First().Text())
+	link := strings.TrimSpace(doc.Root.Find("ol#b_results li.b_algo h2 a").First().AttrOr("href", ""))
+	site := strings.TrimSpace(doc.Root.Find("ol#b_results li.b_algo div.tptt").First().Text())
 
 	if len(cTitle) == 0 || len(link) == 0 {
 		logger.Debugf(e, "empty bing search results for %s, title: %s, link: %s", input, cTitle, link)
