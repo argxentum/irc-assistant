@@ -184,7 +184,8 @@ func login(username, password string) (*LoginResult, error) {
 }
 
 const redditBaseURL = "https://api.reddit.com"
-const searchSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
+const searchNewSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
+const searchRelevantSubredditPosts = "%s/r/%s/search.json?sort=relevance&t=all&limit=1&restrict_sr=on&q=%s"
 const searchPostsForURL = "%s/search.json?limit=1&restrict_sr=on&q=url:%s"
 const subredditCategoryPosts = "%s/r/%s/%s.json?limit=%d"
 const defaultRedditPosts = 3
@@ -195,11 +196,30 @@ func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit,
 	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
-
 	t := url.QueryEscape(topic)
-	query := fmt.Sprintf(searchSubredditPosts, redditBaseURL, subreddit, t)
+	u := fmt.Sprintf(searchNewSubredditPosts, redditBaseURL, subreddit, t)
+	logger.Debugf(nil, "reddit new search URL: %s", u)
+	return searchSubredditPosts(ctx, cfg, u)
+}
 
-	req, err := http.NewRequest(http.MethodGet, query, nil)
+func SearchRelevantSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]PostWithTopComment, error) {
+	logger := log.Logger()
+	if err := Login(ctx, cfg); err != nil {
+		return nil, err
+	}
+	t := url.QueryEscape(topic)
+	u := fmt.Sprintf(searchRelevantSubredditPosts, redditBaseURL, subreddit, t)
+	logger.Debugf(nil, "reddit relevant search URL: %s", u)
+	return searchSubredditPosts(ctx, cfg, u)
+}
+
+func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]PostWithTopComment, error) {
+	logger := log.Logger()
+	if err := Login(ctx, cfg); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}

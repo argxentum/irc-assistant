@@ -103,8 +103,9 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[ForecastCommandName] = NewForecastCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[DefineCommandName] = NewDefineCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ThesaurusCommandName] = NewThesaurusCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[RedditCommandName] = NewRedditCommand(cr.ctx, cr.cfg, cr.irc)
 
-	cr.commands["r/politics"] = NewRedditCommand(
+	cr.commands["r/politics"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,
 		"politics",
 		"Searches for a recent r/politics post on the given topic.",
@@ -112,7 +113,7 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s <topic>"},
 	)
 
-	cr.commands["r/news"] = NewRedditCommand(
+	cr.commands["r/news"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,
 		"news",
 		"Searches for a recent r/news post on the given topic.",
@@ -120,7 +121,7 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s <topic>"},
 	)
 
-	cr.commands["r/worldnews"] = NewRedditCommand(
+	cr.commands["r/worldnews"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,
 		"worldnews",
 		"Searches for a recent r/worldnews post on the given topic.",
@@ -128,7 +129,7 @@ func (cr *commandRegistry) RegisterCommands() {
 		[]string{"%s <topic>"},
 	)
 
-	cr.commands["r/UkrainianConflict"] = NewRedditCommand(
+	cr.commands["r/UkrainianConflict"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,
 		"UkrainianConflict",
 		"Searches for a recent r/UkrainianConflict post on the given topic.",
