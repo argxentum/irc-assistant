@@ -6,21 +6,22 @@ import (
 )
 
 type Config struct {
-	IRC          IRCConfig
-	Web          WebConfig
-	Queue        QueueConfig
-	Reddit       RedditConfig
-	GoogleCloud  GoogleCloudConfig `yaml:"google_cloud"`
-	Currency     APIKeyConfig
-	Commands     CommandsConfig
-	Ignore       IgnoreConfig
-	Giphy        APIKeyConfig
-	Imgflip      ImgflipConfig
-	Alphavantage APIKeyConfig
-	Finage       APIKeyConfig
-	Finnhub      APIKeyConfig
-	Polygon      APIKeyConfig
-	MarketData   APIKeyConfig `yaml:"market_data"`
+	IRC            IRCConfig
+	Web            WebConfig
+	Queue          QueueConfig
+	Reddit         RedditConfig
+	GoogleCloud    GoogleCloudConfig `yaml:"google_cloud"`
+	Currency       APIKeyConfig
+	Commands       CommandsConfig
+	Ignore         IgnoreConfig
+	Giphy          APIKeyConfig
+	Imgflip        ImgflipConfig
+	MerriamWebster MerriamWebsterConfig `yaml:"merriam_webster"`
+	Alphavantage   APIKeyConfig
+	Finage         APIKeyConfig
+	Finnhub        APIKeyConfig
+	Polygon        APIKeyConfig
+	MarketData     APIKeyConfig `yaml:"market_data"`
 }
 
 type IRCConfig struct {
@@ -123,6 +124,11 @@ type ImgflipConfig struct {
 type QueueConfig struct {
 	Topic        string
 	Subscription string
+}
+
+type MerriamWebsterConfig struct {
+	DictionaryAPIKey string `yaml:"dictionary_api_key"`
+	ThesaurusAPIKey  string `yaml:"thesaurus_api_key"`
 }
 
 func ReadConfig(filename string) (*Config, error) {
