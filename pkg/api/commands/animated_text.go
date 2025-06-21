@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
@@ -46,8 +47,19 @@ func (c *AnimatedTextCommand) CanExecute(e *irc.Event) bool {
 }
 
 func (c *AnimatedTextCommand) Execute(e *irc.Event) {
+	logger := log.Logger()
 	tokens := Tokens(e.Message())
 	message := strings.Join(tokens[1:], "_") + ".gif"
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), message)
-	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("%s/animated/%s", c.cfg.Web.ExternalRootURL, message))
+
+	au := fmt.Sprintf("%s/animated/%s", c.cfg.Web.ExternalRootURL, message)
+	id, err := repository.GetArchiveShortcutID(au)
+	if err != nil {
+		logger.Errorf(e, "failed to get archive shortcut ID: %v", err)
+		c.Replyf(e, "Sorry, something went wrong. Please try again later.")
+		return
+	}
+
+	u := fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id + ".gif"
+	c.SendMessage(e, e.ReplyTarget(), u)
 }

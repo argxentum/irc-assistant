@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -207,7 +208,34 @@ func (c *MemeCommand) Execute(e *irc.Event) {
 	}
 
 	logger.Debugf(e, "meme caption response: %v", captionResult)
-	c.SendMessage(e, e.ReplyTarget(), captionResult.Data.URL)
+
+	id, err := repository.GetArchiveShortcutID(captionResult.Data.URL)
+	if err != nil {
+		logger.Errorf(e, "failed to get archive shortcut ID: %v", err)
+		c.Replyf(e, "Sorry, something went wrong. Please try again later.")
+		return
+	}
+
+	// if last path component has an extension, reuse it in shortcut URL
+	parts := strings.Split(captionResult.Data.URL, "/")
+	if len(parts) == 0 {
+		logger.Errorf(e, "invalid meme URL: %s", captionResult.Data.URL)
+		c.Replyf(e, "Sorry, something went wrong. Please try again later.")
+		return
+	}
+
+	lastPart := parts[len(parts)-1]
+	if strings.Contains(lastPart, ".") {
+		ext := strings.Split(lastPart, ".")
+		if len(ext) > 1 {
+			id = fmt.Sprintf("%s.%s", id, ext[len(ext)-1])
+		} else {
+			logger.Debugf(e, "meme URL has no extension: %s", captionResult.Data.URL)
+		}
+	}
+
+	u := fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
+	c.SendMessage(e, e.ReplyTarget(), u)
 }
 
 type memeSearchResult struct {
