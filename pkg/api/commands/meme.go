@@ -209,7 +209,7 @@ func (c *MemeCommand) Execute(e *irc.Event) {
 
 	logger.Debugf(e, "meme caption response: %v", captionResult)
 
-	id, err := repository.GetArchiveShortcutID(captionResult.Data.URL)
+	sc, err := repository.GetShortcut(captionResult.Data.URL, captionResult.Data.URL)
 	if err != nil {
 		logger.Errorf(e, "failed to get archive shortcut ID: %v", err)
 		c.Replyf(e, "Sorry, something went wrong. Please try again later.")
@@ -224,6 +224,7 @@ func (c *MemeCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	id := sc.ID
 	lastPart := parts[len(parts)-1]
 	if strings.Contains(lastPart, ".") {
 		ext := strings.Split(lastPart, ".")

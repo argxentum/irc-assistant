@@ -53,13 +53,13 @@ func (c *AnimatedTextCommand) Execute(e *irc.Event) {
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), message)
 
 	au := fmt.Sprintf("%s/animated/%s", c.cfg.Web.ExternalRootURL, message)
-	id, err := repository.GetArchiveShortcutID(au)
+	sc, err := repository.GetShortcut(au, au)
 	if err != nil {
 		logger.Errorf(e, "failed to get archive shortcut ID: %v", err)
 		c.Replyf(e, "Sorry, something went wrong. Please try again later.")
 		return
 	}
 
-	u := fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id + ".gif"
+	u := fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + sc.ID + ".gif"
 	c.SendMessage(e, e.ReplyTarget(), u)
 }
