@@ -1,6 +1,7 @@
 package wikipedia
 
 import (
+	"assistant/pkg/log"
 	"fmt"
 	gowiki "github.com/Arilucea/go-wiki"
 	"github.com/Arilucea/go-wiki/page"
@@ -35,9 +36,15 @@ func Search(query string) (*page.WikipediaPage, error) {
 }
 
 func GetPage(query string) (*page.WikipediaPage, error) {
-	p, err := gowiki.GetPage(query, -1, false, true)
+	// try to get the page with suggested titles first; if that fails, try again without suggested titles
+	p, err := gowiki.GetPage(query, -1, true, true)
 	if err != nil {
-		return nil, err
+		log.Logger().Debugf(nil, "error getting page for query %s with suggested titles: %v", query, err)
+		p, err = gowiki.GetPage(query, -1, false, true)
+		if err != nil {
+			log.Logger().Debugf(nil, "error getting page for query %s without suggested titles: %v", query, err)
+			return nil, err
+		}
 	}
 
 	_, err = p.GetSummary()
