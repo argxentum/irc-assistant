@@ -95,11 +95,7 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 
 	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: c.ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Debugf(nil, "error fetching %s, %s", url, err)
 		return nil, err
@@ -152,11 +148,7 @@ func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summar
 
 	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: c.ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Debugf(nil, "error fetching %s, %s", url, err)
 		return nil, err

@@ -93,6 +93,8 @@ type RedditConfig struct {
 	UserAgent               string `yaml:"user_agent"`
 	Username                string
 	Password                string
+	ClientID                string   `yaml:"client_id"`
+	ClientSecret            string   `yaml:"client_secret"`
 	SummarizationSubreddits []string `yaml:"summarization_subreddits"`
 }
 

@@ -1,8 +1,6 @@
 package context
 
 import (
-	"net/http"
-	"net/http/cookiejar"
 	"time"
 )
 
@@ -13,23 +11,27 @@ type Session struct {
 	bannedWords []ChannelBannedWords
 }
 
-func NewSession() *Session {
-	jar, _ := cookiejar.New(nil)
-
-	return &Session{
-		StartedAt: time.Now(),
-		IsAwake:   true,
-		Reddit: RedditSession{
-			CookieJar: jar,
-		},
-		bannedWords: make([]ChannelBannedWords, 0),
-	}
+type RedditSession struct {
+	AccessToken string  `json:"access_token"`
+	ExpiresIn   float64 `json:"expires_in"`
 }
 
-type RedditSession struct {
-	JWT       string
-	Modhash   string
-	CookieJar http.CookieJar
+func (rs *RedditSession) IsExpired() bool {
+	if len(rs.AccessToken) == 0 || rs.ExpiresIn <= 0 {
+		return true
+	}
+
+	expirationTime := time.Now().Add(time.Duration(rs.ExpiresIn) * time.Second)
+	return time.Now().After(expirationTime)
+}
+
+func NewSession() *Session {
+	return &Session{
+		StartedAt:   time.Now(),
+		IsAwake:     true,
+		Reddit:      RedditSession{},
+		bannedWords: make([]ChannelBannedWords, 0),
+	}
 }
 
 type Cache struct {

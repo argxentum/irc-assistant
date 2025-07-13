@@ -146,6 +146,41 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
 
+	if c.isRootDomainIn(url, c.cfg.Ignore.Domains) {
+		logger.Debugf(e, "root domain denied %s", url)
+		return
+	}
+
+	if c.isDomainIn(url, domainDenylist) {
+		logger.Debugf(e, "domain denied %s", url)
+		return
+	}
+
+	dis := false
+	if channel != nil && fs.IsDisinformationSource(channel.Name, url) {
+		dis = true
+		logger.Debugf(e, "URL is possible disinformation: %s", url)
+	}
+
+	if c.requiresDomainSummary(url) {
+		logger.Debugf(e, "performing domain summarization for %s", url)
+
+		ds, err := c.domainSummary(e, url)
+		if err != nil {
+			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
+		} else if ds != nil {
+			logger.Debugf(e, "performed domain specific handling: %s", url)
+
+			if dis {
+				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
+			}
+			c.completeSummary(e, source, url, e.ReplyTarget(), ds.messages, dis, p)
+		} else {
+			logger.Debugf(e, "domain specific summarization failed for %s", url)
+		}
+		return
+	}
+
 	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
 	if err != nil {
 		logger.Debugf(e, "error retrieving document for %s: %v", url, err)
@@ -155,12 +190,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if !retriever.IsContentTypeAllowed(doc.Body.Response.Header.Get("Content-Type")) {
 		logger.Debugf(e, "direct prefetch, disallowed content type for %s", url)
 		return
-	}
-
-	dis := false
-	if channel != nil && fs.IsDisinformationSource(channel.Name, url) {
-		dis = true
-		logger.Debugf(e, "URL is possible disinformation: %s", url)
 	}
 
 	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
@@ -202,35 +231,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			p.disinfoCount = 0
 			p.ignoreCount = 0
 		}
-	}
-
-	if c.isRootDomainIn(url, c.cfg.Ignore.Domains) {
-		logger.Debugf(e, "root domain denied %s", url)
-		return
-	}
-
-	if c.isDomainIn(url, domainDenylist) {
-		logger.Debugf(e, "domain denied %s", url)
-		return
-	}
-
-	if c.requiresDomainSummary(url) {
-		logger.Debugf(e, "performing domain summarization for %s", url)
-
-		ds, err := c.domainSummary(e, url)
-		if err != nil {
-			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
-		} else if ds != nil {
-			logger.Debugf(e, "performed domain specific handling: %s", url)
-
-			if dis {
-				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
-			}
-			c.completeSummary(e, source, url, e.ReplyTarget(), ds.messages, dis, p)
-		} else {
-			logger.Debugf(e, "domain specific summarization failed for %s", url)
-		}
-		return
 	}
 
 	contentSummarizer, err := c.contentSummary(e, doc)

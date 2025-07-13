@@ -9,24 +9,18 @@ import (
 	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"html"
+	"io"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
 	"time"
 )
-
-type LoginResult struct {
-	Modhash string
-	JWT     string
-	URL     *url.URL
-	Cookies []*http.Cookie
-}
 
 type Listing struct {
 	Data struct {
@@ -86,57 +80,35 @@ func (c *Comment) FormattedBody() string {
 	}
 }
 
-func IsJWTExpired(tok string) bool {
-	if len(tok) == 0 {
-		return true
-	}
-
-	token, _ := jwt.Parse(tok, func(token *jwt.Token) (any, error) {
-		return token, nil
-	})
-
-	if token == nil {
-		return true
-	}
-
-	exp, err := token.Claims.GetExpirationTime()
-	if err != nil || exp == nil {
-		return true
-	}
-
-	return time.Now().Unix() > exp.Unix()
-}
-
 func Login(ctx context.Context, cfg *config.Config) error {
 	logger := log.Logger()
 
-	if IsJWTExpired(ctx.Session().Reddit.JWT) {
-		logger.Debug(nil, "reddit JWT token expired, logging in")
+	if ctx.Session().Reddit.IsExpired() {
+		logger.Debug(nil, "reddit session nil or expired, logging in")
 
-		result, err := login(cfg.Reddit.Username, cfg.Reddit.Password)
+		session, err := login(cfg.Reddit.Username, cfg.Reddit.Password, cfg.Reddit.ClientID, cfg.Reddit.ClientSecret)
 		if err != nil {
 			return fmt.Errorf("error logging into reddit, %s", err)
 		}
 
-		if result == nil {
+		if session == nil {
 			return errors.New("unable to login to reddit")
 		}
 
-		ctx.Session().Reddit.JWT = result.JWT
-		ctx.Session().Reddit.Modhash = result.Modhash
-		ctx.Session().Reddit.CookieJar.SetCookies(result.URL, result.Cookies)
+		ctx.Session().Reddit = *session
 	}
 
 	return nil
 }
 
-func login(username, password string) (*LoginResult, error) {
+func login(username, password, clientID, clientSecret string) (*context.RedditSession, error) {
 	data := url.Values{}
-	data.Set("user", username)
-	data.Set("passwd", password)
-	data.Set("api_type", "json")
 
-	req, err := http.NewRequest(http.MethodPost, "https://ssl.reddit.com/api/login", strings.NewReader(data.Encode()))
+	data.Set("username", username)
+	data.Set("password", password)
+	data.Set("grant_type", "password")
+
+	req, err := http.NewRequest(http.MethodPost, "https://www.reddit.com/api/v1/access_token", strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +117,9 @@ func login(username, password string) (*LoginResult, error) {
 	for k, v := range retriever.RandomHeaderSet() {
 		req.Header.Set(k, v)
 	}
+
+	auth := fmt.Sprintf("%s:%s", clientID, clientSecret)
+	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth))))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -155,32 +130,23 @@ func login(username, password string) (*LoginResult, error) {
 		return nil, errors.New("no response")
 	}
 
-	var body struct {
-		JSON struct {
-			Errors []string
-			Data   struct {
-				Modhash string
-				Cookie  string
-			}
-		}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error logging into reddit, status code: %d", resp.StatusCode)
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, err
-	}
-
-	result := &LoginResult{}
-
-	result.Modhash = body.JSON.Data.Modhash
-	result.JWT = body.JSON.Data.Cookie
-	u, err := url.Parse("https://reddit.com")
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		return nil, fmt.Errorf("error reading reddit content, %w", err)
+	}
+
+	session := context.RedditSession{}
+	if err = json.Unmarshal(body, &session); err != nil {
 		return nil, err
 	}
 
-	result.URL = u
-	result.Cookies = resp.Cookies()
-	return result, nil
+	return &session, nil
 }
 
 const redditBaseURL = "https://api.reddit.com"
@@ -226,11 +192,7 @@ func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]
 
 	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -271,11 +233,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 
 	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -332,11 +290,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Errorf(nil, "error fetching reddit posts, %s", err)
 		return nil, err
@@ -390,11 +344,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 
 	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
 
-	client := &http.Client{
-		Jar: ctx.Session().Reddit.CookieJar,
-	}
-
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Debugf(nil, "error fetching %s, %s", apiURL, err)
 		return nil, err
@@ -433,17 +383,13 @@ func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*
 		return nil, err
 	}
 
-	client := &http.Client{
-		Jar: ctx.Session().Reddit.CookieJar,
-	}
-
 	u := redditBaseURL + html.UnescapeString(permalink)
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
