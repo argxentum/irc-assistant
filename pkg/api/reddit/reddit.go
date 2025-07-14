@@ -188,7 +188,9 @@ func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]
 	}
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
+	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", u)
 	if err != nil {
+		logger.Debugf(retriever.NewRequestLabeler(req), "error requesting %s, %v", u, err)
 		return nil, err
 	}
 
@@ -199,6 +201,7 @@ func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Debugf(retriever.NewResponseLabeler(resp), "error fetching %s, %v", u, err)
 		return nil, err
 	}
 
@@ -232,7 +235,9 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 	query := fmt.Sprintf(searchPostsForURL, redditBaseURL, t)
 
 	req, err := http.NewRequest(http.MethodGet, query, nil)
+	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", query)
 	if err != nil {
+		logger.Debugf(retriever.NewRequestLabeler(req), "error requesting %s, %v", query, err)
 		return nil, err
 	}
 
@@ -243,6 +248,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Debugf(retriever.NewResponseLabeler(resp), "error fetching %s, %s", query, err)
 		return nil, err
 	}
 
@@ -292,7 +298,9 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	query := fmt.Sprintf(subredditCategoryPosts, redditBaseURL, subreddit, category, n)
 	req, err := http.NewRequest(http.MethodGet, query, nil)
+	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", query)
 	if err != nil {
+		logger.Debugf(retriever.NewRequestLabeler(req), "error requesting %s, %v", query, err)
 		return nil, err
 	}
 
@@ -303,7 +311,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		logger.Errorf(nil, "error fetching reddit posts, %s", err)
+		logger.Errorf(retriever.NewResponseLabeler(resp), "error fetching reddit posts, %v", err)
 		return nil, err
 	}
 
@@ -345,9 +353,6 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 		return nil, err
 	}
 
-	logger := log.Logger()
-	logger.Debugf(nil, "fetching reddit API URL %s", apiURL)
-
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
@@ -358,9 +363,12 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 		req.Header.Set(k, v)
 	}
 
+	logger := log.Logger()
+	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", apiURL)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		logger.Debugf(nil, "error fetching %s, %s", apiURL, err)
+		logger.Debugf(retriever.NewResponseLabeler(resp), "error fetching %s, %v", apiURL, err)
 		return nil, err
 	}
 
@@ -397,14 +405,19 @@ func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*
 		return nil, err
 	}
 
+	logger := log.Logger()
+
 	u := redditBaseURL + html.UnescapeString(permalink)
 	req, err := http.NewRequest(http.MethodGet, u, nil)
+	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", u)
 	if err != nil {
+		logger.Debugf(retriever.NewRequestLabeler(req), "error requesting %s, %v", u, err)
 		return nil, err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		logger.Debugf(retriever.NewResponseLabeler(resp), "error fetching %s, %v", u, err)
 		return nil, err
 	}
 
