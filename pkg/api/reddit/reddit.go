@@ -81,22 +81,24 @@ func (c *Comment) FormattedBody() string {
 }
 
 func Login(ctx context.Context, cfg *config.Config) error {
-	logger := log.Logger()
+	/*
+		logger := log.Logger()
 
-	if ctx.Session().Reddit.IsExpired() {
-		logger.Debug(nil, "reddit session nil or expired, logging in")
+		if ctx.Session().Reddit.IsExpired() {
+			logger.Debug(nil, "reddit session nil or expired, logging in")
 
-		session, err := login(cfg.Reddit.Username, cfg.Reddit.Password, cfg.Reddit.ClientID, cfg.Reddit.ClientSecret)
-		if err != nil {
-			return fmt.Errorf("error logging into reddit, %s", err)
+			session, err := login(cfg.Reddit.Username, cfg.Reddit.Password, cfg.Reddit.ClientID, cfg.Reddit.ClientSecret)
+			if err != nil {
+				return fmt.Errorf("error logging into reddit, %s", err)
+			}
+
+			if session == nil {
+				return errors.New("unable to login to reddit")
+			}
+
+			ctx.Session().Reddit = *session
 		}
-
-		if session == nil {
-			return errors.New("unable to login to reddit")
-		}
-
-		ctx.Session().Reddit = *session
-	}
+	*/
 
 	return nil
 }
@@ -190,7 +192,10 @@ func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -231,7 +236,10 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -288,7 +296,10 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -342,7 +353,10 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

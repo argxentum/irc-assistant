@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"bytes"
@@ -93,7 +94,10 @@ func (c *SummaryCommand) parseRedditShortlink(e *irc.Event, url string) (*summar
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -146,7 +150,10 @@ func (c *SummaryCommand) parseRedditMediaLink(e *irc.Event, url string) (*summar
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", c.cfg.Reddit.UserAgent)
+	rhs := retriever.RandomHeaderSet()
+	for k, v := range rhs {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
