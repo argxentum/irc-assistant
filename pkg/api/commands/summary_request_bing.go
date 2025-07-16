@@ -29,7 +29,7 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 	title := strings.TrimSpace(doc.Root.Find("ol#b_results").First().Find("h2").First().Text())
 
 	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected title: %s", title)
+		logger.Debugf(e, "rejected bing title: %s", title)
 		return nil, rejectedTitleError
 	}
 
@@ -41,11 +41,6 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 	if len(title) == 0 {
 		logger.Debugf(e, "bing title empty")
 		return nil, summaryTooShortError
-	}
-
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected bing title: %s", title)
-		return nil, rejectedTitleError
 	}
 
 	return createSummary(style.Bold(title)), nil
