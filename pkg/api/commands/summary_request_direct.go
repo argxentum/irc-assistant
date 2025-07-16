@@ -12,7 +12,7 @@ import (
 
 func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	logger := log.Logger()
-	logger.Infof(e, "request for %s", doc.URL)
+	logger.Infof(e, "direct request for %s", doc.URL)
 
 	title := strings.TrimSpace(doc.Root.Find("title").First().Text())
 	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
@@ -40,10 +40,12 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 	}
 
 	if c.isRejectedTitle(title) {
+		logger.Debugf(e, "rejected direct title: %s", title)
 		return nil, rejectedTitleError
 	}
 
 	if len(title)+len(description) < minimumTitleLength {
+		logger.Debugf(e, "direct summary too short - title: %s, description: %s", title, description)
 		return nil, summaryTooShortError
 	}
 
@@ -51,7 +53,7 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 		title = title[:maximumTitleLength] + "..."
 	}
 
-	logger.Debugf(e, "title: %s, description: %s", title, description)
+	logger.Debugf(e, "direct request - title: %s, description: %s", title, description)
 
 	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < standardMaximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
 		if text.MostlyContains(title, description, 0.9) {
