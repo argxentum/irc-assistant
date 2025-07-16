@@ -66,6 +66,7 @@ type NickServConfig struct {
 	Recipient       string
 	IdentifyPattern string `yaml:"identify_pattern"`
 	IdentifyCommand string `yaml:"identify_command"`
+	RecoverCommand  string `yaml:"recover_command"`
 	Password        string
 }
 

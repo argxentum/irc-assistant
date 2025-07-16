@@ -59,6 +59,11 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 		return nil, nil
 	}
 
+	if c.isRejectedTitle(title) {
+		logger.Infof(e, "rejected reddit post title: %s", title)
+		return nil, nil
+	}
+
 	messages := make([]string, 0)
 	messages = append(messages, post.Post.FormattedTitle())
 

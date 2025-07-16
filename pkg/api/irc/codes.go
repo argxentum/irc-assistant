@@ -17,6 +17,7 @@ const (
 	CodeWhoIsReply = "311"
 	CodeEndOfWhoIs = "318"
 	CodeBanned     = "474"
+	CodeNickInUse  = "433"
 )
 
 const (

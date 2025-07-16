@@ -112,6 +112,12 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 	}
 
 	if len(cfg.IRC.NickServ.Password) > 0 {
+		s.respondOnce(CodeNickInUse, func(event *irce.Event) bool {
+			log.Logger().Debugf(nil, "nick %s already in use, trying to recover with NickServ", cfg.IRC.Nick)
+			s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.RecoverCommand, cfg.IRC.Nick, cfg.IRC.NickServ.Password)
+			return true
+		})
+
 		s.respondOnce(CodeNotice, func(event *irce.Event) bool {
 			if strings.Contains(event.Message(), cfg.IRC.NickServ.IdentifyPattern) {
 				s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.IdentifyCommand, cfg.IRC.NickServ.Password)
