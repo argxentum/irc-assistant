@@ -28,6 +28,11 @@ func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*
 		return nil, nil
 	}
 
+	if c.isRejectedTitle(title) {
+		logger.Debugf(e, "rejected reddit request title: %s", title)
+		return nil, rejectedTitleError
+	}
+
 	messages := make([]string, 0)
 	messages = append(messages, posts[0].Post.FormattedTitle())
 

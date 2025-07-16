@@ -38,7 +38,8 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 	}
 
 	if c.isRejectedTitle(title) {
-		return nil, fmt.Errorf("rejected title: %s", title)
+		logger.Debugf(e, "rejected startpage title: %s", title)
+		return nil, rejectedTitleError
 	}
 
 	return createSummary(style.Bold(title)), nil

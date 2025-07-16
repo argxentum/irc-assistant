@@ -43,5 +43,10 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 		return nil, summaryTooShortError
 	}
 
+	if c.isRejectedTitle(title) {
+		logger.Debugf(e, "rejected bing title: %s", title)
+		return nil, rejectedTitleError
+	}
+
 	return createSummary(style.Bold(title)), nil
 }

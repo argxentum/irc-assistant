@@ -38,5 +38,10 @@ func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, doc *retriever.Document)
 		return nil, summaryTooShortError
 	}
 
+	if c.isRejectedTitle(title) {
+		logger.Debugf(e, "rejected nuggetize title: %s", title)
+		return nil, rejectedTitleError
+	}
+
 	return createSummary(style.Bold(title)), nil
 }

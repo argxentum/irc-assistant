@@ -37,5 +37,10 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document
 		return nil, summaryTooShortError
 	}
 
+	if c.isRejectedTitle(title) {
+		logger.Debugf(e, "rejected duckduckgo title: %s", title)
+		return nil, rejectedTitleError
+	}
+
 	return createSummary(style.Bold(title)), nil
 }

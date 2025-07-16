@@ -60,8 +60,8 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, error)
 	}
 
 	if c.isRejectedTitle(title) {
-		logger.Infof(e, "rejected reddit post title: %s", title)
-		return nil, nil
+		logger.Infof(e, "rejected reddit domain title: %s", title)
+		return nil, rejectedTitleError
 	}
 
 	messages := make([]string, 0)
