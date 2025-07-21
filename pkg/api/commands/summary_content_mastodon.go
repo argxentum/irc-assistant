@@ -26,7 +26,7 @@ func (c *SummaryCommand) parseMastodon(e *irc.Event, doc *retriever.Document) (*
 	}
 
 	if c.isRejectedTitle(title) {
-		return nil, fmt.Errorf("rejected title: %s", title)
+		return nil, fmt.Errorf("rejected mastodon title: %s", title)
 	}
 
 	if len(title)+len(description) < minimumTitleLength {

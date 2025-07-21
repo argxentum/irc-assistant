@@ -2,7 +2,6 @@ package retriever
 
 import (
 	"errors"
-	"github.com/bobesa/go-domain-util/domainutil"
 	"io"
 	"math/rand/v2"
 	"net/http"
@@ -115,27 +114,8 @@ func IsContentTypeAllowed(contentType string) bool {
 	return false
 }
 
-func translateURL(url string) string {
-	domain := RootDomain(url)
-	switch domain {
-	case "x.com":
-		return replaceRoot(url, "x.com", "fixupx.com")
-	case "twitter.com":
-		return replaceRoot(url, "twitter.com", "fxtwitter.com")
-	}
-	return url
-}
-
-func replaceRoot(url, old, new string) string {
-	return strings.Replace(url, old, new, 1)
-}
-
 func RandomHeaderSet() map[string]string {
 	return headerSets[rand.IntN(len(headerSets))]
-}
-
-func RootDomain(url string) string {
-	return domainutil.Domain(url)
 }
 
 func Domain(url string) string {

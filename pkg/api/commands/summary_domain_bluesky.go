@@ -47,7 +47,7 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 	}
 
 	if c.isRejectedTitle(title) {
-		return nil, fmt.Errorf("rejected title: %s", title)
+		return nil, fmt.Errorf("rejected bluesky title: %s", title)
 	}
 
 	if len(title)+len(description) < minimumTitleLength {

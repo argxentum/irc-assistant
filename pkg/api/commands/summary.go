@@ -12,6 +12,7 @@ import (
 	"assistant/pkg/models"
 	"errors"
 	"fmt"
+	"github.com/bobesa/go-domain-util/domainutil"
 	"html"
 	"math"
 	"regexp"
@@ -137,6 +138,12 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if len(url) == 0 {
 		logger.Debugf(e, "no URL found in message")
 		return
+	}
+
+	translated, ok := c.translateURL(url)
+	if ok {
+		logger.Debugf(e, "translated %s to %s", url, translated)
+		url = translated
 	}
 
 	source, err := repository.FindSource(url)
@@ -384,7 +391,7 @@ var domainDenylist = []string{
 }
 
 func (c *SummaryCommand) isRootDomainIn(url string, domains []string) bool {
-	root := retriever.RootDomain(url)
+	root := domainutil.Domain(url)
 	return slices.Contains(domains, root)
 }
 
@@ -400,4 +407,12 @@ func (c *SummaryCommand) isRejectedTitle(title string) bool {
 		}
 	}
 	return false
+}
+
+func (c *SummaryCommand) translateURL(url string) (string, bool) {
+	domain := strings.ToLower(domainutil.Domain(url))
+	if translated, ok := c.cfg.Summary.TranslatedDomains[domain]; ok {
+		return strings.Replace(url, domain, translated, 1), true
+	}
+	return url, false
 }

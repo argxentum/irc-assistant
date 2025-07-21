@@ -2,7 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/irc"
-	"assistant/pkg/api/retriever"
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 var dsf map[string]func(e *irc.Event, url string) (*summary, error)
@@ -16,6 +16,8 @@ func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url
 			"reddit.com":     c.parseReddit,
 			"twitter.com":    c.parseTwitter,
 			"x.com":          c.parseTwitter,
+			"fixupx.com":     c.parseTwitter,
+			"fxtwitter.com":  c.parseTwitter,
 			"bsky.app":       c.parseBlueSky,
 			"wikipedia.org":  c.parseWikipedia,
 			"polymarket.com": c.parsePolymarket,
@@ -27,12 +29,12 @@ func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url
 }
 
 func (c *SummaryCommand) requiresDomainSummary(url string) bool {
-	domain := retriever.RootDomain(url)
+	domain := domainutil.Domain(url)
 	return c.domainSummarization()[domain] != nil
 }
 
 func (c *SummaryCommand) domainSummary(e *irc.Event, url string) (*summary, error) {
-	domain := retriever.RootDomain(url)
+	domain := domainutil.Domain(url)
 	if c.domainSummarization()[domain] == nil {
 		return nil, nil
 	}

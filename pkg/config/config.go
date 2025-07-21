@@ -22,6 +22,7 @@ type Config struct {
 	Finnhub        APIKeyConfig
 	Polygon        APIKeyConfig
 	MarketData     APIKeyConfig `yaml:"market_data"`
+	Summary        SummaryConfig
 }
 
 type IRCConfig struct {
@@ -132,6 +133,10 @@ type QueueConfig struct {
 type MerriamWebsterConfig struct {
 	DictionaryAPIKey string `yaml:"dictionary_api_key"`
 	ThesaurusAPIKey  string `yaml:"thesaurus_api_key"`
+}
+
+type SummaryConfig struct {
+	TranslatedDomains map[string]string `yaml:"translated_domains"`
 }
 
 func ReadConfig(filename string) (*Config, error) {

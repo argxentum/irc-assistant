@@ -34,12 +34,6 @@ type bodyRetriever struct {
 func (r *bodyRetriever) RetrieveBody(e *irc.Event, params RetrievalParams) (*Body, error) {
 	logger := log.Logger()
 
-	translated := translateURL(params.URL)
-	if translated != params.URL {
-		logger.Debugf(e, "translated %s to %s", params.URL, translated)
-	}
-	params.URL = translated
-
 	req, err := http.NewRequest(params.Method, params.URL, params.Body)
 	if err != nil {
 		logger.Debugf(e, "request creation error, %s", err)

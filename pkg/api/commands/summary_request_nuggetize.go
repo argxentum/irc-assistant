@@ -29,18 +29,13 @@ func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, doc *retriever.Document)
 	title := strings.TrimSpace(doc.Root.Find("span.title").First().Text())
 
 	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected title: %s", title)
+		logger.Debugf(e, "rejected nuggetize title: %s", title)
 		return nil, rejectedTitleError
 	}
 
 	if len(title) < minimumTitleLength {
 		logger.Debugf(e, "nuggetize title too short: %s", title)
 		return nil, summaryTooShortError
-	}
-
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected nuggetize title: %s", title)
-		return nil, rejectedTitleError
 	}
 
 	return createSummary(style.Bold(title)), nil
