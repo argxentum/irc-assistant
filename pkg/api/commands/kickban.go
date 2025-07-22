@@ -2,12 +2,15 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -29,7 +32,7 @@ func (c *KickBanCommand) Name() string {
 }
 
 func (c *KickBanCommand) Description() string {
-	return "Kicks and bans the specified user from the channel."
+	return "Kicks and bans the specified user from the channel. If a duration is specified, the ban will be temporary. Otherwise, the ban is permanent."
 }
 
 func (c *KickBanCommand) Triggers() []string {
@@ -37,7 +40,7 @@ func (c *KickBanCommand) Triggers() []string {
 }
 
 func (c *KickBanCommand) Usages() []string {
-	return []string{"%s <nick> [<reason>]"}
+	return []string{"%s [<duration>] <nick> [<reason>]"}
 }
 
 func (c *KickBanCommand) AllowedInPrivateMessages() bool {
@@ -51,6 +54,13 @@ func (c *KickBanCommand) CanExecute(e *irc.Event) bool {
 func (c *KickBanCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	channel := e.ReplyTarget()
+
+	duration := ""
+	if len(tokens) > 2 && elapse.IsDuration(tokens[1]) {
+		duration = tokens[1]
+		tokens = append(tokens[:1], tokens[2:]...)
+	}
+
 	nick := tokens[1]
 	reason := ""
 	if len(tokens) > 2 {
@@ -115,6 +125,22 @@ func (c *KickBanCommand) Execute(e *irc.Event) {
 			}()
 
 			go func() {
+				if len(duration) > 0 {
+					seconds, err := elapse.ParseDuration(duration)
+					if err != nil {
+						logger.Errorf(e, "error parsing duration, %s", err)
+						c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(TempBanCommandName).Triggers()[0])))
+						return
+					}
+
+					task := models.NewBanRemovalTask(time.Now().Add(seconds), user.Mask.NickWildcardString(), channel)
+					err = firestore.Get().AddTask(task)
+					if err != nil {
+						logger.Errorf(e, "error adding task, %s", err)
+						return
+					}
+				}
+
 				c.irc.Ban(channel, user.Mask.NickWildcardString())
 				time.Sleep(100 * time.Millisecond)
 				c.irc.Kick(channel, nick, reason)
