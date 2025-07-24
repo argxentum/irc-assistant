@@ -139,6 +139,12 @@ func (c *KickBanCommand) Execute(e *irc.Event) {
 						logger.Errorf(e, "error adding task, %s", err)
 						return
 					}
+
+					if len(reason) == 0 {
+						reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationDescription(duration))
+					} else {
+						reason = fmt.Sprintf("%s - temporarily banned for %s", reason, elapse.ParseDurationDescription(duration))
+					}
 				}
 
 				c.irc.Ban(channel, user.Mask.NickWildcardString())
