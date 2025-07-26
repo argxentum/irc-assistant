@@ -21,7 +21,7 @@ func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, er
 		return nil, nil
 	}
 
-	result, err := findPolymarketSlugMarketResult(slug)
+	result, total, err := findPolymarketSlugMarketResult(slug)
 	if err != nil {
 		return nil, fmt.Errorf("error finding Polymarket market result: %w", err)
 	}
@@ -30,43 +30,61 @@ func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, er
 		return nil, nil
 	}
 
-	messages := generatePolymarketMessages(result)
+	messages := generatePolymarketMessages(result, total)
 
 	return &summary{
 		messages: messages,
 	}, nil
 }
 
-func findPolymarketSlugMarketResult(slug string) (*polymarketMarketResult, error) {
+func findPolymarketSlugMarketResult(slug string) (*polymarketMarketResult, int, error) {
 	url := fmt.Sprintf(PolymarketGammaAPIEventsURL, slug)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching Polymarket results: %w", err)
+		return nil, 0, fmt.Errorf("error fetching Polymarket results: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, 0, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	var results []polymarketEventResult
 	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
-		return nil, fmt.Errorf("error decoding Polymarket results: %w", err)
+		return nil, 0, fmt.Errorf("error decoding Polymarket results: %w", err)
 	}
 
 	if len(results) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	result := results[0]
 
 	if len(result.Markets) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 
-	market := result.Markets[0]
-	json.Unmarshal([]byte(market.OutcomesRaw), &market.Outcomes)
-	market.OutcomePrices = parseOutcomePrices(market.OutcomePricesRaw)
+	markets := make([]*polymarketMarketResult, 0, len(result.Markets))
+	for _, m := range result.Markets {
+		if len(m.OutcomePricesRaw) > 0 {
+			markets = append(markets, &m)
+		}
+	}
 
-	return &market, nil
+	if len(markets) == 0 {
+		return nil, 0, nil
+	}
+
+	var maxMarket *polymarketMarketResult
+	maxOutcomePrice := 0.0
+	for _, market := range markets {
+		json.Unmarshal([]byte(market.OutcomesRaw), &market.Outcomes)
+		market.OutcomePrices = parseOutcomePrices(market.OutcomePricesRaw)
+		if len(market.OutcomePrices) > 0 && market.OutcomePrices[0] > maxOutcomePrice {
+			maxOutcomePrice = market.OutcomePrices[0]
+			maxMarket = market
+		}
+	}
+
+	return maxMarket, len(markets), nil
 }

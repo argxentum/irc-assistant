@@ -108,7 +108,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "found Polymarket result: %s", result.ID)
 
-	messages := generatePolymarketMessages(result)
+	messages := generatePolymarketMessages(result, 1)
 	c.irc.SendMessages(e.ReplyTarget(), messages)
 }
 
@@ -178,7 +178,7 @@ func parseOutcomePrices(raw string) []float64 {
 	return prices
 }
 
-func generatePolymarketMessages(result *polymarketMarketResult) []string {
+func generatePolymarketMessages(result *polymarketMarketResult, total int) []string {
 	maxPrice := 0.0
 	for _, price := range result.OutcomePrices {
 		if price > maxPrice {
@@ -187,6 +187,14 @@ func generatePolymarketMessages(result *polymarketMarketResult) []string {
 	}
 
 	message := style.Bold(result.Question)
+
+	if total > 1 {
+		plural := "s"
+		if total == 2 {
+			plural = ""
+		}
+		message += fmt.Sprintf(" (+%d other outcome%s)", total-1, plural)
+	}
 
 	if len(result.Outcomes) == 1 {
 		outcome := result.Outcomes[0]
