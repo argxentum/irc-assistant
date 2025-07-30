@@ -18,6 +18,7 @@ const (
 	CodeEndOfWhoIs = "318"
 	CodeBanned     = "474"
 	CodeNickInUse  = "433"
+	CodeEndOfMotd  = "376"
 )
 
 const (

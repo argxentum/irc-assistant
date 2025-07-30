@@ -92,10 +92,11 @@ func NewIRC(ctx context.Context) IRC {
 }
 
 type service struct {
-	ctx  context.Context
-	cfg  *config.Config
-	conn *irce.Connection
-	ech  chan *Event
+	ctx           context.Context
+	cfg           *config.Config
+	conn          *irce.Connection
+	ech           chan *Event
+	recoverNeeded bool
 }
 
 func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.Context, cfg *config.Config, irc IRC), joinChannelCallback func(channel string, mask *Mask)) error {
@@ -113,8 +114,16 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 
 	if len(cfg.IRC.NickServ.Password) > 0 {
 		s.respondOnce(CodeNickInUse, func(event *irce.Event) bool {
-			log.Logger().Debugf(nil, "nick %s already in use, trying to recover with NickServ", cfg.IRC.Nick)
-			s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.RecoverCommand, cfg.IRC.Nick, cfg.IRC.NickServ.Password)
+			log.Logger().Debugf(nil, "nick %s already in use, marking as recover needed", cfg.IRC.Nick)
+			s.recoverNeeded = true
+			return true
+		})
+
+		s.respondOnce(CodeEndOfMotd, func(event *irce.Event) bool {
+			if s.recoverNeeded {
+				log.Logger().Debugf(nil, "reached end of MOTD and recover is needed, trying to recover %s with NickServ", cfg.IRC.Nick)
+				s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.RecoverCommand, cfg.IRC.Nick, cfg.IRC.NickServ.Password)
+			}
 			return true
 		})
 
