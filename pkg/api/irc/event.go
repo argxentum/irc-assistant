@@ -19,6 +19,7 @@ type Event struct {
 	Raw       string
 	Code      string
 	From      string
+	Username  string
 	Source    string
 	Arguments []string
 }
@@ -47,6 +48,18 @@ func (e *Event) Recipient() (string, EntityType) {
 		return e.Arguments[0], EntityTypeChannel
 	}
 	return e.Arguments[0], EntityTypeUser
+}
+
+func (e *Event) Mask() *Mask {
+	mask := ParseMask(e.Source)
+	if mask == nil {
+		return &Mask{
+			Nick:   e.From,
+			UserID: e.Username,
+			Host:   e.Source,
+		}
+	}
+	return mask
 }
 
 func (e *Event) ReplyTarget() string {
@@ -98,6 +111,7 @@ func createEvent(e *irce.Event) *Event {
 		Raw:       e.Raw,
 		Code:      e.Code,
 		From:      e.Nick,
+		Username:  e.User,
 		Source:    e.Source,
 		Arguments: e.Arguments,
 	}

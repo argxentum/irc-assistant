@@ -91,9 +91,9 @@ func (eh *handler) Handle(e *irc.Event) {
 		substitutions := false
 		tokens := commands.Tokens(e.Arguments[len(e.Arguments)-1])
 		for i, a := range tokens {
-			if v, ok := silentSubstitutions[a]; ok {
+			if v, ok := commandSubstitutions[a]; ok {
 				substitutions = true
-				logger.Debugf(e, "substituting %s with %s", a, v)
+				logger.Debugf(e, "substituting command %s with %s", a, v)
 				tokens[i] = v
 			}
 		}
@@ -120,6 +120,17 @@ func (eh *handler) Handle(e *irc.Event) {
 		if sender == eh.cfg.IRC.Owner || slices.Contains(eh.cfg.IRC.Admins, sender) {
 			channel := e.Arguments[1]
 			eh.irc.Join(channel)
+		}
+	case irc.CodeNickChange:
+		if e.IsPrivateMessage() {
+			logger.Debugf(e, "ignoring nick change event in private message")
+			return
+		}
+		oldMask := e.Mask()
+		newMask := e.Mask()
+		newMask.Nick = e.Message()
+		if err := repository.CreateUserFromNickChange(e, oldMask, newMask); err != nil {
+			logger.Errorf(e, "unable to create user for nick change event, %v", err)
 		}
 	case irc.CodePrivateMessage:
 		tokens := commands.Tokens(e.Message())

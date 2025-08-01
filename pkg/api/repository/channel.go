@@ -13,21 +13,43 @@ import (
 	"time"
 )
 
+func GetAllChannels(e *irc.Event) ([]*models.Channel, error) {
+	fs := firestore.Get()
+
+	channels, err := fs.Channels()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving channels, %w", err)
+	}
+
+	if channels == nil {
+		return nil, fmt.Errorf("no channels found")
+	}
+
+	for _, ch := range channels {
+		populateChannelDefaults(ch)
+	}
+
+	return channels, nil
+}
+
 func GetChannel(e *irc.Event, channel string) (*models.Channel, error) {
-	logger := log.Logger()
 	fs := firestore.Get()
 
 	ch, err := fs.Channel(channel)
 	if err != nil {
-		logger.Errorf(e, "error retrieving channel, %s", err)
-		return nil, err
+		return nil, fmt.Errorf("error retrieving channel, %w", err)
 	}
 
 	if ch == nil {
-		logger.Errorf(e, "channel %s does not exist", channel)
 		return nil, fmt.Errorf("channel %s does not exist", channel)
 	}
 
+	populateChannelDefaults(ch)
+
+	return ch, nil
+}
+
+func populateChannelDefaults(ch *models.Channel) {
 	if ch.AutoVoiced == nil {
 		ch.AutoVoiced = make([]string, 0)
 	}
@@ -39,8 +61,6 @@ func GetChannel(e *irc.Event, channel string) (*models.Channel, error) {
 	slices.SortFunc(ch.VoiceRequests, func(a, b models.VoiceRequest) int {
 		return cmp.Compare(a.RequestedAt.Unix(), b.RequestedAt.Unix())
 	})
-
-	return ch, nil
 }
 
 func IsChannelAutoVoicedUser(e *irc.Event, ch *models.Channel, nick string) bool {

@@ -3,6 +3,7 @@ package repository
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/firestore"
+	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
 	"sort"
@@ -16,6 +17,39 @@ const (
 	OpSubtract  = "-"
 	OpDecrement = "--"
 )
+
+func CreateUserFromNickChange(e *irc.Event, oldMask, newMask *irc.Mask) error {
+	fs := firestore.Get()
+	logger := log.Logger()
+
+	logger.Debugf(e, "attempting to create user: %s", newMask.String())
+	channels, err := GetAllChannels(e)
+	if err != nil {
+		return fmt.Errorf("error getting channels: %w", err)
+	}
+
+	for _, channel := range channels {
+		logger.Debugf(e, "checking %s for %s", channel.Name, oldMask.String())
+
+		oldUser, err := fs.GetUser(channel.Name, oldMask)
+		if err != nil {
+			return fmt.Errorf("error getting user: %w", err)
+		}
+
+		if oldUser != nil {
+			logger.Debugf(e, "old user found %s, creating %s", oldMask.String(), newMask.String())
+			newUser := models.NewUser(newMask)
+			newUser.IsAutoVoiced = oldUser.IsAutoVoiced
+			err = fs.CreateUser(channel.Name, newUser)
+			if err != nil {
+				return fmt.Errorf("error creating user: %w", err)
+			}
+			logger.Debugf(e, "created user: %s", newUser.Nick)
+		}
+	}
+
+	return nil
+}
 
 func GetUsersByHost(e *irc.Event, channel, host string) ([]*models.User, error) {
 	fs := firestore.Get()

@@ -2,6 +2,7 @@ package irc
 
 const (
 	CodeNotice         = "NOTICE"
+	CodeNickChange     = "NICK"
 	CodeJoin           = "JOIN"
 	CodeInvite         = "INVITE"
 	CodePrivateMessage = "PRIVMSG"

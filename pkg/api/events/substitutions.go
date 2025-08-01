@@ -1,5 +1,5 @@
 package events
 
-var silentSubstitutions = map[string]string{
+var commandSubstitutions = map[string]string{
 	".grab": "!quote",
 }
