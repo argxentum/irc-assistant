@@ -140,6 +140,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	originalURL := url
 	translated, ok := c.translateURL(url)
 	if ok {
 		logger.Debugf(e, "translated %s to %s", url, translated)
@@ -164,7 +165,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	}
 
 	dis := false
-	if channel != nil && fs.IsDisinformationSource(channel.Name, url) {
+	if channel != nil && fs.IsDisinformationSource(channel.Name, originalURL) {
 		dis = true
 		logger.Debugf(e, "URL is possible disinformation: %s", url)
 	}

@@ -18,9 +18,9 @@ import (
 const RemindersCommandName = "reminders"
 
 const (
-	actionCancel = "cancel"
-	actionRemove = "remove"
-	actionDelete = "delete"
+	remindersActionCancel = "cancel"
+	remindersActionRemove = "remove"
+	remindersActionDelete = "delete"
 )
 
 type RemindersCommand struct {
@@ -67,7 +67,7 @@ func (c *RemindersCommand) Execute(e *irc.Event) {
 	}
 
 	action := strings.ToLower(strings.TrimSpace(tokens[1]))
-	if len(tokens) > 2 && len(action) > 0 && slices.Contains([]string{actionCancel, actionRemove, actionDelete}, action) {
+	if len(tokens) > 2 && len(action) > 0 && slices.Contains([]string{remindersActionCancel, remindersActionRemove, remindersActionDelete}, action) {
 		number, err := strconv.Atoi(strings.ToLower(strings.TrimSpace(tokens[2])))
 		if err != nil {
 			c.Replyf(e, "Invalid reminder number.")
