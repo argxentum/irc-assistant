@@ -126,10 +126,11 @@ func FullSourceSummary(source *models.Source) string {
 		"extreme", "conspiracy", "propaganda", "pseudoscience", "far",
 	}
 
+	cleanedBias := strings.ReplaceAll(strings.ToLower(source.Bias), "-", " ")
 	ratingColor := style.ColorNone
-	if strings.Contains(strings.ToLower(source.Bias), "least biased") {
+	if strings.Contains(strings.ToLower(cleanedBias), "least biased") {
 		ratingColor = style.ColorGreen
-	} else if slicesx.ContainsAny(highlyBiased, strings.Fields(strings.ReplaceAll(strings.ToLower(source.Bias), "-", " "))) {
+	} else if slicesx.ContainsAny(highlyBiased, strings.Fields(cleanedBias)) {
 		ratingColor = style.ColorRed
 	} else if strings.ToLower(source.Bias) == "left" || strings.ToLower(source.Bias) == "right" {
 		ratingColor = style.ColorYellow
