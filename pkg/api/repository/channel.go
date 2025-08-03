@@ -205,6 +205,10 @@ func FindUserQuotes(channel, nick string) ([]*models.Quote, error) {
 	return fs.FindUserQuotes(channel, nick)
 }
 
+func FindChannelQuotes(channel string) ([]*models.Quote, error) {
+	return firestore.Get().Quotes(channel)
+}
+
 func FindQuotes(channel string, keywords []string) ([]*models.Quote, error) {
 	fs := firestore.Get()
 	matching, err := fs.FindQuotes(channel, keywords)
