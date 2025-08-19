@@ -9,14 +9,15 @@ import (
 	"assistant/pkg/log"
 	"errors"
 	"fmt"
-	"github.com/bwmarrin/snowflake"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/bwmarrin/snowflake"
 )
 
 var twitterAuthorRegex = regexp.MustCompile(`^(.*?)\s*\(@(.*?)\)$`)
-var twitterSnowflakeRegex = regexp.MustCompile(`^https?://(?:twitter|x)\.com/[^/]+/status/(\d+)(?:$|\?)`)
+var twitterSnowflakeRegex = regexp.MustCompile(`^https?://.*?/[^/]+/status/(\d+)(?:$|\?)`)
 
 func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error) {
 	params := retriever.DefaultParams(url)
