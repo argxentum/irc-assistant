@@ -12,13 +12,14 @@ import (
 	"assistant/pkg/models"
 	"errors"
 	"fmt"
-	"github.com/bobesa/go-domain-util/domainutil"
 	"html"
 	"math"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 const SummaryCommandName = "summary"
@@ -140,11 +141,18 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	// some urls are used to avoid specific domains, e.g., xcancel.com to avoid x.com
+	if actualURL, ok := c.actualURL(url); ok {
+		logger.Debugf(e, "actualURL %s to %s", url, actualURL)
+		url = actualURL
+	}
+
 	originalURL := url
-	translated, ok := c.translateURL(url)
-	if ok {
-		logger.Debugf(e, "translated %s to %s", url, translated)
-		url = translated
+
+	// we need to translate some domains to get the actual content, e.g., x.com to fixupx.com
+	if translatedURL, ok := c.translatedURL(url); ok {
+		logger.Debugf(e, "translatedURL %s to %s", url, translatedURL)
+		url = translatedURL
 	}
 
 	source, err := repository.FindSource(url)
@@ -410,10 +418,18 @@ func (c *SummaryCommand) isRejectedTitle(title string) bool {
 	return false
 }
 
-func (c *SummaryCommand) translateURL(url string) (string, bool) {
+func (c *SummaryCommand) translatedURL(url string) (string, bool) {
 	domain := strings.ToLower(domainutil.Domain(url))
 	if translated, ok := c.cfg.Summary.TranslatedDomains[domain]; ok {
 		return strings.Replace(url, domain, translated, 1), true
+	}
+	return url, false
+}
+
+func (c *SummaryCommand) actualURL(url string) (string, bool) {
+	domain := strings.ToLower(domainutil.Domain(url))
+	if avoidance, ok := c.cfg.Summary.AvoidanceDomains[domain]; ok {
+		return strings.Replace(url, domain, avoidance, 1), true
 	}
 	return url, false
 }

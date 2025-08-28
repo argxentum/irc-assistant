@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/irc"
+
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 

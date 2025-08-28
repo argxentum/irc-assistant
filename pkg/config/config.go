@@ -1,8 +1,9 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -136,6 +137,7 @@ type MerriamWebsterConfig struct {
 }
 
 type SummaryConfig struct {
+	AvoidanceDomains  map[string]string `yaml:"avoidance_domains"`
 	TranslatedDomains map[string]string `yaml:"translated_domains"`
 }
 
