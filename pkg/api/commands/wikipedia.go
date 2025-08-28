@@ -53,7 +53,7 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 	query := strings.Join(tokens[1:], " ")
 	log.Logger().Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), query)
 
-	page, err := wikipedia.Search(query)
+	page, err := wikipedia.Search(query, c.cfg.IRC.Nick+" (IRC bot)")
 	if err != nil {
 		c.Replyf(e, "Unable to search Wikipedia for %s", style.Bold(query))
 		return
@@ -64,7 +64,7 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	description := page.Summary
+	description := page.Extract
 	if len(description) > extendedMaximumDescriptionLength {
 		description = description[:extendedMaximumDescriptionLength] + "..."
 	}
@@ -73,7 +73,7 @@ func (c *WikipediaCommand) Execute(e *irc.Event) {
 		fmt.Sprintf("%s: %s", style.Bold(style.Underline(page.Title)), description),
 	}
 
-	if u, err := url.QueryUnescape(page.URL); err == nil {
+	if u, err := url.QueryUnescape(page.ContentURLs.Desktop.Page); err == nil {
 		messages = append(messages, u)
 	}
 

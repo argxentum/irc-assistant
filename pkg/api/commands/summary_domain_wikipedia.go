@@ -8,12 +8,12 @@ import (
 )
 
 func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summary, error) {
-	page, err := wikipedia.GetPageForURL(url)
+	page, err := wikipedia.GetPageForURL(url, c.cfg.IRC.Nick+" (IRC bot)")
 	if err != nil {
 		return nil, err
 	}
 
-	description := page.Summary
+	description := page.Extract
 	if len(description) > standardMaximumDescriptionLength {
 		description = description[:standardMaximumDescriptionLength] + "..."
 	}
