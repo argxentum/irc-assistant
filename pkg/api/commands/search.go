@@ -129,7 +129,7 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 	link := strings.TrimSpace(doc.Root.Find("ol#b_results li.b_algo h2 a").First().AttrOr("href", ""))
 	site := strings.TrimSpace(doc.Root.Find("ol#b_results li.b_algo div.tptt").First().Text())
 
-	if len(cTitle) == 0 || len(link) == 0 {
+	if len(cTitle) == 0 || len(link) == 0 || strings.HasPrefix(link, "https://www.bing.com/") {
 		logger.Debugf(e, "empty bing search results for %s, title: %s, link: %s", input, cTitle, link)
 		return nil, errors.New("empty bing search results data")
 	}
