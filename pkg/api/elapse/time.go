@@ -143,7 +143,7 @@ func FutureTimeDescription(t time.Time) string {
 			return "a second from now"
 		}
 		if seconds == 0 {
-			return "as soon as possible"
+			return "soon"
 		}
 		return fmt.Sprintf("%d seconds from now", seconds)
 	}
@@ -188,7 +188,7 @@ func FutureTimeDescriptionConcise(t time.Time) string {
 			return "a second"
 		}
 		if seconds == 0 {
-			return "as soon as possible"
+			return "soon"
 		}
 		return fmt.Sprintf("%d seconds", seconds)
 	}
