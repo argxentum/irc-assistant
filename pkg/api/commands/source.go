@@ -74,8 +74,16 @@ func SendSource(cs *commandStub, e *irc.Event, source *models.Source) {
 	messages := make([]string, 0)
 	messages = append(messages, repository.FullSourceSummary(source))
 
-	if len(source.Reviews) > 0 {
-		messages = append(messages, source.Reviews[0])
+	reviews := ""
+	for i, review := range source.Reviews {
+		if i > 0 {
+			reviews += " • "
+		}
+		reviews += review
+	}
+
+	if reviews != "" {
+		messages = append(messages, reviews)
 	}
 
 	cs.SendMessages(e, e.ReplyTarget(), messages)
