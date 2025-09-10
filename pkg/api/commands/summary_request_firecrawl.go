@@ -75,6 +75,11 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 		return nil, fmt.Errorf("response is nil")
 	}
 
+	logger.Infof(e, "firecrawl title1: %s", respBody.Data.Metadata.Title1)
+	logger.Infof(e, "firecrawl title2: %s", respBody.Data.Metadata.Title2)
+	logger.Infof(e, "firecrawl title3: %s", respBody.Data.Metadata.Title3)
+	logger.Infof(e, "firecrawl title4: %s", respBody.Data.Metadata.Title4)
+
 	title := coalesce(respBody.Data.Metadata.Title1, respBody.Data.Metadata.Title2, respBody.Data.Metadata.Title3, respBody.Data.Metadata.Title4)
 
 	if c.isRejectedTitle(title) {
