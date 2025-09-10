@@ -18,6 +18,7 @@ type Config struct {
 	Giphy          APIKeyConfig
 	Imgflip        ImgflipConfig
 	MerriamWebster MerriamWebsterConfig `yaml:"merriam_webster"`
+	Firecrawl      FirecrawlConfig
 	Alphavantage   APIKeyConfig
 	Finage         APIKeyConfig
 	Finnhub        APIKeyConfig
@@ -134,6 +135,10 @@ type QueueConfig struct {
 type MerriamWebsterConfig struct {
 	DictionaryAPIKey string `yaml:"dictionary_api_key"`
 	ThesaurusAPIKey  string `yaml:"thesaurus_api_key"`
+}
+
+type FirecrawlConfig struct {
+	APIKey string `yaml:"api_key"`
 }
 
 type SummaryConfig struct {
