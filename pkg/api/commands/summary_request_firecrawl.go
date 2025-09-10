@@ -26,8 +26,8 @@ type firecrawlResponseBody struct {
 			Title2 string `json:"ogTitle"`
 			Title3 string `json:"og:title"`
 			Title4 string `json:"twitter:title"`
-		}
-	}
+		} `json:"metadata"`
+	} `json:"data"`
 }
 
 func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
