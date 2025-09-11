@@ -51,7 +51,7 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authentication", "Bearer "+c.cfg.Firecrawl.APIKey)
+	req.Header.Set("Authorization", "Bearer "+c.cfg.Firecrawl.APIKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -74,11 +74,6 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 	if respBody == nil {
 		return nil, fmt.Errorf("response is nil")
 	}
-
-	logger.Infof(e, "firecrawl title1: %s", respBody.Data.Metadata.Title1)
-	logger.Infof(e, "firecrawl title2: %s", respBody.Data.Metadata.Title2)
-	logger.Infof(e, "firecrawl title3: %s", respBody.Data.Metadata.Title3)
-	logger.Infof(e, "firecrawl title4: %s", respBody.Data.Metadata.Title4)
 
 	title := coalesce(respBody.Data.Metadata.Title1, respBody.Data.Metadata.Title2, respBody.Data.Metadata.Title3, respBody.Data.Metadata.Title4)
 
