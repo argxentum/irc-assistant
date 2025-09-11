@@ -7,6 +7,8 @@ import (
 	"assistant/pkg/log"
 	"fmt"
 	"strings"
+
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
@@ -23,6 +25,14 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 	if doc == nil {
 		logger.Debugf(e, "unable to retrieve startpage search results for %s", url)
 		return nil, fmt.Errorf("startpage search results doc nil")
+	}
+
+	anchorURL := strings.TrimSpace(doc.Root.Find("section#main a.result-title").First().AttrOr("href", ""))
+	anchorURLDomain := domainutil.Domain(anchorURL)
+	urlDomain := domainutil.Domain(url)
+	if anchorURLDomain != urlDomain {
+		logger.Debugf(e, "startpage anchor domain (%s) does not match url domain (%s)", anchorURLDomain, urlDomain)
+		return nil, fmt.Errorf("invalid search result")
 	}
 
 	title := strings.TrimSpace(doc.Root.Find("section#main h2").First().Text())
