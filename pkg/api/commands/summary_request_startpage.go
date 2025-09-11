@@ -52,5 +52,12 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 		return nil, rejectedTitleError
 	}
 
+	if len(title) < minimumTitleLength {
+		logger.Debugf(e, "startpage title too short: %s", title)
+		return nil, summaryTooShortError
+	}
+
+	logger.Debugf(e, "startpage request - title: %s", title)
+
 	return createSummary(style.Bold(title)), nil
 }

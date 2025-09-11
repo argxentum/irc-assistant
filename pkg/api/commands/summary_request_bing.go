@@ -43,5 +43,12 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 		return nil, summaryTooShortError
 	}
 
+	if len(title) < minimumTitleLength {
+		logger.Debugf(e, "bing title too short: %s", title)
+		return nil, summaryTooShortError
+	}
+
+	logger.Debugf(e, "bing request - title: %s", title)
+
 	return createSummary(style.Bold(title)), nil
 }

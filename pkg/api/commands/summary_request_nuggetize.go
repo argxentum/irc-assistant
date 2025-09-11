@@ -38,5 +38,7 @@ func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, doc *retriever.Document)
 		return nil, summaryTooShortError
 	}
 
+	logger.Debugf(e, "nuggetize request - title: %s", title)
+
 	return createSummary(style.Bold(title)), nil
 }

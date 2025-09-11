@@ -109,5 +109,7 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 		return nil, summaryTooShortError
 	}
 
+	logger.Debugf(e, "firecrawl request - title: %s", title)
+
 	return createSummary(style.Bold(title)), nil
 }

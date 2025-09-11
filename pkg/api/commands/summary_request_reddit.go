@@ -33,6 +33,8 @@ func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*
 		return nil, rejectedTitleError
 	}
 
+	logger.Debugf(e, "reddit request - title: %s", title)
+
 	messages := make([]string, 0)
 	messages = append(messages, posts[0].Post.FormattedTitle())
 

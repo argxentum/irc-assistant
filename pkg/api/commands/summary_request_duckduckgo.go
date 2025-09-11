@@ -42,5 +42,12 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document
 		return nil, rejectedTitleError
 	}
 
+	if len(title) < minimumTitleLength {
+		logger.Debugf(e, "duckduckgo title too short: %s", title)
+		return nil, summaryTooShortError
+	}
+
+	logger.Debugf(e, "duckduckgo request - title: %s", title)
+
 	return createSummary(style.Bold(title)), nil
 }
