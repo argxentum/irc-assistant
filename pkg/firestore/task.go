@@ -4,10 +4,11 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
-	"cloud.google.com/go/firestore"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"cloud.google.com/go/firestore"
 )
 
 func (fs *Firestore) Task(path string) (*models.Task, error) {
@@ -84,6 +85,9 @@ func (fs *Firestore) taskPath(task *models.Task) string {
 	case models.TaskTypePersistentChannel:
 		data := task.Data.(models.PersistentTaskData)
 		return fs.PersistentChannelTaskPath(data.Channel, task.ID)
+	case models.TaskTypeDisinformationPenaltyRemoval:
+		data := task.Data.(models.DisinformationPenaltyRemovalTaskData)
+		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
 	}
 	return "unknown"
 }
@@ -96,9 +100,10 @@ func (fs *Firestore) tasksPath(user, destination, taskType string) string {
 		} else {
 			return fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathUsers, user, pathTasks)
 		}
-	case models.TaskTypeBanRemoval, models.TaskTypeMuteRemoval, models.TaskTypeNotifyVoiceRequests:
+	case models.TaskTypeBanRemoval, models.TaskTypeMuteRemoval, models.TaskTypeNotifyVoiceRequests, models.TaskTypeDisinformationPenaltyRemoval:
 		return fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathTasks)
 	default:
+		log.Logger().Errorf(nil, "can't create path for unknown task type: %s", taskType)
 		return "unknown"
 	}
 }

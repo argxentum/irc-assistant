@@ -25,28 +25,25 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 		err := queue.Get().Receive(func(task *models.Task) {
 			logger.Debugf(nil, "received task %s: %s [%d runs]", task.ID, task.Type, task.Runs)
 
-			var isScheduledTask bool
+			isScheduledTask := true
 			var err error
 
 			switch task.Type {
 			case models.TaskTypeReconnect:
-				isScheduledTask = true
 				err = connect(ctx, irc, cfg)
 			case models.TaskTypeReminder:
-				isScheduledTask = true
 				err = processReminder(irc, task)
 			case models.TaskTypeBanRemoval:
-				isScheduledTask = true
 				err = processBanRemoval(irc, task)
 			case models.TaskTypeMuteRemoval:
-				isScheduledTask = true
 				err = processMuteRemoval(irc, task)
 			case models.TaskTypeNotifyVoiceRequests:
-				isScheduledTask = true
 				err = processNotifyVoiceRequests(irc, task)
 			case models.TaskTypePersistentChannel:
 				isScheduledTask = false
 				err = processPersistentChannel(ctx, cfg, irc, task)
+			case models.TaskTypeDisinformationPenaltyRemoval:
+				err = processDisinformationPenaltyRemoval(ctx, cfg, irc, task)
 			}
 
 			task.Runs++
@@ -168,7 +165,7 @@ func processMuteRemoval(irc irc.IRC, task *models.Task) error {
 		if data.AutoVoice {
 			fs := firestore.Get()
 			u.IsAutoVoiced = true
-			if err := fs.UpdateUser(data.Channel, u, map[string]interface{}{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()}); err != nil {
+			if err := fs.UpdateUser(data.Channel, u, map[string]any{"is_auto_voiced": u.IsAutoVoiced, "updated_at": time.Now()}); err != nil {
 				return fmt.Errorf("error updating user isAutoVoiced, %s", err)
 			}
 			logger.Debugf(nil, "auto-voiced %s in %s", u.Nick, data.Channel)
@@ -305,4 +302,37 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 	}
 
 	return nil
+}
+
+func processDisinformationPenaltyRemoval(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.DisinformationPenaltyRemovalTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing disinformation penalty (%d) removal request for %s in %s", data.Penalty, data.Nick, data.Channel)
+
+	var user *models.User
+
+	if len(data.Nick) > 0 {
+		u, err := repository.GetUserByNick(nil, data.Channel, data.Nick, false)
+		if err != nil {
+			return fmt.Errorf("error getting user by nick: %v", err)
+		}
+
+		if u != nil {
+			user = u
+		}
+	}
+
+	if user == nil {
+		return fmt.Errorf("user %s not found in %s for disinformation penalty removal request", data.Nick, data.Channel)
+	}
+
+	user.Penalty -= data.Penalty
+
+	if user.Penalty < 0 {
+		user.Penalty = 0
+	}
+
+	fs := firestore.Get()
+	return fs.UpdateUser(data.Channel, user, map[string]any{"penalty": user.Penalty, "updated_at": time.Now()})
 }

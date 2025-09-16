@@ -15,6 +15,7 @@ type Config struct {
 	Currency       APIKeyConfig
 	Commands       CommandsConfig
 	Ignore         IgnoreConfig
+	DisinfoPenalty DisinfoPenaltyConfig
 	Giphy          APIKeyConfig
 	Imgflip        ImgflipConfig
 	MerriamWebster MerriamWebsterConfig `yaml:"merriam_webster"`
@@ -120,6 +121,11 @@ type IgnoreConfig struct {
 	Users         []string
 	Domains       []string
 	TitlePrefixes []string `yaml:"title_prefixes"`
+}
+
+type DisinfoPenaltyConfig struct {
+	TimeoutSeconds int `yaml:"timeout_seconds"`
+	Threshold      int `yaml:"threshold"`
 }
 
 type ImgflipConfig struct {

@@ -32,9 +32,6 @@ const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.025
-const pauseDisinfoMultiplier = 2.5
-const pauseShowWarningAfter = 5
-const disinfoKickThreshold = 3
 const disinfoTempMuteDuration = "5m"
 
 type summary struct {
@@ -45,7 +42,6 @@ type UserPause struct {
 	channel      string
 	nick         string
 	summaryCount int
-	disinfoCount int
 	timeoutAt    time.Time
 	ignoreCount  int
 }
@@ -186,10 +182,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
-
-			if dis {
-				ds.messages = append(ds.messages, "⚠️ Possible disinformation, use caution.")
-			}
 			c.completeSummary(e, source, url, e.ReplyTarget(), ds.messages, dis, p)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
@@ -223,28 +215,18 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			if dis {
 				c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
+				c.applyDisinformationPenalty(e, 1)
 			}
 
 			p.ignoreCount++
 			p.summaryCount++
-			if dis {
-				p.disinfoCount++
-			}
 			updatePause(e, p)
-			if dis && p.disinfoCount >= disinfoKickThreshold {
-				c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From))
-				return
-			}
-			if p.ignoreCount > pauseShowWarningAfter {
-				c.Replyf(e, "%s Slow down, please. I've paused summarizing your links for %s.", "\U0001F975", elapse.FutureTimeDescriptionConcise(p.timeoutAt))
-			}
 			c.userPauses[e.From+"@"+e.ReplyTarget()] = p
 			return
 		} else {
 			logger.Debugf(e, "pause expired for %s in %s", e.From, e.ReplyTarget())
 			p.timeoutAt = time.Time{}
 			p.summaryCount = 0
-			p.disinfoCount = 0
 			p.ignoreCount = 0
 		}
 	}
@@ -284,9 +266,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
-		if dis {
-			s.messages = append(s.messages, "⚠️ Possible disinformation, use caution.")
-		}
 		c.completeSummary(e, source, url, e.ReplyTarget(), s.messages, dis, p)
 	}
 }
@@ -318,6 +297,11 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
 func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, url, target string, messages []string, dis bool, p *UserPause) {
+	if dis {
+		messages = append(messages, "⚠️ Possible disinformation, use caution.")
+		c.applyDisinformationPenalty(e, 1)
+	}
+
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -326,14 +310,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 			}
 		}
 		p.summaryCount++
-		if dis {
-			p.disinfoCount++
-		}
 		updatePause(e, p)
-		if dis && p.disinfoCount >= disinfoKickThreshold {
-			c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From))
-			return
-		}
 		c.userPauses[e.From+"@"+target] = p
 	}
 
@@ -368,9 +345,6 @@ func updatePause(e *irc.Event, p *UserPause) {
 	}
 
 	dp := 0.0
-	if p.disinfoCount > 0 {
-		dp = math.Pow(pauseDisinfoMultiplier, float64(p.disinfoCount))
-	}
 
 	if p.timeoutAt.IsZero() {
 		p.timeoutAt = time.Now()
@@ -383,7 +357,7 @@ func updatePause(e *irc.Event, p *UserPause) {
 		p.timeoutAt = maxTimeoutAt
 	}
 
-	logger.Debugf(e, "pausing %s in %s until %s (summary: %d, disinfo: %d)", e.From, e.ReplyTarget(), elapse.TimeDescription(p.timeoutAt), p.summaryCount, p.disinfoCount)
+	logger.Debugf(e, "pausing %s in %s until %s (summary: %d)", e.From, e.ReplyTarget(), elapse.TimeDescription(p.timeoutAt), p.summaryCount)
 }
 
 func parseURLFromMessage(message string) string {
@@ -432,4 +406,45 @@ func (c *SummaryCommand) actualURL(url string) (string, bool) {
 		return strings.Replace(url, domain, avoidance, 1), true
 	}
 	return url, false
+}
+
+func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int) {
+	logger := log.Logger()
+	logger.Debugf(e, "incrementing disinformation penalty for %s in %s by %d", e.From, e.ReplyTarget(), penalty)
+
+	u, err := repository.GetUserByNick(e, e.ReplyTarget(), e.From, false)
+	if err != nil {
+		logger.Errorf(e, "error getting user by nick: %v", err)
+		return
+	}
+
+	if u == nil {
+		logger.Errorf(e, "user %s not found in %s for disinformation penalty removal request", e.From, e.ReplyTarget())
+		return
+	}
+
+	u.Penalty += penalty
+	if u.Penalty < 0 {
+		u.Penalty = 0
+	}
+
+	fs := firestore.Get()
+	err = fs.UpdateUser(e.ReplyTarget(), u, map[string]any{"penalty": u.Penalty, "updated_at": time.Now()})
+	if err != nil {
+		logger.Errorf(e, "error updating penalty for %s: %v", e.ReplyTarget(), err)
+		return
+	}
+
+	logger.Debug(e, "adding disinformation penalty removal task")
+
+	task := models.NewDisinformationPenaltyRemovalTask(time.Now().Add(time.Duration(c.cfg.DisinfoPenalty.TimeoutSeconds)*time.Second), e.ReplyTarget(), e.From, penalty)
+	err = firestore.Get().AddTask(task)
+	if err != nil {
+		logger.Errorf(e, "error adding disinformation penalty removal task, %s", err)
+		return
+	}
+
+	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
+		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From))
+	}
 }
