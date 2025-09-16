@@ -15,7 +15,7 @@ type Config struct {
 	Currency       APIKeyConfig
 	Commands       CommandsConfig
 	Ignore         IgnoreConfig
-	DisinfoPenalty DisinfoPenaltyConfig
+	DisinfoPenalty DisinfoPenaltyConfig `yaml:"disinfo_penalty"`
 	Giphy          APIKeyConfig
 	Imgflip        ImgflipConfig
 	MerriamWebster MerriamWebsterConfig `yaml:"merriam_webster"`
