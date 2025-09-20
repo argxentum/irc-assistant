@@ -32,7 +32,8 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 		}
 	}
 
-	atAttr, _ := doc.Root.Find("meta[name='article:published_time']").First().Attr("content")
+	atNameAttr, _ := doc.Root.Find("meta[name='article:published_time']").First().Attr("content")
+	atPropAttr, _ := doc.Root.Find("meta[property='article:published_time']").First().Attr("content")
 	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
 	title := strings.TrimSpace(titleAttr)
 	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
@@ -55,8 +56,13 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, error
 	}
 
 	at := ""
-	if len(atAttr) > 0 {
-		if t, err := time.Parse(time.RFC3339, atAttr); err == nil {
+	if len(atNameAttr) > 0 {
+		if t, err := time.Parse(time.RFC3339, atNameAttr); err == nil {
+			at = elapse.PastTimeDescription(t)
+		}
+	}
+	if at == "" && len(atPropAttr) > 0 {
+		if t, err := time.Parse(time.RFC3339, atPropAttr); err == nil {
 			at = elapse.PastTimeDescription(t)
 		}
 	}
