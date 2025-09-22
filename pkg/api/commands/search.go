@@ -21,6 +21,7 @@ const SearchCommandName = "search"
 const bingSearchURL = "https://www.bing.com/search?q=%s"
 const duckDuckGoSearchURL = "https://html.duckduckgo.com/html?q=%s"
 const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
+const braveSearchURL = "https://search.brave.com/search?q=%s&source=web"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
 

@@ -18,6 +18,7 @@ func (c *SummaryCommand) requestChain() []func(e *irc.Event, doc *retriever.Docu
 		rsf = []func(e *irc.Event, doc *retriever.Document) (*summary, error){
 			c.redditRequest,
 			c.directRequest,
+			c.braveSearchRequest,
 			c.firecrawlRequest,
 			c.startPageRequest,
 			c.duckduckgoRequest,
