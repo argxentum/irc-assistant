@@ -2,16 +2,17 @@ package firestore
 
 import (
 	"assistant/pkg/models"
-	"cloud.google.com/go/firestore"
 	"fmt"
+
+	"cloud.google.com/go/firestore"
 )
 
-func (fs *Firestore) UserNote(nick, id string) (*models.Note, error) {
+func (fs *Firestore) PersonalNote(nick, id string) (*models.PersonalNote, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes, id)
-	return get[models.Note](fs.ctx, fs.client, path)
+	return get[models.PersonalNote](fs.ctx, fs.client, path)
 }
 
-func (fs *Firestore) UserNotes(nick string) ([]*models.Note, error) {
+func (fs *Firestore) PersonalNotes(nick string) ([]*models.PersonalNote, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes)
 
 	criteria := QueryCriteria{
@@ -24,10 +25,10 @@ func (fs *Firestore) UserNotes(nick string) ([]*models.Note, error) {
 		},
 	}
 
-	return query[models.Note](fs.ctx, fs.client, criteria)
+	return query[models.PersonalNote](fs.ctx, fs.client, criteria)
 }
 
-func (fs *Firestore) UserNotesMatchingKeywords(nick string, keywords []string) ([]*models.Note, error) {
+func (fs *Firestore) PersonalNotesMatchingKeywords(nick string, keywords []string) ([]*models.PersonalNote, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes)
 
 	criteria := QueryCriteria{
@@ -45,10 +46,10 @@ func (fs *Firestore) UserNotesMatchingKeywords(nick string, keywords []string) (
 		},
 	}
 
-	return query[models.Note](fs.ctx, fs.client, criteria)
+	return query[models.PersonalNote](fs.ctx, fs.client, criteria)
 }
 
-func (fs *Firestore) UserNotesMatchingSource(nick, source string) ([]*models.Note, error) {
+func (fs *Firestore) PersonalNotesMatchingSource(nick, source string) ([]*models.PersonalNote, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes)
 
 	criteria := QueryCriteria{
@@ -75,10 +76,10 @@ func (fs *Firestore) UserNotesMatchingSource(nick, source string) ([]*models.Not
 		},
 	}
 
-	return query[models.Note](fs.ctx, fs.client, criteria)
+	return query[models.PersonalNote](fs.ctx, fs.client, criteria)
 }
 
-func (fs *Firestore) CreateUserNote(nick string, note *models.Note) error {
+func (fs *Firestore) CreatePersonalNote(nick string, note *models.PersonalNote) error {
 	usersPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick)
 	user, err := get[models.User](fs.ctx, fs.client, usersPath)
 	if err != nil {
@@ -96,12 +97,12 @@ func (fs *Firestore) CreateUserNote(nick string, note *models.Note) error {
 	return create(fs.ctx, fs.client, path, note)
 }
 
-func (fs *Firestore) SetUserNote(nick string, note *models.Note) error {
+func (fs *Firestore) SetPersonalNote(nick string, note *models.PersonalNote) error {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes, note.ID)
 	return set(fs.ctx, fs.client, path, note)
 }
 
-func (fs *Firestore) DeleteUserNote(nick, id string) error {
+func (fs *Firestore) DeletePersonalNote(nick, id string) error {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUsers, nick, pathNotes, id)
 	return remove(fs.ctx, fs.client, path)
 }

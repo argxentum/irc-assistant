@@ -195,28 +195,28 @@ func AddUserKarmaHistory(e *irc.Event, channel, from, to, operation, reason stri
 	return u.Karma, firestore.Get().SaveKarmaHistory(channel, to, kh)
 }
 
-func GetUserNote(e *irc.Event, nick, id string) (*models.Note, error) {
-	return firestore.Get().UserNote(nick, id)
+func GetPersonalNote(e *irc.Event, nick, id string) (*models.PersonalNote, error) {
+	return firestore.Get().PersonalNote(nick, id)
 }
 
-func GetUserNotes(e *irc.Event, nick string) ([]*models.Note, error) {
-	return firestore.Get().UserNotes(nick)
+func GetPersonalNotes(e *irc.Event, nick string) ([]*models.PersonalNote, error) {
+	return firestore.Get().PersonalNotes(nick)
 }
 
-type noteSearchResult struct {
+type personalNoteSearchResult struct {
 	score int
-	note  *models.Note
+	note  *models.PersonalNote
 }
 
-func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) ([]*models.Note, error) {
-	matching, err := firestore.Get().UserNotesMatchingKeywords(nick, keywords)
+func GetPersonalNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) ([]*models.PersonalNote, error) {
+	matching, err := firestore.Get().PersonalNotesMatchingKeywords(nick, keywords)
 	if err != nil {
 		return nil, err
 	}
 
-	topMatches := make([]*models.Note, 0)
+	topMatches := make([]*models.PersonalNote, 0)
 
-	sr := make([]noteSearchResult, 0)
+	sr := make([]personalNoteSearchResult, 0)
 	for _, n := range matching {
 		score := 0
 		allMatch := true
@@ -233,7 +233,7 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 		}
 
 		if score > 0 {
-			sr = append(sr, noteSearchResult{score, n})
+			sr = append(sr, personalNoteSearchResult{score, n})
 		}
 	}
 
@@ -245,7 +245,7 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 		return sr[i].score > sr[j].score
 	})
 
-	notes := make([]*models.Note, 0)
+	notes := make([]*models.PersonalNote, 0)
 	for _, r := range sr {
 		notes = append(notes, r.note)
 	}
@@ -253,14 +253,14 @@ func GetUserNotesMatchingKeywords(e *irc.Event, nick string, keywords []string) 
 	return notes, nil
 }
 
-func GetUserNotesMatchingSource(e *irc.Event, nick, source string) ([]*models.Note, error) {
-	return firestore.Get().UserNotesMatchingSource(nick, source)
+func GetPersonalNotesMatchingSource(e *irc.Event, nick, source string) ([]*models.PersonalNote, error) {
+	return firestore.Get().PersonalNotesMatchingSource(nick, source)
 }
 
-func AddUserNote(e *irc.Event, nick string, note *models.Note) error {
-	return firestore.Get().CreateUserNote(nick, note)
+func AddPersonalNote(e *irc.Event, nick string, note *models.PersonalNote) error {
+	return firestore.Get().CreatePersonalNote(nick, note)
 }
 
-func DeleteUserNote(e *irc.Event, nick, id string) error {
-	return firestore.Get().DeleteUserNote(nick, id)
+func DeletePersonalNote(e *irc.Event, nick, id string) error {
+	return firestore.Get().DeletePersonalNote(nick, id)
 }
