@@ -214,7 +214,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			if dis {
-				c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
 				c.applyDisinformationPenalty(e, 1)
 			}
 
@@ -297,11 +296,6 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
 func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, url, target string, messages []string, dis bool, p *UserPause) {
-	if dis {
-		messages = append(messages, "⚠️ Possible disinformation, use caution.")
-		c.applyDisinformationPenalty(e, 1)
-	}
-
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -335,6 +329,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 	}
 
 	c.SendMessages(e, target, unescapedMessages)
+
+	if dis {
+		c.applyDisinformationPenalty(e, 1)
+	}
 }
 
 func updatePause(e *irc.Event, p *UserPause) {
@@ -411,6 +409,8 @@ func (c *SummaryCommand) actualURL(url string) (string, bool) {
 func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int) {
 	logger := log.Logger()
 	logger.Debugf(e, "incrementing disinformation penalty for %s in %s by %d", e.From, e.ReplyTarget(), penalty)
+
+	c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
 
 	u, err := repository.GetUserByNick(e, e.ReplyTarget(), e.From, false)
 	if err != nil {
