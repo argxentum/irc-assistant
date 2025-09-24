@@ -104,6 +104,9 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[DefineCommandName] = NewDefineCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ThesaurusCommandName] = NewThesaurusCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[RedditCommandName] = NewRedditCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[CommunityNoteGetCommandName] = NewCommunityNoteGetCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[CommunityNoteAddCommandName] = NewCommunityNoteAddCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[CommunityNoteEditCommandName] = NewCommunityNoteEditCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,

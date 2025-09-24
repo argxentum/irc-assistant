@@ -217,6 +217,8 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				c.applyDisinformationPenalty(e, 1)
 			}
 
+			c.addCommunityNote(e, url)
+
 			p.ignoreCount++
 			p.summaryCount++
 			updatePause(e, p)
@@ -333,6 +335,8 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 	if dis {
 		c.applyDisinformationPenalty(e, 1)
 	}
+
+	c.addCommunityNote(e, url)
 }
 
 func updatePause(e *irc.Event, p *UserPause) {
@@ -446,5 +450,33 @@ func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int) {
 
 	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
 		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From))
+	}
+}
+
+func (c *SummaryCommand) addCommunityNote(e *irc.Event, url string) {
+	if e.IsPrivateMessage() {
+		return
+	}
+
+	logger := log.Logger()
+
+	note, err := repository.GetCommunityNoteForSource(e, e.ReplyTarget(), url)
+	if err != nil {
+		logger.Errorf(e, "error getting community note for %s: %v", url, err)
+		return
+	}
+
+	if note == nil {
+		return
+	}
+
+	logger.Debugf(e, "adding community note %s for %s", note.ID, url)
+
+	messages := createCommunityNoteOutputMessages(e, note)
+	if len(messages) > 0 {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			c.SendMessages(e, e.ReplyTarget(), messages)
+		}()
 	}
 }
