@@ -60,7 +60,14 @@ func (c *CommunityNoteAddCommand) Execute(e *irc.Event) {
 			c.Replyf(e, "Please specify a channel: %s", style.Italics(fmt.Sprintf("%s <channel> <id>", tokens[0])))
 			return
 		}
-		tokens = tokens[2:]
+
+		updatedTokens := make([]string, 0)
+		for i, token := range tokens {
+			if i != 1 {
+				updatedTokens = append(updatedTokens, token)
+			}
+		}
+		tokens = updatedTokens
 	}
 
 	source := strings.TrimSpace(strings.ToLower(tokens[1]))
