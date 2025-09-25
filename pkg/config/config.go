@@ -87,8 +87,12 @@ type PostConnectConfig struct {
 	AutoLeave []string `yaml:"auto_leave"`
 }
 
+const InactivityModelReddit = "reddit"
+const InactivityModelDrudge = "drudge"
+
 type InactivityConfig struct {
 	DefaultDuration string `yaml:"default_duration"`
+	Model           string `yaml:"model"`
 	Subreddit       string `yaml:"subreddit"`
 	Category        string `yaml:"category"`
 	Posts           int    `yaml:"posts"`

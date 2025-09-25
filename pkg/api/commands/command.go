@@ -178,7 +178,12 @@ func (cs *commandStub) UnauthorizedReply(e *irc.Event) {
 func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload string) {
 	cmd := registry.Command(command)
 	args := orig.Arguments
-	args[1] = cs.cfg.Commands.Prefix + cmd.Triggers()[0] + " " + payload
+
+	if len(cmd.Triggers()) > 0 {
+		args[1] = cs.cfg.Commands.Prefix + cmd.Triggers()[0] + " " + payload
+	} else {
+		args[1] = payload
+	}
 
 	modified := &irc.Event{
 		ID:        orig.ID,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/drudge"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
@@ -215,90 +216,165 @@ var previousInactivityPostURLs = make([]string, 0)
 
 func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
-	fs := firestore.Get()
-	logger.Debugf(nil, "processing persistent channel task for %s", task.ID)
+	logger.Debugf(nil, "processing persistent channel task for %s using model %s", task.ID, cfg.IRC.Inactivity.Model)
 
 	switch task.ID {
 	case models.ChannelInactivityTaskID:
-		posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts+inactivityPostsBuffer)
-		if err != nil {
-			logger.Errorf(nil, "error getting subreddit category posts, %s", err)
-			return err
-		}
-
-		channelName := task.Data.(models.PersistentTaskData).Channel
-		if len(channelName) == 0 {
-			return fmt.Errorf("channel name is empty")
-		}
-
-		channel, err := fs.Channel(channelName)
-		if err != nil {
-			logger.Errorf(nil, "error getting channel, %s", err)
-		}
-
-		if channel == nil {
-			logger.Errorf(nil, "channel %s does not exist, exiting", channelName)
+		if cfg.IRC.Inactivity.Model == config.InactivityModelDrudge {
+			//return processInactivityTaskUsingDrudgeModel(ctx, cfg, irc, task)
+			logger.Debugf(nil, "skipping drudge inactivity task temporarily...")
 			return nil
-		}
-
-		filteredPosts := make([]reddit.PostWithTopComment, 0)
-		for _, post := range posts {
-			if slices.Contains(previousInactivityPostURLs, post.Post.URL) {
-				logger.Debugf(nil, "skipping duplicate post %s", post.Post.URL)
-				continue
-			}
-
-			filteredPosts = append(filteredPosts, post)
-			if len(filteredPosts) == cfg.IRC.Inactivity.Posts {
-				break
-			}
-		}
-
-		if len(filteredPosts) == 0 {
-			logger.Debugf(nil, "no inactivity posts found for channel %s matching filter requirements", channelName)
-			return nil
-		}
-
-		message := fmt.Sprintf("🕑 %s of inactivity, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
-		if len(filteredPosts) > 1 {
-			message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), len(filteredPosts), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
-		}
-		irc.SendMessage(channelName, message)
-		time.Sleep(1 * time.Second)
-
-		for i, post := range filteredPosts {
-			messages := make([]string, 0)
-			messages = append(messages, post.Post.FormattedTitle())
-			messages = append(messages, post.Post.URL)
-			previousInactivityPostURLs = append(previousInactivityPostURLs, post.Post.URL)
-
-			if post.Comment != nil {
-				messages = append(messages, post.Comment.FormattedBody())
-			}
-
-			source, err := repository.FindSource(post.Post.URL)
-			if err != nil {
-				logger.Errorf(nil, "error finding source, %s", err)
-			}
-
-			if source != nil {
-				sourceSummary := repository.ShortSourceSummary(source)
-				id, err := repository.GetArchiveShortcutID(post.Post.URL)
-				if err == nil && len(id) > 0 {
-					sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, cfg.Web.ExternalRootURL) + id
-				}
-				messages = append(messages, sourceSummary)
-			}
-
-			irc.SendMessages(channelName, messages)
-			logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
-
-			if i < len(filteredPosts)-1 {
-				time.Sleep(3 * time.Second)
-			}
+		} else {
+			return processInactivityTaskUsingSubredditModel(ctx, cfg, irc, task)
 		}
 	default:
 		return fmt.Errorf("unknown persistent channel task, %s", task.ID)
+	}
+}
+
+var drudgeHeadlinesURLHistory = make(map[string]bool)
+
+func processInactivityTaskUsingDrudgeModel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	channelName := task.Data.(models.PersistentTaskData).Channel
+	if len(channelName) == 0 {
+		return fmt.Errorf("channel name is empty")
+	}
+
+	channel, err := fs.Channel(channelName)
+	if err != nil {
+		logger.Errorf(nil, "error getting channel, %s", err)
+	}
+
+	if channel == nil {
+		logger.Errorf(nil, "channel %s does not exist, exiting", channelName)
+		return nil
+	}
+
+	urls, err := drudge.GetHeadlineURLs(nil, cfg.IRC.Inactivity.Posts+len(drudgeHeadlinesURLHistory))
+	if err != nil {
+		logger.Warningf(nil, "failed to get inactivity drudge headline URLs: %v", err)
+		return err
+	}
+
+	if len(urls) == 0 {
+		logger.Warningf(nil, "no inactivity drudge headline URLs found")
+		return nil
+	}
+
+	filteredURLs := make([]string, 0)
+	for _, url := range urls {
+		if _, ok := drudgeHeadlinesURLHistory[url]; !ok {
+			drudgeHeadlinesURLHistory[url] = true
+			filteredURLs = append(filteredURLs, url)
+			if len(filteredURLs) == cfg.IRC.Inactivity.Posts {
+				break
+			}
+		}
+	}
+
+	message := fmt.Sprintf("🕑 %s of inactivity, sharing a trending headline:", elapse.ParseDurationDescription(channel.InactivityDuration))
+	if len(filteredURLs) > 1 {
+		message = fmt.Sprintf("🕑 %s of inactivity, sharing %d trending headlines:", elapse.ParseDurationDescription(channel.InactivityDuration), len(filteredURLs))
+	}
+	irc.SendMessage(channelName, message)
+	time.Sleep(1 * time.Second)
+
+	for i, u := range filteredURLs {
+		// TODO - refactor summary functionality out of commands package, summarize 'u' here
+
+		logger.Debugf(nil, "shared %s in %s due to inactivity", u, channelName)
+
+		if i < len(filteredURLs)-1 {
+			time.Sleep(3 * time.Second)
+		}
+	}
+
+	return nil
+}
+
+func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts+inactivityPostsBuffer)
+	if err != nil {
+		logger.Errorf(nil, "error getting subreddit category posts, %s", err)
+		return err
+	}
+
+	channelName := task.Data.(models.PersistentTaskData).Channel
+	if len(channelName) == 0 {
+		return fmt.Errorf("channel name is empty")
+	}
+
+	channel, err := fs.Channel(channelName)
+	if err != nil {
+		logger.Errorf(nil, "error getting channel, %s", err)
+	}
+
+	if channel == nil {
+		logger.Errorf(nil, "channel %s does not exist, exiting", channelName)
+		return nil
+	}
+
+	filteredPosts := make([]reddit.PostWithTopComment, 0)
+	for _, post := range posts {
+		if slices.Contains(previousInactivityPostURLs, post.Post.URL) {
+			logger.Debugf(nil, "skipping duplicate post %s", post.Post.URL)
+			continue
+		}
+
+		filteredPosts = append(filteredPosts, post)
+		if len(filteredPosts) == cfg.IRC.Inactivity.Posts {
+			break
+		}
+	}
+
+	if len(filteredPosts) == 0 {
+		logger.Debugf(nil, "no inactivity posts found for channel %s matching filter requirements", channelName)
+		return nil
+	}
+
+	message := fmt.Sprintf("🕑 %s of inactivity, sharing a %s post from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+	if len(filteredPosts) > 1 {
+		message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), len(filteredPosts), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
+	}
+	irc.SendMessage(channelName, message)
+	time.Sleep(1 * time.Second)
+
+	for i, post := range filteredPosts {
+		messages := make([]string, 0)
+		messages = append(messages, post.Post.FormattedTitle())
+		messages = append(messages, post.Post.URL)
+		previousInactivityPostURLs = append(previousInactivityPostURLs, post.Post.URL)
+
+		if post.Comment != nil {
+			messages = append(messages, post.Comment.FormattedBody())
+		}
+
+		source, err := repository.FindSource(post.Post.URL)
+		if err != nil {
+			logger.Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			sourceSummary := repository.ShortSourceSummary(source)
+			id, err := repository.GetArchiveShortcutID(post.Post.URL)
+			if err == nil && len(id) > 0 {
+				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, cfg.Web.ExternalRootURL) + id
+			}
+			messages = append(messages, sourceSummary)
+		}
+
+		irc.SendMessages(channelName, messages)
+		logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
+
+		if i < len(filteredPosts)-1 {
+			time.Sleep(3 * time.Second)
+		}
 	}
 
 	return nil
