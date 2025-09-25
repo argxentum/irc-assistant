@@ -214,7 +214,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			if dis {
-				c.applyDisinformationPenalty(e, 1)
+				c.applyDisinformationPenalty(e, 1, true)
 			}
 
 			c.addCommunityNote(e, url)
@@ -330,10 +330,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 		unescapedMessages = append(unescapedMessages, sourceSummary)
 	}
 
+	if dis {
+		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
+	}
+
 	c.SendMessages(e, target, unescapedMessages)
 
 	if dis {
-		c.applyDisinformationPenalty(e, 1)
+		c.applyDisinformationPenalty(e, 1, false)
 	}
 
 	c.addCommunityNote(e, url)
@@ -410,11 +414,15 @@ func (c *SummaryCommand) actualURL(url string) (string, bool) {
 	return url, false
 }
 
-func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int) {
+const disinfoWarningMessage = "⚠️ Possible disinformation, use caution."
+
+func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, showWarning bool) {
 	logger := log.Logger()
 	logger.Debugf(e, "incrementing disinformation penalty for %s in %s by %d", e.From, e.ReplyTarget(), penalty)
 
-	c.SendMessage(e, e.ReplyTarget(), "⚠️ Possible disinformation, use caution.")
+	if showWarning {
+		c.SendMessage(e, e.ReplyTarget(), disinfoWarningMessage)
+	}
 
 	u, err := repository.GetUserByNick(e, e.ReplyTarget(), e.From, false)
 	if err != nil {
