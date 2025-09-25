@@ -11,8 +11,8 @@ import (
 )
 
 const DrudgeHeadlinesCommandName = "drudge_headlines"
-const defaultHeadlineCount = 3
-const maxHeadlineCount = 5
+const defaultHeadlineCount = 1
+const maxHeadlineCount = 3
 
 type DrudgeHeadlinesCommand struct {
 	*commandStub
@@ -29,7 +29,7 @@ func (c *DrudgeHeadlinesCommand) Name() string {
 }
 
 func (c *DrudgeHeadlinesCommand) Description() string {
-	return "Shows the specified number of top headlines from Drudge Report, defaulting to 3."
+	return "Shows the specified number of top headlines from Drudge Report, defaulting to 1."
 }
 
 func (c *DrudgeHeadlinesCommand) Triggers() []string {
