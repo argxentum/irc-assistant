@@ -11,15 +11,16 @@ const (
 )
 
 const (
-	CodeNamesReply = "353"
-	CodeEndOfNames = "366"
-	CodeWhoReply   = "352"
-	CodeEndOfWho   = "315"
-	CodeWhoIsReply = "311"
-	CodeEndOfWhoIs = "318"
-	CodeBanned     = "474"
-	CodeNickInUse  = "433"
-	CodeEndOfMotd  = "376"
+	CodeWhoIsReply   = "311"
+	CodeEndOfWho     = "315"
+	CodeEndOfWhoIs   = "318"
+	CodeWhoReply     = "352"
+	CodeNamesReply   = "353"
+	CodeEndOfNames   = "366"
+	CodeEndOfMotd    = "376"
+	CodeNickReserved = "432"
+	CodeNickInUse    = "433"
+	CodeBanned       = "474"
 )
 
 const (

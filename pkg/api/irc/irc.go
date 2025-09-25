@@ -6,10 +6,11 @@ import (
 	"assistant/pkg/log"
 	"crypto/tls"
 	"fmt"
-	irce "github.com/thoj/go-ircevent"
 	"regexp"
 	"strings"
 	"time"
+
+	irce "github.com/thoj/go-ircevent"
 )
 
 type ChannelStatus string
@@ -116,6 +117,12 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 		s.respondOnce(CodeNickInUse, func(event *irce.Event) bool {
 			log.Logger().Debugf(nil, "nick %s already in use, marking as recover needed", cfg.IRC.Nick)
 			s.recoverNeeded = true
+			return true
+		})
+
+		s.respondOnce(CodeNickReserved, func(event *irce.Event) bool {
+			log.Logger().Debugf(nil, "nick %s already in use, need to release", cfg.IRC.Nick)
+			s.conn.Privmsgf(cfg.IRC.NickServ.Recipient, cfg.IRC.NickServ.ReleaseCommand, cfg.IRC.Nick, cfg.IRC.NickServ.Password)
 			return true
 		})
 

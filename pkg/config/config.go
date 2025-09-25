@@ -71,6 +71,7 @@ type NickServConfig struct {
 	IdentifyPattern string `yaml:"identify_pattern"`
 	IdentifyCommand string `yaml:"identify_command"`
 	RecoverCommand  string `yaml:"recover_command"`
+	ReleaseCommand  string `yaml:"release_command"`
 	Password        string
 }
 
