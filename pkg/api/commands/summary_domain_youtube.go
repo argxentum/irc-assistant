@@ -89,7 +89,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 						views = strings.Replace(views, m[1], shortenViewCount(m[1]), 1)
 					}
 				}
-			} else if !strings.HasSuffix(views, "views") {
+			} else if !strings.HasSuffix(views, "views") && !strings.HasSuffix(views, "view") {
 				views = views + " views"
 			}
 
