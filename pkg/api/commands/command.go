@@ -20,6 +20,10 @@ const (
 	RoleUnprivileged Role = ""
 )
 
+const (
+	CommandMetadataShowURL = "show_url"
+)
+
 type Command interface {
 	Name() string
 	Description() string
@@ -175,7 +179,7 @@ func (cs *commandStub) UnauthorizedReply(e *irc.Event) {
 	cs.Replyf(e, "You are not authorized to use %s.", style.Bold(strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix)))
 }
 
-func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload string) {
+func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload string, metadata map[string]any) {
 	cmd := registry.Command(command)
 	args := orig.Arguments
 
@@ -192,6 +196,7 @@ func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload
 		From:      orig.From,
 		Source:    orig.Source,
 		Arguments: args,
+		Metadata:  metadata,
 	}
 
 	cmd.Execute(modified)

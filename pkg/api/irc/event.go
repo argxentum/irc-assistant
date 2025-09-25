@@ -2,9 +2,10 @@ package irc
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	irce "github.com/thoj/go-ircevent"
-	"strings"
 )
 
 type EntityType string
@@ -22,6 +23,7 @@ type Event struct {
 	Username  string
 	Source    string
 	Arguments []string
+	Metadata  map[string]any
 }
 
 func (e *Event) Message() string {
@@ -114,6 +116,7 @@ func createEvent(e *irce.Event) *Event {
 		Username:  e.User,
 		Source:    e.Source,
 		Arguments: e.Arguments,
+		Metadata:  nil,
 	}
 }
 

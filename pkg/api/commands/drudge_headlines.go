@@ -80,7 +80,7 @@ func (c *DrudgeHeadlinesCommand) Execute(e *irc.Event) {
 
 	go func() {
 		for _, u := range urls {
-			c.ExecuteSynthesizedEvent(e, SummaryCommandName, u)
+			c.ExecuteSynthesizedEvent(e, SummaryCommandName, u, map[string]any{CommandMetadataShowURL: true})
 			time.Sleep(3 * time.Second)
 		}
 	}()

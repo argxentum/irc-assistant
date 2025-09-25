@@ -319,6 +319,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 		}
 	}
 
+	if e.Metadata != nil {
+		if showURL, ok := e.Metadata[CommandMetadataShowURL]; ok {
+			if showURL.(bool) {
+				unescapedMessages = append(unescapedMessages, url)
+			}
+		}
+	}
+
 	if source != nil {
 		sourceSummary := repository.ShortSourceSummary(source)
 		if source.Paywall && c.isRootDomainIn(url, source.URLs) {
@@ -457,7 +465,7 @@ func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, s
 	}
 
 	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
-		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From))
+		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From), nil)
 	}
 }
 
