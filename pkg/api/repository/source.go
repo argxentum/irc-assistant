@@ -179,7 +179,7 @@ func FullSourceSummary(source *models.Source) string {
 	}
 
 	if len(desc) > 0 {
-		desc = fmt.Sprintf("📊 %s: %s", style.Bold(source.Title), desc)
+		desc = fmt.Sprintf("📊 %s: %s | %s", style.Bold(source.Title), desc, style.Italics(source.ID))
 	}
 
 	return desc

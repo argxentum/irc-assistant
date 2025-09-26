@@ -2,8 +2,9 @@ package firestore
 
 import (
 	"assistant/pkg/models"
-	"cloud.google.com/go/firestore"
 	"fmt"
+
+	"cloud.google.com/go/firestore"
 )
 
 func (fs *Firestore) GetSource(id string) (*models.Source, error) {
@@ -20,6 +21,10 @@ func (fs *Firestore) UpdateSource(id string, fields map[string]any) error {
 
 func (fs *Firestore) CreateSource(source *models.Source) error {
 	return create(fs.ctx, fs.client, fs.pathToSource(source.ID), source)
+}
+
+func (fs *Firestore) DeleteSource(id string) error {
+	return remove(fs.ctx, fs.client, fs.pathToSource(id))
 }
 
 func (fs *Firestore) FindSourcesByDomain(input string) ([]*models.Source, error) {

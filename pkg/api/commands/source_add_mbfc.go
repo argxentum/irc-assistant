@@ -14,39 +14,39 @@ import (
 	"unicode"
 )
 
-const SourceAddCommandName = "add_source"
+const SourceAddMBFCCommandName = "add_source_mbfc"
 
-type SourceAddCommand struct {
+type SourceAddMBFCCommand struct {
 	*commandStub
 }
 
-func NewSourceAddCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
-	return &SourceAddCommand{
+func NewSourceAddMBFCCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Command {
+	return &SourceAddMBFCCommand{
 		commandStub: newCommandStub(ctx, cfg, ircs, RoleAdmin, irc.ChannelStatusNone),
 	}
 }
 
-func (c *SourceAddCommand) Name() string {
-	return SourceAddCommandName
+func (c *SourceAddMBFCCommand) Name() string {
+	return SourceAddMBFCCommandName
 }
 
-func (c *SourceAddCommand) Description() string {
+func (c *SourceAddMBFCCommand) Description() string {
 	return "Add source bias and credibility information."
 }
 
-func (c *SourceAddCommand) Triggers() []string {
-	return []string{"sourceadd"}
+func (c *SourceAddMBFCCommand) Triggers() []string {
+	return []string{"sourceaddmbfc"}
 }
 
-func (c *SourceAddCommand) Usages() []string {
+func (c *SourceAddMBFCCommand) Usages() []string {
 	return []string{"%s <mbfc-url> <source-domain> [<keyword>...]"}
 }
 
-func (c *SourceAddCommand) AllowedInPrivateMessages() bool {
+func (c *SourceAddMBFCCommand) AllowedInPrivateMessages() bool {
 	return true
 }
 
-func (c *SourceAddCommand) CanExecute(e *irc.Event) bool {
+func (c *SourceAddMBFCCommand) CanExecute(e *irc.Event) bool {
 	return c.isCommandEventValid(c, e, 2)
 }
 
@@ -54,7 +54,7 @@ var biasRatingRegexp = regexp.MustCompile(`(?m)(?i)bias rating:([^\n]+)`)
 var factualityReportingRegexp = regexp.MustCompile(`(?m)(?i)factual reporting:([^\n]+)`)
 var credibilityRegexp = regexp.MustCompile(`(?m)(?i).*?credibility rating:([^\n]+)`)
 
-func (c *SourceAddCommand) Execute(e *irc.Event) {
+func (c *SourceAddMBFCCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	tokens := Tokens(e.Message())
 

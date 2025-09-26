@@ -169,7 +169,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	// commands requiring authorization
 	cr.commands[EnableCommandName] = NewEnableCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[DisableCommandName] = NewDisableCommand(cr.ctx, cr.cfg, cr.irc)
-	cr.commands[SourceAddCommandName] = NewSourceAddCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[DataManagementCommandName] = NewDataManagementCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[EchoCommandName] = NewEchoCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SayCommandName] = NewSayCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[JoinCommandName] = NewJoinCommand(cr.ctx, cr.cfg, cr.irc)

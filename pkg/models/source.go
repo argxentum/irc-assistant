@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/sqids/sqids-go"
 	"time"
+
+	"github.com/sqids/sqids-go"
 )
 
 type Source struct {
@@ -37,6 +38,11 @@ func NewSource(title, bias, factuality, credibility, reviewURL string, urls, key
 	s, _ := sqids.New()
 	id, _ := s.Encode([]uint64{uint64(time.Now().UnixNano())})
 
+	references := make([]string, 0)
+	if len(reviewURL) > 0 {
+		references = append(references, reviewURL)
+	}
+
 	return &Source{
 		ID:          id,
 		Title:       title,
@@ -44,7 +50,7 @@ func NewSource(title, bias, factuality, credibility, reviewURL string, urls, key
 		Bias:        bias,
 		Factuality:  factuality,
 		Credibility: credibility,
-		Reviews:     []string{reviewURL},
+		Reviews:     references,
 		Keywords:    keywords,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
