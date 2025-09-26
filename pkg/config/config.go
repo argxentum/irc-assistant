@@ -129,8 +129,9 @@ type IgnoreConfig struct {
 }
 
 type DisinfoPenaltyConfig struct {
-	TimeoutSeconds int `yaml:"timeout_seconds"`
-	Threshold      int `yaml:"threshold"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
+	Threshold      int    `yaml:"threshold"`
+	Duration       string `yaml:"duration"`
 }
 
 type ImgflipConfig struct {

@@ -32,7 +32,6 @@ const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.025
-const disinfoTempMuteDuration = "5m"
 
 type summary struct {
 	messages []string
@@ -465,7 +464,7 @@ func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, s
 	}
 
 	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
-		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", disinfoTempMuteDuration, e.From), nil)
+		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", c.cfg.DisinfoPenalty.Duration, e.From), nil)
 	}
 }
 
