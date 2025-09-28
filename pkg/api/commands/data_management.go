@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const DataManagementCommandName = "data_management"
@@ -179,27 +180,33 @@ func (c *DataManagementCommand) copySourceData(e *irc.Event, id string, field co
 	case commandFieldSourceBias:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Bias = fmt.Sprintf("%s", value)
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourceCredibility:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Credibility = fmt.Sprintf("%s", value)
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourceFactuality:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Factuality = fmt.Sprintf("%s", value)
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourceIdentity:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.URLs = append(source.URLs, fmt.Sprintf("%s", value))
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourceKeyword:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Keywords = append(source.Keywords, fmt.Sprintf("%s", value))
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourcePaywall:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		if parseBool, err := strconv.ParseBool(fmt.Sprintf("%s", value)); err == nil {
 			source.Paywall = parseBool
+			source.UpdatedAt = time.Now()
 			return source, fs.SetSource(source)
 		}
 		logger.Warningf(e, "Could not parse boolean value %s for field %s", value, field)
@@ -207,10 +214,12 @@ func (c *DataManagementCommand) copySourceData(e *irc.Event, id string, field co
 	case commandFieldSourceReference:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Reviews = append(source.Reviews, fmt.Sprintf("%s", value))
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	case commandFieldSourceTitle:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Title = fmt.Sprintf("%s", value)
+		source.UpdatedAt = time.Now()
 		return source, fs.SetSource(source)
 	default:
 		return nil, commandFieldNotFoundError(fmt.Errorf("unknown field: %s", field))
@@ -226,11 +235,11 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 
 	switch field {
 	case commandFieldSourceBias:
-		return fs.UpdateSource(id, map[string]any{"bias": value})
+		return fs.UpdateSource(id, map[string]any{"bias": value, "updated_at": time.Now()})
 	case commandFieldSourceCredibility:
-		return fs.UpdateSource(id, map[string]any{"credibility": value})
+		return fs.UpdateSource(id, map[string]any{"credibility": value, "updated_at": time.Now()})
 	case commandFieldSourceFactuality:
-		return fs.UpdateSource(id, map[string]any{"factuality": value})
+		return fs.UpdateSource(id, map[string]any{"factuality": value, "updated_at": time.Now()})
 	case commandFieldSourceIdentity:
 		identities := make([]string, 0)
 		if value != nil {
@@ -239,7 +248,7 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			}
 			identities = append(identities, fmt.Sprintf("%s", value))
 		}
-		return fs.UpdateSource(id, map[string]any{"urls": identities})
+		return fs.UpdateSource(id, map[string]any{"urls": identities, "updated_at": time.Now()})
 	case commandFieldSourceKeyword:
 		keywords := make([]string, 0)
 		if value != nil {
@@ -248,9 +257,9 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			}
 			keywords = append(keywords, fmt.Sprintf("%s", value))
 		}
-		return fs.UpdateSource(id, map[string]any{"keywords": keywords})
+		return fs.UpdateSource(id, map[string]any{"keywords": keywords, "updated_at": time.Now()})
 	case commandFieldSourcePaywall:
-		return fs.UpdateSource(id, map[string]any{"paywall": value})
+		return fs.UpdateSource(id, map[string]any{"paywall": value, "updated_at": time.Now()})
 	case commandFieldSourceReference:
 		references := make([]string, 0)
 		if value != nil {
@@ -259,9 +268,9 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			}
 			references = append(references, fmt.Sprintf("%s", value))
 		}
-		return fs.UpdateSource(id, map[string]any{"reviews": references})
+		return fs.UpdateSource(id, map[string]any{"reviews": references, "updated_at": time.Now()})
 	case commandFieldSourceTitle:
-		return fs.UpdateSource(id, map[string]any{"title": value})
+		return fs.UpdateSource(id, map[string]any{"title": value, "updated_at": time.Now()})
 	default:
 		return commandFieldNotFoundError(fmt.Errorf("unknown field: %s", field))
 	}
