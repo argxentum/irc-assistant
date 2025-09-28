@@ -1,7 +1,9 @@
 package irc
 
 import (
+	"assistant/pkg/log"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -35,6 +37,14 @@ func (m *Mask) NickWildcardString() string {
 }
 
 func ParseMask(mask string) *Mask {
+	if !strings.Contains(mask, "!") && !strings.Contains(mask, "@") {
+		return &Mask{
+			Nick:   mask,
+			UserID: "*",
+			Host:   "*",
+		}
+	}
+
 	n := strings.Split(mask, "!")
 	if len(n) != 2 {
 		return nil
@@ -50,4 +60,17 @@ func ParseMask(mask string) *Mask {
 		UserID: u[0],
 		Host:   u[1],
 	}
+}
+
+func (m *Mask) Matches(other *Mask) bool {
+	logger := log.Logger()
+
+	pattern := "^" + strings.ReplaceAll(m.String(), "*", ".*?") + "$"
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		logger.Errorf(nil, "unable to compile mask regexp %s: %v", pattern, err)
+		return false
+	}
+
+	return re.MatchString(other.String())
 }

@@ -55,6 +55,11 @@ func publishTasks(tasks []*models.Task) {
 	q := queue.Get()
 
 	for _, task := range tasks {
+		if task == nil {
+			logger.Warningf(nil, "skipping nil task")
+			continue
+		}
+
 		logger.Debugf(nil, "publishing %s: %s", task.ID, task.Type)
 
 		if err := q.Publish(task); err != nil {

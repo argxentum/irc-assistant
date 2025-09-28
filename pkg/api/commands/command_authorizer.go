@@ -14,6 +14,7 @@ type CommandAuthorizer interface {
 	IsUserAuthorizedByChannelStatus(e *irc.Event, channel string, status irc.ChannelStatus, callback func(bool))
 	GetUser(channel, nick string, callback func(user *irc.User))
 	ListUsers(channel string, callback func([]*irc.User))
+	ListUsersByMask(channel, mask string, callback func([]*irc.User))
 }
 
 type commandAuthorizer struct {
@@ -68,6 +69,10 @@ func (c *commandAuthorizer) GetUser(channel, nick string, callback func(user *ir
 
 func (c *commandAuthorizer) ListUsers(channel string, callback func([]*irc.User)) {
 	c.irc.ListUsers(channel, callback)
+}
+
+func (c *commandAuthorizer) ListUsersByMask(channel, mask string, callback func([]*irc.User)) {
+	c.irc.ListUsersByMask(channel, mask, callback)
 }
 
 // IsUserAuthorizedByChannelStatus checks if the given sender is authorized based on their channel status

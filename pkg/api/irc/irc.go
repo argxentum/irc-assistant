@@ -74,6 +74,7 @@ type IRC interface {
 	SendMessages(target string, messages []string)
 	GetUser(channel, nick string, callback func(user *User))
 	ListUsers(channel string, callback func(users []*User))
+	ListUsersByMask(channel, mask string, callback func(users []*User))
 	Up(channel, nick string)
 	Down(channel, nick string)
 	Voice(channel, nick string)
@@ -275,6 +276,48 @@ func (s *service) ListUsers(channel string, callback func(users []*User)) {
 		allUsers = append(allUsers, users...)
 	}, func(e *irce.Event) {
 		callback(allUsers)
+	})
+}
+
+func (s *service) ListUsersByMask(channel, mask string, callback func(users []*User)) {
+	s.conn.SendRawf("WHO %s", channel)
+
+	matchingUsers := make([]*User, 0)
+	m := ParseMask(mask)
+
+	s.respondUntil(CodeWhoReply, CodeEndOfWho, func(e *irce.Event) {
+		tokens := strings.Split(e.Raw, " ")
+		if len(tokens) < 9 {
+			return
+		}
+
+		um := &Mask{
+			Nick:   tokens[7],
+			UserID: tokens[4],
+			Host:   tokens[5],
+		}
+
+		if m.Matches(um) {
+			var status ChannelStatus
+			if strings.Contains(tokens[9], string(ChannelStatusOperator)) {
+				status = ChannelStatusOperator
+			} else if strings.Contains(tokens[9], string(ChannelStatusHalfOperator)) {
+				status = ChannelStatusHalfOperator
+			} else if strings.Contains(tokens[9], string(ChannelStatusVoice)) {
+				status = ChannelStatusVoice
+			} else {
+				status = ChannelStatusNone
+			}
+
+			user := &User{
+				Mask:   um,
+				Status: status,
+			}
+
+			matchingUsers = append(matchingUsers, user)
+		}
+	}, func(e *irce.Event) {
+		callback(matchingUsers)
 	})
 }
 

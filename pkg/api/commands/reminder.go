@@ -61,7 +61,7 @@ func (c *ReminderCommand) Execute(e *irc.Event) {
 	seconds, err := elapse.ParseDuration(duration)
 	if err != nil {
 		logger.Errorf(e, "error parsing duration, %s", err)
-		c.Replyf(e, "invalid duration, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(ReminderCommandName).Triggers()[0])))
+		c.Replyf(e, "invalid duration, see %s for help", style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, c.Triggers()[0])))
 		return
 	}
 

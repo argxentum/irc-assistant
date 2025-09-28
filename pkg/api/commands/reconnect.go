@@ -62,7 +62,7 @@ func (c *ReconnectCommand) Execute(e *irc.Event) {
 	seconds, err := elapse.ParseDuration(interval)
 	if err != nil {
 		logger.Errorf(e, "error parsing interval, %s", err)
-		c.Replyf(e, "invalid interval, see %s for help", style.Bold(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, registry.Command(ReconnectCommandName).Triggers()[0])))
+		c.Replyf(e, "invalid interval, see %s for help", style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, c.Triggers()[0])))
 		return
 	}
 
