@@ -464,7 +464,7 @@ func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, s
 	}
 
 	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
-		c.ExecuteSynthesizedEvent(e, TempMuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", c.cfg.DisinfoPenalty.Duration, e.From), nil)
+		c.ExecuteSynthesizedEvent(e, MuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", c.cfg.DisinfoPenalty.Duration, e.From), nil)
 	}
 }
 
