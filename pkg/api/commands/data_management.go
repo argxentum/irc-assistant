@@ -204,13 +204,14 @@ func (c *DataManagementCommand) copySourceData(e *irc.Event, id string, field co
 		return source, fs.SetSource(source)
 	case commandFieldSourcePaywall:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
-		if parseBool, err := strconv.ParseBool(fmt.Sprintf("%s", value)); err == nil {
-			source.Paywall = parseBool
-			source.UpdatedAt = time.Now()
-			return source, fs.SetSource(source)
+		bv, err := coerceToBoolean(value)
+		if err != nil {
+			logger.Warningf(e, "Could not parse boolean value %v for field %s", value, field)
+			return source, nil
 		}
-		logger.Warningf(e, "Could not parse boolean value %s for field %s", value, field)
-		return source, nil
+		source.Paywall = bv
+		source.UpdatedAt = time.Now()
+		return source, fs.SetSource(source)
 	case commandFieldSourceReference:
 		source := models.NewSource("", orig.Bias, orig.Factuality, orig.Credibility, "", []string{}, []string{})
 		source.Reviews = append(source.Reviews, fmt.Sprintf("%s", value))
@@ -227,6 +228,7 @@ func (c *DataManagementCommand) copySourceData(e *irc.Event, id string, field co
 }
 
 func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field commandField, value any) error {
+	logger := log.Logger()
 	fs := firestore.Get()
 	source, err := fs.GetSource(id)
 	if err != nil {
@@ -259,7 +261,12 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 		}
 		return fs.UpdateSource(id, map[string]any{"keywords": keywords, "updated_at": time.Now()})
 	case commandFieldSourcePaywall:
-		return fs.UpdateSource(id, map[string]any{"paywall": value, "updated_at": time.Now()})
+		bv, err := coerceToBoolean(value)
+		if err != nil {
+			logger.Warningf(e, "Could not parse boolean value %v for field %s", value, field)
+			return err
+		}
+		return fs.UpdateSource(id, map[string]any{"paywall": bv, "updated_at": time.Now()})
 	case commandFieldSourceReference:
 		references := make([]string, 0)
 		if value != nil {
@@ -283,5 +290,16 @@ func (c *DataManagementCommand) deleteSourceData(e *irc.Event, id string, field 
 		return fs.DeleteSource(id)
 	} else {
 		return c.editSourceData(e, id, field, nil)
+	}
+}
+
+func coerceToBoolean(value any) (bool, error) {
+	switch value.(type) {
+	case bool:
+		return value.(bool), nil
+	case string:
+		return strconv.ParseBool(value.(string))
+	default:
+		return strconv.ParseBool(fmt.Sprintf("%v", value))
 	}
 }
