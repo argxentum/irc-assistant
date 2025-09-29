@@ -9,6 +9,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"fmt"
 	"strings"
 )
 
@@ -123,6 +124,6 @@ func (c *QuoteAddCommand) Execute(e *irc.Event) {
 	}
 
 	if !silent {
-		c.Replyf(e, "Saved quote: <%s> %s", style.Bold(style.Italics(q.Author)), style.Italics(q.Quote))
+		c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Saved quote: <%s> %s", style.Bold(style.Italics(q.Author)), style.Italics(q.Quote)))
 	}
 }
