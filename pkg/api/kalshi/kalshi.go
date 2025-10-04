@@ -73,6 +73,10 @@ func GetEventAndMarkets(eventTicker string) (*Event, []*Market, error) {
 		return nil, nil, fmt.Errorf("error parsing Kalshi events: %w", err)
 	}
 
+	sort.Slice(response.Markets, func(i, j int) bool {
+		return response.Markets[i].YesPrice > response.Markets[j].YesPrice
+	})
+
 	return response.Event, response.Markets, nil
 }
 
