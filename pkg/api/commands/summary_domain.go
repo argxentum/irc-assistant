@@ -22,6 +22,7 @@ func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url
 			"bsky.app":       c.parseBlueSky,
 			"wikipedia.org":  c.parseWikipedia,
 			"polymarket.com": c.parsePolymarket,
+			"kalshi.com":     c.parseKalshi,
 			//"truthsocial.com": c.parseTruthSocial,
 		}
 	}

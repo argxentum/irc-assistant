@@ -18,10 +18,10 @@ import (
 
 const PolymarketCommandName = "polymarket"
 
-const PolymarketGammaAPIMarketsURL = "https://gamma-api.polymarket.com/markets?active=true&closed=false&order=endDate&ascending=false&limit=%d&offset=%d"
-const PolymarketEventPublicURL = "https://polymarket.com/event/%s"
-const MaxSearchResults = 10000
-const SearchResultLimit = 500
+const polymarketGammaAPIMarketsURL = "https://gamma-api.polymarket.com/markets?active=true&closed=false&order=endDate&ascending=false&limit=%d&offset=%d"
+const polymarketEventPublicURL = "https://polymarket.com/event/%s"
+const polymarketMaxSearchResults = 10000
+const polymarketSearchResultLimit = 500
 
 type PolymarketCommand struct {
 	*commandStub
@@ -87,7 +87,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 
 	offset := 0
 	var result *polymarketMarketResult
-	for result == nil && offset < MaxSearchResults {
+	for result == nil && offset < polymarketMaxSearchResults {
 		var err error
 		result, err = findPolymarketMarketResult(offset, queryTerms)
 		if err != nil {
@@ -96,7 +96,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 			return
 		}
 		if result == nil {
-			offset += SearchResultLimit
+			offset += polymarketSearchResultLimit
 		}
 	}
 
@@ -113,7 +113,7 @@ func (c *PolymarketCommand) Execute(e *irc.Event) {
 }
 
 func findPolymarketMarketResult(offset int, queryTerms []string) (*polymarketMarketResult, error) {
-	url := fmt.Sprintf(PolymarketGammaAPIMarketsURL, SearchResultLimit, offset)
+	url := fmt.Sprintf(polymarketGammaAPIMarketsURL, polymarketSearchResultLimit, offset)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching Polymarket results: %w", err)
@@ -239,7 +239,7 @@ func generatePolymarketMessages(result *polymarketMarketResult, total int) []str
 	messages = append(messages, message)
 
 	if len(result.Events) > 0 && len(result.Events[0].Slug) > 0 {
-		messages = append(messages, fmt.Sprintf(PolymarketEventPublicURL, result.Events[0].Slug))
+		messages = append(messages, fmt.Sprintf(polymarketEventPublicURL, result.Events[0].Slug))
 	}
 
 	return messages
