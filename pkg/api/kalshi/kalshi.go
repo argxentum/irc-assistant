@@ -49,6 +49,7 @@ type Market struct {
 func GetEventAndMarkets(eventTicker string) (*Event, []*Market, error) {
 	logger := log.Logger()
 
+	eventTicker = strings.ToUpper(eventTicker)
 	u := fmt.Sprintf(apiEventURL, eventTicker)
 	logger.Debugf(nil, "Kalshi event request: %s", u)
 
@@ -125,6 +126,7 @@ func FindEvent(query, cursor string, results int) (*Event, error) {
 func FindMarkets(eventTicker string) ([]*Market, error) {
 	logger := log.Logger()
 
+	eventTicker = strings.ToUpper(eventTicker)
 	u := fmt.Sprintf(apiMarketsURL, eventTicker, searchResultLimit)
 	logger.Debugf(nil, "Kalshi markets request: %s", u)
 

@@ -19,7 +19,7 @@ func (c *SummaryCommand) parseKalshi(e *irc.Event, url string) (*summary, error)
 	}
 
 	eventTicker := m[1]
-	logger.Debugf(e, "Parse kalshi event ticker %s from %s", eventTicker, url)
+	logger.Debugf(e, "Parsed kalshi event ticker %s from %s", eventTicker, url)
 
 	event, markets, err := kalshi.GetEventAndMarkets(eventTicker)
 	if err != nil {
