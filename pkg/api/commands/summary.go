@@ -32,6 +32,7 @@ const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.025
+const disinfoWarningMessage = "⚠️ Possible disinformation, use caution."
 
 type summary struct {
 	messages []string
@@ -214,7 +215,8 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		if p.timeoutAt.After(time.Now()) {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			if dis {
-				c.applyDisinformationPenalty(e, 1, true)
+				c.addDisinformationPenalty(e, 1)
+				c.SendMessage(e, e.ReplyTarget(), disinfoWarningMessage)
 			}
 
 			cn := c.findCommunityNotes(e, url)
@@ -352,16 +354,16 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
 	}
 
-	c.SendMessages(e, target, unescapedMessages)
-
 	if dis {
-		c.applyDisinformationPenalty(e, 1, false)
+		c.addDisinformationPenalty(e, 1)
 	}
 
 	cn := c.findCommunityNotes(e, url)
 	if len(cn) > 0 {
-		c.SendMessages(e, target, cn)
+		unescapedMessages = append(unescapedMessages, cn...)
 	}
+
+	c.SendMessages(e, target, unescapedMessages)
 }
 
 func updatePause(e *irc.Event, p *UserPause) {
@@ -435,15 +437,9 @@ func (c *SummaryCommand) actualURL(url string) (string, bool) {
 	return url, false
 }
 
-const disinfoWarningMessage = "⚠️ Possible disinformation, use caution."
-
-func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, showWarning bool) {
+func (c *SummaryCommand) addDisinformationPenalty(e *irc.Event, penalty int) {
 	logger := log.Logger()
 	logger.Debugf(e, "incrementing disinformation penalty for %s in %s by %d", e.From, e.ReplyTarget(), penalty)
-
-	if showWarning {
-		c.SendMessage(e, e.ReplyTarget(), disinfoWarningMessage)
-	}
 
 	u, err := repository.GetUserByNick(e, e.ReplyTarget(), e.From, false)
 	if err != nil {
