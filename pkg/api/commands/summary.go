@@ -329,8 +329,15 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 
 	if source != nil {
 		sourceSummary := repository.ShortSourceSummary(source)
-		if source.Paywall && (c.isRootDomainIn(url, source.URLs) || c.isRootDomainIn(originalURL, source.URLs)) {
-			id, err := repository.GetArchiveShortcutID(url)
+		if source.Paywall {
+			var id string
+			var err error
+			if c.isRootDomainIn(originalURL, source.URLs) {
+				id, err = repository.GetArchiveShortcutID(originalURL)
+			} else if c.isRootDomainIn(url, source.URLs) {
+				id, err = repository.GetArchiveShortcutID(url)
+			}
+
 			if err == nil && len(id) > 0 {
 				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
 			}
