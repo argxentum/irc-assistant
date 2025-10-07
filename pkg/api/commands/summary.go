@@ -181,7 +181,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", url)
-			c.completeSummary(e, source, url, e.ReplyTarget(), ds.messages, dis, p)
+			c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), ds.messages, dis, p)
 		} else {
 			logger.Debugf(e, "domain specific summarization failed for %s", url)
 		}
@@ -201,6 +201,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
 	if isValidCanonicalLink(url, canonicalLink) {
+		originalURL = url
 		url = canonicalLink
 		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
 		if err != nil {
@@ -253,7 +254,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
-			c.completeSummary(e, source, url, e.ReplyTarget(), messages, dis, p)
+			c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), messages, dis, p)
 			return
 		}
 	}
@@ -266,7 +267,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", url)
 	} else {
-		c.completeSummary(e, source, url, e.ReplyTarget(), s.messages, dis, p)
+		c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), s.messages, dis, p)
 	}
 }
 
@@ -296,7 +297,7 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
-func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, url, target string, messages []string, dis bool, p *UserPause) {
+func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, originalURL, url, target string, messages []string, dis bool, p *UserPause) {
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -328,7 +329,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ur
 
 	if source != nil {
 		sourceSummary := repository.ShortSourceSummary(source)
-		if source.Paywall && c.isRootDomainIn(url, source.URLs) {
+		if source.Paywall && (c.isRootDomainIn(url, source.URLs) || c.isRootDomainIn(originalURL, source.URLs)) {
 			id, err := repository.GetArchiveShortcutID(url)
 			if err == nil && len(id) > 0 {
 				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
