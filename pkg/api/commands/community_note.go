@@ -23,16 +23,16 @@ func createCommunityNoteOutputMessages(e *irc.Event, n *models.CommunityNote) []
 	messages = append(messages, fmt.Sprintf("%s %s: %s (via %s, %s • %s)", "\u2139\uFE0F", style.Italics(style.Bold("Factual note")), style.Italics(n.Content), n.Author, elapse.PastTimeDescription(n.NotedAt), n.ID))
 
 	if len(n.CounterSources) > 0 {
-		source := n.CounterSources[0]
-		messages = append(messages, source)
+		counterSource := n.CounterSources[0]
+		messages = append(messages, counterSource)
 
-		s, err := repository.FindSource(source)
+		cs, err := repository.FindSource(counterSource)
 		if err != nil {
-			logger.Errorf(e, "error finding source, %s", err)
+			logger.Errorf(e, "error finding counter-source, %s", err)
 		}
 
-		if s != nil {
-			messages = append(messages, repository.ShortSourceSummary(s))
+		if cs != nil {
+			messages = append(messages, repository.ShortSourceSummary(cs))
 		}
 	}
 

@@ -217,7 +217,10 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				c.applyDisinformationPenalty(e, 1, true)
 			}
 
-			c.addCommunityNote(e, url)
+			cn := c.findCommunityNotes(e, url)
+			if len(cn) > 0 {
+				c.SendMessages(e, e.ReplyTarget(), cn)
+			}
 
 			p.ignoreCount++
 			p.summaryCount++
@@ -355,7 +358,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 		c.applyDisinformationPenalty(e, 1, false)
 	}
 
-	c.addCommunityNote(e, url)
+	cn := c.findCommunityNotes(e, url)
+	if len(cn) > 0 {
+		c.SendMessages(e, target, cn)
+	}
 }
 
 func updatePause(e *irc.Event, p *UserPause) {
@@ -476,9 +482,9 @@ func (c *SummaryCommand) applyDisinformationPenalty(e *irc.Event, penalty int, s
 	}
 }
 
-func (c *SummaryCommand) addCommunityNote(e *irc.Event, url string) {
+func (c *SummaryCommand) findCommunityNotes(e *irc.Event, url string) []string {
 	if e.IsPrivateMessage() {
-		return
+		return nil
 	}
 
 	logger := log.Logger()
@@ -486,20 +492,14 @@ func (c *SummaryCommand) addCommunityNote(e *irc.Event, url string) {
 	note, err := repository.GetCommunityNoteForSource(e, e.ReplyTarget(), url)
 	if err != nil {
 		logger.Errorf(e, "error getting community note for %s: %v", url, err)
-		return
+		return nil
 	}
 
 	if note == nil {
-		return
+		return nil
 	}
 
 	logger.Debugf(e, "adding community note %s for %s", note.ID, url)
 
-	messages := createCommunityNoteOutputMessages(e, note)
-	if len(messages) > 0 {
-		go func() {
-			time.Sleep(500 * time.Millisecond)
-			c.SendMessages(e, e.ReplyTarget(), messages)
-		}()
-	}
+	return createCommunityNoteOutputMessages(e, note)
 }
