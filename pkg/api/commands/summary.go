@@ -303,6 +303,8 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
 func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, originalURL, url, target string, messages []string, dis bool, p *UserPause) {
+	logger := log.Logger()
+
 	if !e.IsPrivateMessage() {
 		if p == nil {
 			p = &UserPause{
@@ -325,6 +327,8 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 	}
 
 	if e.Metadata != nil {
+		logger.Debugf(e, "event has metadata: %v", e.Metadata)
+
 		if showURL, ok := e.Metadata[CommandMetadataShowURL]; ok {
 			if showURL.(bool) {
 				unescapedMessages = append(unescapedMessages, url)
@@ -333,6 +337,8 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 	}
 
 	if source != nil {
+		logger.Debugf(e, "adding source details to output")
+
 		sourceSummary := repository.ShortSourceSummary(source)
 		if source.Paywall {
 			var id string
@@ -344,6 +350,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 			}
 
 			if err == nil && len(id) > 0 {
+				logger.Debugf(e, "adding paywall avoidance url to output")
 				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
 			}
 		}
@@ -351,15 +358,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 	}
 
 	if dis {
-		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
-	}
-
-	if dis {
+		logger.Debugf(e, "content is possible disinformation, applying penalty and adding warning")
 		c.addDisinformationPenalty(e, 1)
+		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
 	}
 
 	cn := c.findCommunityNotes(e, url)
 	if len(cn) > 0 {
+		logger.Debugf(e, "adding community notes to output")
 		unescapedMessages = append(unescapedMessages, cn...)
 	}
 
