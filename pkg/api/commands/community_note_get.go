@@ -78,7 +78,7 @@ func (c *CommunityNoteGetCommand) Execute(e *irc.Event) {
 	}
 
 	if n != nil {
-		c.SendMessages(e, e.ReplyTarget(), createCommunityNoteOutputMessages(e, n))
+		c.SendMessages(e, e.ReplyTarget(), createCommunityNoteOutputMessages(e, n, true))
 		return
 	}
 }

@@ -12,7 +12,7 @@ import (
 
 const communityNoteMaxLength = 300
 
-func createCommunityNoteOutputMessages(e *irc.Event, n *models.CommunityNote) []string {
+func createCommunityNoteOutputMessages(e *irc.Event, n *models.CommunityNote, includeCounterSourceURL bool) []string {
 	logger := log.Logger()
 
 	if len(n.Content) > communityNoteMaxLength {
@@ -22,7 +22,7 @@ func createCommunityNoteOutputMessages(e *irc.Event, n *models.CommunityNote) []
 	messages := make([]string, 0)
 	messages = append(messages, fmt.Sprintf("%s %s: %s (via %s, %s • %s)", "\u2139\uFE0F", style.Italics(style.Bold("Factual note")), style.Italics(n.Content), n.Author, elapse.PastTimeDescription(n.NotedAt), n.ID))
 
-	if len(n.CounterSources) > 0 {
+	if includeCounterSourceURL && len(n.CounterSources) > 0 {
 		counterSource := n.CounterSources[0]
 		messages = append(messages, counterSource)
 

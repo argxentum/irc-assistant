@@ -503,5 +503,6 @@ func (c *SummaryCommand) findCommunityNotes(e *irc.Event, url string) []string {
 
 	logger.Debugf(e, "adding community note %s for %s", note.ID, url)
 
-	return createCommunityNoteOutputMessages(e, note)
+	includeCounterSourceURL := !slices.Contains(note.CounterSources, url)
+	return createCommunityNoteOutputMessages(e, note, includeCounterSourceURL)
 }
