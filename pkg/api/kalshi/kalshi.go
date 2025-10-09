@@ -40,6 +40,7 @@ type Market struct {
 	ResponsePriceUnits string  `json:"response_price_units"`
 	YesPrice           float64 `json:"yes_ask"`
 	NoPrice            float64 `json:"no_ask"`
+	Result             string  `json:"result"`
 	Volume             float64 `json:"volume"`
 	Liquidity          float64 `json:"liquidity"`
 	RulesPrimary       string  `json:"rules_primary"`
@@ -77,7 +78,14 @@ func GetEventAndMarkets(eventTicker string) (*Event, []*Market, error) {
 		return response.Markets[i].YesPrice > response.Markets[j].YesPrice
 	})
 
-	return response.Event, response.Markets, nil
+	markets := make([]*Market, 0)
+	for _, market := range response.Markets {
+		if market.Result == "" {
+			markets = append(markets, market)
+		}
+	}
+
+	return response.Event, markets, nil
 }
 
 func FindEvent(query, cursor string, results int) (*Event, error) {
@@ -157,7 +165,14 @@ func FindMarkets(eventTicker string) ([]*Market, error) {
 		return response.Markets[i].YesPrice > response.Markets[j].YesPrice
 	})
 
-	return response.Markets, nil
+	markets := make([]*Market, 0)
+	for _, market := range response.Markets {
+		if market.Result == "" {
+			markets = append(markets, market)
+		}
+	}
+
+	return markets, nil
 }
 
 func Summarize(event *Event, markets []*Market, includeEventURL bool) []string {
