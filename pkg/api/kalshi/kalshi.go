@@ -78,14 +78,7 @@ func GetEventAndMarkets(eventTicker string) (*Event, []*Market, error) {
 		return response.Markets[i].YesPrice > response.Markets[j].YesPrice
 	})
 
-	markets := make([]*Market, 0)
-	for _, market := range response.Markets {
-		if market.Result == "" {
-			markets = append(markets, market)
-		}
-	}
-
-	return response.Event, markets, nil
+	return response.Event, response.Markets, nil
 }
 
 func FindEvent(query, cursor string, results int) (*Event, error) {
@@ -165,21 +158,21 @@ func FindMarkets(eventTicker string) ([]*Market, error) {
 		return response.Markets[i].YesPrice > response.Markets[j].YesPrice
 	})
 
+	return response.Markets, nil
+}
+
+func Summarize(event *Event, rawMarkets []*Market, includeEventURL bool) []string {
+	message := style.Bold(event.Title)
+
+	if len(rawMarkets) == 0 {
+		return nil
+	}
+
 	markets := make([]*Market, 0)
-	for _, market := range response.Markets {
+	for _, market := range rawMarkets {
 		if market.Result == "" {
 			markets = append(markets, market)
 		}
-	}
-
-	return markets, nil
-}
-
-func Summarize(event *Event, markets []*Market, includeEventURL bool) []string {
-	message := style.Bold(event.Title)
-
-	if len(markets) == 0 {
-		return nil
 	}
 
 	if len(markets) == 1 {
@@ -209,8 +202,10 @@ func Summarize(event *Event, markets []*Market, includeEventURL bool) []string {
 
 		truncated := 0
 		if len(markets) > maxMarketsDisplayed {
-			truncated = len(markets) - maxMarketsDisplayed
+			truncated = len(rawMarkets) - maxMarketsDisplayed
 			markets = markets[:maxMarketsDisplayed]
+		} else if len(markets) < len(rawMarkets) {
+			truncated = len(rawMarkets) + len(markets)
 		}
 
 		for i, market := range markets {
