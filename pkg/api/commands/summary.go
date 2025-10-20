@@ -10,15 +10,19 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"bytes"
 	"errors"
 	"fmt"
 	"html"
+	"io"
 	"math"
+	"net/http"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 
@@ -149,6 +153,23 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if translatedURL, ok := c.translatedURL(url); ok {
 		logger.Debugf(e, "translatedURL %s to %s", url, translatedURL)
 		url = translatedURL
+
+		// ugly hack to parse out canonical url in translated urls
+		if resp, _ := http.Get(url); resp != nil {
+			if data, _ := io.ReadAll(resp.Body); len(data) > 0 {
+				if doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(data)); doc != nil {
+					canonical := doc.Find(`link[rel="canonical"]`).First().AttrOr("href", "")
+					if canonical != "" {
+						originalURL = canonical
+						if translatedCanonicalURL, ok := c.translatedURL(canonical); ok {
+							logger.Debugf(e, "canonicalURL %s to %s", canonical, translatedCanonicalURL)
+							url = translatedCanonicalURL
+						}
+					}
+				}
+			}
+			defer resp.Body.Close()
+		}
 	}
 
 	source, err := repository.FindSource(url)
