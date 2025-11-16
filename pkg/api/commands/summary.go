@@ -124,6 +124,12 @@ func (c *SummaryCommand) CanExecute(e *irc.Event) bool {
 	return strings.Contains(message, "https://") || strings.Contains(message, "http://")
 }
 
+type urlBundle struct {
+	url      string
+	original string
+	actual   string
+}
+
 func (c *SummaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	fs := firestore.Get()
@@ -135,35 +141,37 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	url := parseURLFromMessage(e.Message())
-	if len(url) == 0 {
+	original := parseURLFromMessage(e.Message())
+	ub := urlBundle{url: original, original: original}
+
+	if len(ub.url) == 0 {
 		logger.Debugf(e, "no URL found in message")
 		return
 	}
 
 	// some urls are used to avoid specific domains, e.g., xcancel.com to avoid x.com
-	if actualURL, ok := c.actualURL(url); ok {
-		logger.Debugf(e, "actualURL %s to %s", url, actualURL)
-		url = actualURL
+	if actualURL, ok := c.actualURL(ub.url); ok {
+		logger.Debugf(e, "actualURL %s to %s", ub.url, actualURL)
+		ub.url = actualURL
 	}
 
-	originalURL := url
+	ub.actual = ub.url
 
 	// we need to translate some domains to get the actual content, e.g., x.com to fixupx.com
-	if translatedURL, ok := c.translatedURL(url); ok {
-		logger.Debugf(e, "translatedURL %s to %s", url, translatedURL)
-		url = translatedURL
+	if translatedURL, ok := c.translatedURL(ub.url); ok {
+		logger.Debugf(e, "translatedURL %s to %s", ub.url, translatedURL)
+		ub.url = translatedURL
 
 		// ugly hack to parse out canonical url in translated urls
-		if resp, _ := http.Get(url); resp != nil {
+		if resp, _ := http.Get(ub.url); resp != nil {
 			if data, _ := io.ReadAll(resp.Body); len(data) > 0 {
 				if doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(data)); doc != nil {
 					canonical := doc.Find(`link[rel="canonical"]`).First().AttrOr("href", "")
 					if canonical != "" {
-						originalURL = canonical
+						ub.actual = canonical
 						if translatedCanonicalURL, ok := c.translatedURL(canonical); ok {
 							logger.Debugf(e, "canonicalURL %s to %s", canonical, translatedCanonicalURL)
-							url = translatedCanonicalURL
+							ub.url = translatedCanonicalURL
 						}
 					}
 				}
@@ -172,62 +180,62 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	source, err := repository.FindSource(url)
+	source, err := repository.FindSource(ub.url)
 	if err != nil {
 		logger.Errorf(nil, "error finding source, %s", err)
 	}
 
-	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), url)
+	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), ub.url)
 
-	if c.isRootDomainIn(url, c.cfg.Ignore.Domains) {
-		logger.Debugf(e, "root domain denied %s", url)
+	if c.isRootDomainIn(ub.url, c.cfg.Ignore.Domains) {
+		logger.Debugf(e, "root domain denied %s", ub.url)
 		return
 	}
 
-	if c.isDomainIn(url, domainDenylist) {
-		logger.Debugf(e, "domain denied %s", url)
+	if c.isDomainIn(ub.url, domainDenylist) {
+		logger.Debugf(e, "domain denied %s", ub.url)
 		return
 	}
 
 	dis := false
-	if channel != nil && fs.IsDisinformationSource(channel.Name, originalURL) {
+	if channel != nil && fs.IsDisinformationSource(channel.Name, ub.actual) {
 		dis = true
-		logger.Debugf(e, "URL is possible disinformation: %s", url)
+		logger.Debugf(e, "URL is possible disinformation: %s", ub.url)
 	}
 
-	if c.requiresDomainSummary(url) {
-		logger.Debugf(e, "performing domain summarization for %s", url)
+	if c.requiresDomainSummary(ub.url) {
+		logger.Debugf(e, "performing domain summarization for %s", ub.url)
 
-		ds, err := c.domainSummary(e, url)
+		ds, err := c.domainSummary(e, ub.url)
 		if err != nil {
-			logger.Debugf(e, "domain specific summarization failed for %s: %s", url, err)
+			logger.Debugf(e, "domain specific summarization failed for %s: %s", ub.url, err)
 		} else if ds != nil {
-			logger.Debugf(e, "performed domain specific handling: %s", url)
-			c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), ds.messages, dis, p)
+			logger.Debugf(e, "performed domain specific handling: %s", ub.url)
+			c.completeSummary(e, source, ub, e.ReplyTarget(), ds.messages, dis, p)
 		} else {
-			logger.Debugf(e, "domain specific summarization failed for %s", url)
+			logger.Debugf(e, "domain specific summarization failed for %s", ub.url)
 		}
 		return
 	}
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(ub.url))
 	if err != nil {
-		logger.Debugf(e, "error retrieving document for %s: %v", url, err)
+		logger.Debugf(e, "error retrieving document for %s: %v", ub.url, err)
 		return
 	}
 
 	if !retriever.IsContentTypeAllowed(doc.Body.Response.Header.Get("Content-Type")) {
-		logger.Debugf(e, "direct prefetch, disallowed content type for %s", url)
+		logger.Debugf(e, "direct prefetch, disallowed content type for %s", ub.url)
 		return
 	}
 
 	canonicalLink, _ := doc.Root.Find("link[rel='canonical']").First().Attr("href")
-	if isValidCanonicalLink(url, canonicalLink) {
-		originalURL = url
-		url = canonicalLink
-		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(url))
+	if isValidCanonicalLink(ub.url, canonicalLink) {
+		ub.actual = ub.url
+		ub.url = canonicalLink
+		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(ub.url))
 		if err != nil {
-			logger.Debugf(e, "error retrieving canonical document for %s: %v", url, err)
+			logger.Debugf(e, "error retrieving canonical document for %s: %v", ub.url, err)
 			return
 		}
 	}
@@ -240,7 +248,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				c.SendMessage(e, e.ReplyTarget(), disinfoWarningMessage)
 			}
 
-			cn := c.findCommunityNotes(e, url)
+			cn := c.findCommunityNotes(e, ub.url)
 			if len(cn) > 0 {
 				c.SendMessages(e, e.ReplyTarget(), cn)
 			}
@@ -261,17 +269,17 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	contentSummarizer, err := c.contentSummary(e, doc)
 	if err != nil {
 		if errors.Is(err, retriever.DisallowedContentTypeError) {
-			logger.Debugf(e, "disallowed content type for %s", url)
+			logger.Debugf(e, "disallowed content type for %s", ub.url)
 			return
 		}
 	}
 
 	if contentSummarizer != nil {
-		logger.Debugf(e, "performing content summarization for %s", url)
+		logger.Debugf(e, "performing content summarization for %s", ub.url)
 
 		s, err := contentSummarizer(e, doc)
 		if err != nil {
-			logger.Debugf(e, "content specific summarization failed for %s: %s", url, err)
+			logger.Debugf(e, "content specific summarization failed for %s: %s", ub.url, err)
 		}
 		if s != nil {
 			messages := s.messages
@@ -280,20 +288,20 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
-			c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), messages, dis, p)
+			c.completeSummary(e, source, ub, e.ReplyTarget(), messages, dis, p)
 			return
 		}
 	}
 
 	s, err := c.summarize(e, doc)
 	if err != nil {
-		logger.Debugf(e, "unable to summarize %s: %s", url, err)
+		logger.Debugf(e, "unable to summarize %s: %s", ub.url, err)
 	}
 
 	if s == nil {
-		logger.Debugf(e, "unable to summarize %s", url)
+		logger.Debugf(e, "unable to summarize %s", ub.url)
 	} else {
-		c.completeSummary(e, source, originalURL, url, e.ReplyTarget(), s.messages, dis, p)
+		c.completeSummary(e, source, ub, e.ReplyTarget(), s.messages, dis, p)
 	}
 }
 
@@ -323,7 +331,7 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
-func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, originalURL, url, target string, messages []string, dis bool, p *UserPause) {
+func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub urlBundle, target string, messages []string, dis bool, p *UserPause) {
 	logger := log.Logger()
 
 	if !e.IsPrivateMessage() {
@@ -352,13 +360,13 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 
 		if showURL, ok := e.Metadata[CommandMetadataShowURL]; ok {
 			if showURL.(bool) {
-				unescapedMessages = append(unescapedMessages, url)
+				unescapedMessages = append(unescapedMessages, ub.url)
 			}
 		}
 	}
 
-	if strings.ToLower(domainutil.Domain(originalURL)) == "x.com" {
-		replacementURL := strings.Replace(originalURL, "x.com", "xcancel.com", -1)
+	if strings.ToLower(domainutil.Domain(ub.original)) == "x.com" {
+		replacementURL := strings.Replace(ub.original, "x.com", "xcancel.com", -1)
 		unescapedMessages = append(unescapedMessages, "\U000027A1\U0000FE0F "+replacementURL)
 	}
 
@@ -369,10 +377,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 		if source.Paywall {
 			var id string
 			var err error
-			if c.isRootDomainIn(originalURL, source.URLs) {
-				id, err = repository.GetArchiveShortcutID(originalURL)
-			} else if c.isRootDomainIn(url, source.URLs) {
-				id, err = repository.GetArchiveShortcutID(url)
+			if c.isRootDomainIn(ub.actual, source.URLs) {
+				id, err = repository.GetArchiveShortcutID(ub.actual)
+			} else if c.isRootDomainIn(ub.url, source.URLs) {
+				id, err = repository.GetArchiveShortcutID(ub.url)
 			}
 
 			if err == nil && len(id) > 0 {
@@ -389,7 +397,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
 	}
 
-	cn := c.findCommunityNotes(e, url)
+	cn := c.findCommunityNotes(e, ub.url)
 	if len(cn) > 0 {
 		logger.Debugf(e, "adding community notes to output")
 		unescapedMessages = append(unescapedMessages, cn...)
