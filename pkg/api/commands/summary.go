@@ -357,6 +357,11 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, or
 		}
 	}
 
+	if strings.ToLower(domainutil.Domain(originalURL)) == "x.com" {
+		replacementURL := strings.Replace(originalURL, "x.com", "xcancel.com", -1)
+		unescapedMessages = append(unescapedMessages, "\U000027A1\U0000FE0F "+replacementURL)
+	}
+
 	if source != nil {
 		logger.Debugf(e, "adding source details to output")
 
