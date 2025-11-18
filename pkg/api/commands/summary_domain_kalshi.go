@@ -4,18 +4,19 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/kalshi"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"fmt"
 	"regexp"
 )
 
 var kalshiURLPattern = regexp.MustCompile("^https://kalshi.com/markets/.*?/(?:.*?/)?(.*?)$")
 
-func (c *SummaryCommand) parseKalshi(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseKalshi(e *irc.Event, url string) (*summary, *models.Source, error) {
 	logger := log.Logger()
 
 	m := kalshiURLPattern.FindStringSubmatch(url)
 	if m == nil || len(m) < 2 {
-		return nil, fmt.Errorf("invalid kalshi url: %s", url)
+		return nil, nil, fmt.Errorf("invalid kalshi url: %s", url)
 	}
 
 	eventTicker := m[1]
@@ -23,10 +24,10 @@ func (c *SummaryCommand) parseKalshi(e *irc.Event, url string) (*summary, error)
 
 	event, markets, err := kalshi.GetEventAndMarkets(eventTicker)
 	if err != nil {
-		return nil, fmt.Errorf("error getting kalshi events and markets: %w", err)
+		return nil, nil, fmt.Errorf("error getting kalshi events and markets: %w", err)
 	}
 
 	logger.Debugf(e, "Retrieved %d markets for event %s (%s)", len(markets), event.EventTicker, event.SeriesTicker)
 	messages := kalshi.Summarize(event, markets, false)
-	return createSummary(messages...), nil
+	return createSummary(messages...), nil, nil
 }

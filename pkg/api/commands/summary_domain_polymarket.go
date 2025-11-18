@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/irc"
+	"assistant/pkg/models"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 
 const PolymarketGammaAPIEventsURL = "https://gamma-api.polymarket.com/events?slug=%s&limit=1"
 
-func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, *models.Source, error) {
 	uc := strings.Split(url, "/")
 	if i := strings.Index(uc[len(uc)-1], "?"); i != -1 {
 		uc[len(uc)-1] = uc[len(uc)-1][:i]
@@ -18,23 +19,23 @@ func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, er
 	slug := uc[len(uc)-1]
 
 	if len(slug) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	result, total, err := findPolymarketSlugMarketResult(slug)
 	if err != nil {
-		return nil, fmt.Errorf("error finding Polymarket market result: %w", err)
+		return nil, nil, fmt.Errorf("error finding Polymarket market result: %w", err)
 	}
 
 	if result == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	messages := generatePolymarketMessages(result, total)
 
 	return &summary{
 		messages: messages,
-	}, nil
+	}, nil, nil
 }
 
 func findPolymarketSlugMarketResult(slug string) (*polymarketMarketResult, int, error) {

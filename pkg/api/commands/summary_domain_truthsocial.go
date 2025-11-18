@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -17,10 +18,10 @@ const truthSocialAPIURL = "https://truthsocial.com/api/v1/statuses/%s"
 
 var truthSocialURLRegex = regexp.MustCompile(`^https?://(?:.*?\.)?truthsocial\.com/(.*?)/(\d+)$`)
 
-func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, *models.Source, error) {
 	urlComponents := truthSocialURLRegex.FindStringSubmatch(url)
 	if len(urlComponents) < 3 {
-		return nil, fmt.Errorf("invalid Truth Social URL: %s", url)
+		return nil, nil, fmt.Errorf("invalid Truth Social URL: %s", url)
 	}
 
 	username := urlComponents[1]
@@ -44,23 +45,23 @@ func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, e
 	r := retriever.NewBodyRetriever()
 	body, err := r.RetrieveBody(e, params)
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve Truth Social post %s: %s", postID, err)
+		return nil, nil, fmt.Errorf("unable to retrieve Truth Social post %s: %s", postID, err)
 	}
 
 	if body.Response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unable to retrieve Truth Social post %s: %s", postID, body.Response.StatusCode)
+		return nil, nil, fmt.Errorf("unable to retrieve Truth Social post %s: %s", postID, body.Response.StatusCode)
 	}
 
 	var post truthSocialPost
 	if err := json.NewDecoder(bytes.NewReader(body.Data)).Decode(&post); err != nil {
-		return nil, fmt.Errorf("unable to decode Truth Social post %s: %s", postID, err)
+		return nil, nil, fmt.Errorf("unable to decode Truth Social post %s: %s", postID, err)
 	}
 
 	content := ""
 	if len(post.Content) > 0 {
 		content = fmt.Sprintf("%s • %s (%s)", style.Bold(post.Content), post.Account.DisplayName, username)
 	} else {
-		return nil, fmt.Errorf("post content is empty for post %s", postID)
+		return nil, nil, fmt.Errorf("post content is empty for post %s", postID)
 	}
 
 	if len(post.CreatedAt) > 0 {
@@ -73,7 +74,7 @@ func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, e
 		}
 	}
 
-	return createSummary(content), nil
+	return createSummary(content), nil, nil
 }
 
 type truthSocialPost struct {

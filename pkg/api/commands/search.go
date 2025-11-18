@@ -236,7 +236,7 @@ func createSearchResultSummary(e *irc.Event, title, url string) *summary {
 
 	if sc := registry.Command(SummaryCommandName); sc != nil {
 		dsc := sc.(*SummaryCommand)
-		if ds, err := dsc.domainSummary(e, url); ds != nil && err == nil {
+		if ds, _, err := dsc.domainSummary(e, url); ds != nil && err == nil {
 			s.addMessages(ds.messages...)
 		}
 	}

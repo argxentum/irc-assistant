@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"errors"
 	"fmt"
 	"regexp"
@@ -19,7 +20,7 @@ import (
 var twitterAuthorRegex = regexp.MustCompile(`^(.*?)\s*\(@(.*?)\)$`)
 var twitterSnowflakeRegex = regexp.MustCompile(`^https?://.*?/[^/]+/status/(\d+)(?:$|\?)`)
 
-func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, *models.Source, error) {
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 
@@ -27,11 +28,11 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error
 	if err != nil || doc == nil {
 		if err != nil {
 			if errors.Is(err, retriever.DisallowedContentTypeError) {
-				return nil, fmt.Errorf("disallowed content type for %s", url)
+				return nil, nil, fmt.Errorf("disallowed content type for %s", url)
 			}
-			return nil, fmt.Errorf("unable to retrieve %s: %s", url, err)
+			return nil, nil, fmt.Errorf("unable to retrieve %s: %s", url, err)
 		} else {
-			return nil, fmt.Errorf("unable to retrieve %s", url)
+			return nil, nil, fmt.Errorf("unable to retrieve %s", url)
 		}
 	}
 
@@ -60,11 +61,11 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error
 	}
 
 	if c.isRejectedTitle(title) {
-		return nil, fmt.Errorf("rejected twitter title: %s", title)
+		return nil, nil, fmt.Errorf("rejected twitter title: %s", title)
 	}
 
 	if len(title)+len(description) < minimumTitleLength {
-		return nil, fmt.Errorf("title and description too short, title: %s, description: %s", title, description)
+		return nil, nil, fmt.Errorf("title and description too short, title: %s, description: %s", title, description)
 	}
 
 	content := ""
@@ -81,6 +82,7 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error
 	messages := make([]string, 0)
 	messages = append(messages, content)
 
+	var source *models.Source
 	m := twitterAuthorRegex.FindStringSubmatch(title)
 	if len(m) > 2 {
 		author := m[1]
@@ -97,11 +99,11 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, error
 		}
 
 		if authorHandleSource != nil {
-			messages = append(messages, repository.ShortSourceSummary(authorHandleSource))
+			source = authorHandleSource
 		} else if authorSource != nil {
-			messages = append(messages, repository.ShortSourceSummary(authorSource))
+			source = authorSource
 		}
 	}
 
-	return createSummary(messages...), nil
+	return createSummary(messages...), source, nil
 }

@@ -36,8 +36,8 @@ const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.025
-const disinfoWarningMessage = "⚠️ Known source of disinformation, use caution"
-const disinfoWarningMessageShort = "⚠️ Source of disinformation"
+const disinfoWarningMessage = "⚠️ Disinformation source, use caution"
+const disinfoWarningMessageShort = "⚠️ Disinformation source"
 
 type summary struct {
 	messages []string
@@ -207,7 +207,8 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if c.requiresDomainSummary(ub.url) {
 		logger.Debugf(e, "performing domain summarization for %s", ub.url)
 
-		ds, err := c.domainSummary(e, ub.url)
+		var ds *summary
+		ds, source, err = c.domainSummary(e, ub.url)
 		if err != nil {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", ub.url, err)
 		} else if ds != nil {
@@ -366,6 +367,22 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		}
 	}
 
+	sourceSummary := c.combinedSourceSummary(e, ub, source, dis)
+	if len(sourceSummary) > 0 {
+		unescapedMessages = append(unescapedMessages, sourceSummary)
+	}
+
+	cn := c.findCommunityNotes(e, ub.url)
+	if len(cn) > 0 {
+		logger.Debugf(e, "adding community notes to output")
+		unescapedMessages = append(unescapedMessages, cn...)
+	}
+
+	c.SendMessages(e, target, unescapedMessages)
+}
+
+func (c *SummaryCommand) combinedSourceSummary(e *irc.Event, ub urlBundle, source *models.Source, dis bool) string {
+	logger := log.Logger()
 	sourceSummary := ""
 
 	if dis {
@@ -375,10 +392,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 
 	if source != nil {
 		logger.Debugf(e, "adding source details to output")
-
 		sourceSummary += repository.ShortSourceSummary(source)
+
 		if dis {
-			sourceSummary += " | " + disinfoWarningMessageShort
+			logger.Debugf(e, "adding short disinformation warning message to output")
+			if len(sourceSummary) > 0 {
+				sourceSummary += " | "
+			}
+			sourceSummary += disinfoWarningMessageShort
 		}
 
 		if source.Paywall {
@@ -392,10 +413,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 
 			if err == nil && len(id) > 0 {
 				logger.Debugf(e, "adding paywall avoidance url to output")
-				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
+				if len(sourceSummary) > 0 {
+					sourceSummary += " | "
+				}
+				sourceSummary += "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
 			}
 		}
 	} else if dis {
+		logger.Debugf(e, "adding long disinformation warning message to output")
 		sourceSummary = disinfoWarningMessage
 	}
 
@@ -407,17 +432,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		sourceSummary += "\U000027A1\U0000FE0F " + replacementURL
 	}
 
-	if len(sourceSummary) > 0 {
-		unescapedMessages = append(unescapedMessages, sourceSummary)
-	}
-
-	cn := c.findCommunityNotes(e, ub.url)
-	if len(cn) > 0 {
-		logger.Debugf(e, "adding community notes to output")
-		unescapedMessages = append(unescapedMessages, cn...)
-	}
-
-	c.SendMessages(e, target, unescapedMessages)
+	return sourceSummary
 }
 
 func updatePause(e *irc.Event, p *UserPause) {

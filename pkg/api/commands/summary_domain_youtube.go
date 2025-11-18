@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -18,41 +19,41 @@ import (
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
 
-func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, error) {
+func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, *models.Source, error) {
 	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
 	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
+		return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
 	}
 
 	if body == nil {
-		return nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
+		return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
 	}
 
 	html := string(body.Data)
 	matches := ytInitialDataRegexp.FindStringSubmatch(html)
 	if len(matches) < 2 {
-		return nil, fmt.Errorf("unable to find ytInitialData for %s", url)
+		return nil, nil, fmt.Errorf("unable to find ytInitialData for %s", url)
 	}
 
 	var data ytData
 	err = json.Unmarshal([]byte(matches[1]), &data)
 	if err != nil {
-		return nil, fmt.Errorf("unable to unmarshal post JSON for %s: %s", url, err)
+		return nil, nil, fmt.Errorf("unable to unmarshal post JSON for %s: %s", url, err)
 	}
 
 	if strings.Contains(url, "/post/") {
-		s, err := c.parseYouTubePost(e, data)
+		s, src, err := c.parseYouTubePost(e, data)
 		if s == nil || err != nil {
 			log.Logger().Debugf(e, "error parsing JSON as YouTube post: %v", err)
 		} else {
-			return s, nil
+			return s, src, nil
 		}
 	}
 
 	return c.parseYouTubeVideo(e, data)
 }
 
-func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary, error) {
+func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary, *models.Source, error) {
 	title := ""
 	channel := ""
 	views := ""
@@ -120,12 +121,21 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 		}
 	}
 
+	var source *models.Source
+	if len(username) > 0 {
+		var err error
+		source, err = repository.FindSource(strings.TrimPrefix(username, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
+	}
+
 	messages := make([]string, 0)
 	message := ""
 	if len(title) > 0 {
 		message = style.Bold(title)
 	} else {
-		return createSummary(), nil
+		return createSummary(), source, nil
 	}
 
 	if len(channel) > 0 {
@@ -140,18 +150,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 
 	messages = append(messages, message)
 
-	if len(username) > 0 {
-		source, err := repository.FindSource(strings.TrimPrefix(username, "@"))
-		if err != nil {
-			log.Logger().Errorf(nil, "error finding source, %s", err)
-		}
-
-		if source != nil {
-			messages = append(messages, repository.ShortSourceSummary(source))
-		}
-	}
-
-	return createSummary(messages...), nil
+	return createSummary(messages...), source, nil
 }
 
 func shortenViewCount(input string) string {
@@ -170,20 +169,20 @@ func shortenViewCount(input string) string {
 	return fmt.Sprintf("%.1fB", float64(views)/1000000000)
 }
 
-func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, error) {
+func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, *models.Source, error) {
 	tabs := data.Contents.TwoColumnBrowseResultsRenderer.Tabs
 	if len(tabs) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	sectionListRenderers := tabs[0].TabRenderer.Content.SectionListRenderer.Contents
 	if len(sectionListRenderers) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	itemSectionRenderers := sectionListRenderers[0].ItemSectionRenderer.Contents
 	if len(itemSectionRenderers) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	post := itemSectionRenderers[0].BackstagePostThreadRenderer.Post.BackstagePostRenderer
@@ -196,6 +195,15 @@ func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, 
 	username := ""
 	if len(post.AuthorEndpoint.BrowseEndpoint.CanonicalBaseUrl) > 0 {
 		username = strings.TrimPrefix(post.AuthorEndpoint.BrowseEndpoint.CanonicalBaseUrl, "/")
+	}
+
+	var source *models.Source
+	if len(username) > 0 {
+		var err error
+		source, err = repository.FindSource(strings.TrimPrefix(username, "@"))
+		if err != nil {
+			log.Logger().Errorf(nil, "error finding source, %s", err)
+		}
 	}
 
 	description := ""
@@ -224,7 +232,7 @@ func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, 
 	if len(description) > 0 {
 		message = style.Bold(description)
 	} else {
-		return nil, nil
+		return nil, source, nil
 	}
 
 	if len(author) > 0 {
@@ -236,19 +244,7 @@ func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, 
 	}
 
 	messages = append(messages, message)
-
-	if len(username) > 0 {
-		source, err := repository.FindSource(strings.TrimPrefix(username, "@"))
-		if err != nil {
-			log.Logger().Errorf(nil, "error finding source, %s", err)
-		}
-
-		if source != nil {
-			messages = append(messages, repository.ShortSourceSummary(source))
-		}
-	}
-
-	return createSummary(messages...), nil
+	return createSummary(messages...), source, nil
 }
 
 type ytData struct {
