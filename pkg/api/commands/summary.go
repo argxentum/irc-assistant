@@ -366,11 +366,6 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		}
 	}
 
-	if strings.ToLower(domainutil.Domain(ub.original)) == "x.com" {
-		replacementURL := strings.Replace(ub.original, "x.com", "xcancel.com", -1)
-		unescapedMessages = append(unescapedMessages, "\U000027A1\U0000FE0F "+replacementURL)
-	}
-
 	sourceSummary := ""
 
 	if dis {
@@ -402,6 +397,14 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		}
 	} else if dis {
 		sourceSummary = disinfoWarningMessage
+	}
+
+	if strings.ToLower(domainutil.Domain(ub.original)) == "x.com" {
+		replacementURL := strings.Replace(ub.original, "x.com", "xcancel.com", -1)
+		if len(sourceSummary) > 0 {
+			sourceSummary += " | "
+		}
+		sourceSummary += "\U000027A1\U0000FE0F " + replacementURL
 	}
 
 	if len(sourceSummary) > 0 {
