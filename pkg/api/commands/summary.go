@@ -36,7 +36,8 @@ const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
 const maxPauseTimeoutSeconds = 600
 const pauseSummaryMultiplier = 1.025
-const disinfoWarningMessage = "⚠️ Possible disinformation, use caution."
+const disinfoWarningMessage = "⚠️ Known source of disinformation, use caution"
+const disinfoWarningMessageShort = "⚠️ Source of disinformation"
 
 type summary struct {
 	messages []string
@@ -371,20 +372,16 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 	}
 
 	sourceSummary := ""
+
 	if dis {
 		logger.Debugf(e, "content is possible disinformation, applying penalty and adding warning")
 		c.addDisinformationPenalty(e, 1)
-		sourceSummary = disinfoWarningMessage
 	}
 
 	if source != nil {
 		logger.Debugf(e, "adding source details to output")
 
-		if len(sourceSummary) > 0 {
-			sourceSummary += " | "
-		}
 		sourceSummary += repository.ShortSourceSummary(source)
-
 		if source.Paywall {
 			var id string
 			var err error
@@ -394,11 +391,17 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 				id, err = repository.GetArchiveShortcutID(ub.url)
 			}
 
+			if dis {
+				sourceSummary += " | " + disinfoWarningMessageShort
+			}
+
 			if err == nil && len(id) > 0 {
 				logger.Debugf(e, "adding paywall avoidance url to output")
 				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
 			}
 		}
+	} else if dis {
+		sourceSummary = disinfoWarningMessage
 	}
 
 	if len(sourceSummary) > 0 {
