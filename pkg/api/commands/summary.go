@@ -370,10 +370,21 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		unescapedMessages = append(unescapedMessages, "\U000027A1\U0000FE0F "+replacementURL)
 	}
 
+	sourceSummary := ""
+	if dis {
+		logger.Debugf(e, "content is possible disinformation, applying penalty and adding warning")
+		c.addDisinformationPenalty(e, 1)
+		sourceSummary = disinfoWarningMessage
+	}
+
 	if source != nil {
 		logger.Debugf(e, "adding source details to output")
 
-		sourceSummary := repository.ShortSourceSummary(source)
+		if len(sourceSummary) > 0 {
+			sourceSummary += " | "
+		}
+		sourceSummary += repository.ShortSourceSummary(source)
+
 		if source.Paywall {
 			var id string
 			var err error
@@ -388,13 +399,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 				sourceSummary += " | " + "\U0001F513 " + fmt.Sprintf(shortcutURLPattern, c.cfg.Web.ExternalRootURL) + id
 			}
 		}
-		unescapedMessages = append(unescapedMessages, sourceSummary)
 	}
 
-	if dis {
-		logger.Debugf(e, "content is possible disinformation, applying penalty and adding warning")
-		c.addDisinformationPenalty(e, 1)
-		unescapedMessages = append(unescapedMessages, disinfoWarningMessage)
+	if len(sourceSummary) > 0 {
+		unescapedMessages = append(unescapedMessages, sourceSummary)
 	}
 
 	cn := c.findCommunityNotes(e, ub.url)
