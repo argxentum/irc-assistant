@@ -377,6 +377,10 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		logger.Debugf(e, "adding source details to output")
 
 		sourceSummary += repository.ShortSourceSummary(source)
+		if dis {
+			sourceSummary += " | " + disinfoWarningMessageShort
+		}
+
 		if source.Paywall {
 			var id string
 			var err error
@@ -384,10 +388,6 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 				id, err = repository.GetArchiveShortcutID(ub.actual)
 			} else if c.isRootDomainIn(ub.url, source.URLs) {
 				id, err = repository.GetArchiveShortcutID(ub.url)
-			}
-
-			if dis {
-				sourceSummary += " | " + disinfoWarningMessageShort
 			}
 
 			if err == nil && len(id) > 0 {
