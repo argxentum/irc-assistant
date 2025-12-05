@@ -235,6 +235,10 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 		return err
 	}
 
+	if source == nil {
+		return fmt.Errorf("source %s not found", id)
+	}
+
 	switch field {
 	case commandFieldSourceBias:
 		return fs.UpdateSource(id, map[string]any{"bias": value, "updated_at": time.Now()})
@@ -248,7 +252,7 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			for _, v := range source.URLs {
 				identities = append(identities, v)
 			}
-			identities = append(identities, fmt.Sprintf("%s", value))
+			identities = append(identities, strings.ToLower(fmt.Sprintf("%s", value)))
 		}
 		return fs.UpdateSource(id, map[string]any{"urls": identities, "updated_at": time.Now()})
 	case commandFieldSourceKeyword:
@@ -257,7 +261,7 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			for _, v := range source.Keywords {
 				keywords = append(keywords, v)
 			}
-			keywords = append(keywords, fmt.Sprintf("%s", value))
+			keywords = append(keywords, strings.ToLower(fmt.Sprintf("%s", value)))
 		}
 		return fs.UpdateSource(id, map[string]any{"keywords": keywords, "updated_at": time.Now()})
 	case commandFieldSourcePaywall:
@@ -273,7 +277,7 @@ func (c *DataManagementCommand) editSourceData(e *irc.Event, id string, field co
 			for _, v := range source.Reviews {
 				references = append(references, v)
 			}
-			references = append(references, fmt.Sprintf("%s", value))
+			references = append(references, strings.ToLower(fmt.Sprintf("%s", value)))
 		}
 		return fs.UpdateSource(id, map[string]any{"reviews": references, "updated_at": time.Now()})
 	case commandFieldSourceTitle:
