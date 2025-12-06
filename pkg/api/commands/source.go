@@ -54,7 +54,7 @@ func (c *SourceCommand) Execute(e *irc.Event) {
 	tokens := Tokens(e.Message())
 	input := strings.Join(tokens[1:], " ")
 
-	source, err := repository.FindSource(input)
+	source, err := repository.FindSourceIncludingKeywords(input)
 	if err != nil {
 		log.Logger().Errorf(e, "error finding source: %s", err)
 		c.Replyf(e, "Unable to find source details for %s", style.Bold(input))

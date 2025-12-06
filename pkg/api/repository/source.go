@@ -31,6 +31,19 @@ func FindSource(input string) (*models.Source, error) {
 		return src, nil
 	}
 
+	return nil, nil
+}
+
+func FindSourceIncludingKeywords(input string) (*models.Source, error) {
+	src, err := FindSource(input)
+	if err != nil {
+		return nil, err
+	}
+
+	if src != nil {
+		return src, nil
+	}
+
 	keywords := strings.Fields(input)
 	if len(keywords) == 0 {
 		return nil, nil
