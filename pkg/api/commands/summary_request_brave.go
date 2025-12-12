@@ -14,9 +14,15 @@ import (
 func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	url := doc.URL
 	logger := log.Logger()
-	logger.Infof(e, "trying brave search for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(braveSearchURL, url)))
+	searchURL := fmt.Sprintf(braveSearchURL, url)
+	if u, isSlugified := getSearchURLFromSlugs(url, braveSearchURL); isSlugified {
+		searchURL = u
+	}
+
+	logger.Infof(e, "brave search for %s, search url %s", url, searchURL)
+
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(searchURL))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve brave search search results for %s: %s", url, err)
 		return nil, err
@@ -37,7 +43,13 @@ func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Documen
 	}
 
 	title := strings.TrimSpace(result.Find("div.title").First().Text())
-	description := strings.TrimSpace(result.Find("div.snippet-description").First().Text())
+	desc1 := strings.TrimSpace(result.Find("div.snippet-description").First().Text())
+	desc2 := strings.TrimSpace(result.Find("div.generic-snippet div.content").First().Text())
+
+	description := desc1
+	if description == "" {
+		description = desc2
+	}
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "brave search title contains url: %s", title)

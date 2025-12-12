@@ -12,9 +12,15 @@ import (
 func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	url := doc.URL
 	logger := log.Logger()
-	logger.Infof(e, "trying duckduckgo for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(duckDuckGoSearchURL, url)))
+	searchURL := fmt.Sprintf(duckDuckGoSearchURL, url)
+	if u, isSlugified := getSearchURLFromSlugs(url, duckDuckGoSearchURL); isSlugified {
+		searchURL = u
+	}
+
+	logger.Infof(e, "duckduckgo search for %s, search url %s", url, searchURL)
+
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(searchURL))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve duckduckgo search results for %s: %s", url, err)
 		return nil, err

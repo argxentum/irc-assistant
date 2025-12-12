@@ -14,9 +14,15 @@ import (
 func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	url := doc.URL
 	logger := log.Logger()
-	logger.Infof(e, "trying startpage for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(startPageSearchURL, url)))
+	searchURL := fmt.Sprintf(startPageSearchURL, url)
+	if u, isSlugified := getSearchURLFromSlugs(url, startPageSearchURL); isSlugified {
+		searchURL = u
+	}
+
+	logger.Infof(e, "startpage search for %s, search url %s", url, searchURL)
+
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(searchURL))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve startpage search results for %s: %s", url, err)
 		return nil, err

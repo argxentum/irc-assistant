@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 const SearchCommandName = "search"
@@ -24,6 +26,11 @@ const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 const braveSearchURL = "https://search.brave.com/search?q=%s&source=web"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
+const urlSlugPattern = `[a-zA-Z]+(?:-[a-zA-Z]+)+`
+const urlSlugMinMatch = 3
+
+var duckDuckGoSearchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
+var urlSlugRegex = regexp.MustCompile(urlSlugPattern)
 
 type SearchCommand struct {
 	*commandStub
@@ -162,8 +169,6 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 	return createSearchResultSummary(e, title, link), nil
 }
 
-var searchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
-
 func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, error) {
 	logger := log.Logger()
 
@@ -184,7 +189,7 @@ func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 	title := strings.TrimSpace(doc.Root.Find("div.result__body h2.result__title").First().Text())
 	linkRaw := strings.TrimSpace(doc.Root.Find("div.result__body h2.result__title a.result__a").First().AttrOr("href", ""))
 
-	match := searchResultURLRegex.FindStringSubmatch(linkRaw)
+	match := duckDuckGoSearchResultURLRegex.FindStringSubmatch(linkRaw)
 	if len(match) < 2 {
 		logger.Debugf(e, "unable to parse duckduckgo search result link for %s", input)
 		return nil, summaryTooShortError
@@ -248,4 +253,15 @@ func createSearchResultSummary(e *irc.Event, title, url string) *summary {
 	s.addMessage(url)
 
 	return s
+}
+
+func getSearchURLFromSlugs(originalURL, formatURL string) (string, bool) {
+	slugified := urlSlugRegex.FindString(originalURL)
+	slugs := strings.Split(slugified, "-")
+	if len(slugs) >= urlSlugMinMatch {
+		domain := domainutil.Domain(originalURL)
+		escapedURL := url.QueryEscape(strings.Join(slugs, " ") + " site:" + domain)
+		return fmt.Sprintf(formatURL, escapedURL), true
+	}
+	return "", false
 }

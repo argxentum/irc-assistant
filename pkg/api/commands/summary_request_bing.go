@@ -13,9 +13,15 @@ import (
 func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	url := doc.URL
 	logger := log.Logger()
-	logger.Infof(e, "bing request for %s", url)
 
-	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(fmt.Sprintf(bingSearchURL, url)))
+	searchURL := fmt.Sprintf(bingSearchURL, url)
+	if u, isSlugified := getSearchURLFromSlugs(url, bingSearchURL); isSlugified {
+		searchURL = u
+	}
+
+	logger.Infof(e, "bing search for %s, search url %s", url, searchURL)
+
+	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(searchURL))
 	if err != nil {
 		logger.Debugf(e, "unable to retrieve bing search results for %s: %s", url, err)
 		return nil, err
