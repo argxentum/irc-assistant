@@ -27,7 +27,7 @@ const braveSearchURL = "https://search.brave.com/search?q=%s&source=web"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
 const urlSlugPattern = `[a-zA-Z]+(?:-[a-zA-Z]+)+`
-const urlSlugMinMatch = 3
+const urlSlugComponentMinMatch = 3
 
 var duckDuckGoSearchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
 var urlSlugRegex = regexp.MustCompile(urlSlugPattern)
@@ -255,12 +255,12 @@ func createSearchResultSummary(e *irc.Event, title, url string) *summary {
 	return s
 }
 
-func getSearchURLFromSlugs(originalURL, formatURL string) (string, bool) {
+func getSearchURLFromSlug(originalURL, formatURL string) (string, bool) {
 	slugified := urlSlugRegex.FindString(originalURL)
-	slugs := strings.Split(slugified, "-")
-	if len(slugs) >= urlSlugMinMatch {
+	slugComponents := strings.Split(slugified, "-")
+	if len(slugComponents) >= urlSlugComponentMinMatch {
 		domain := domainutil.Domain(originalURL)
-		escapedURL := url.QueryEscape(strings.Join(slugs, " ") + " site:" + domain)
+		escapedURL := url.QueryEscape(strings.Join(slugComponents, " ") + " site:" + domain)
 		return fmt.Sprintf(formatURL, escapedURL), true
 	}
 	return "", false

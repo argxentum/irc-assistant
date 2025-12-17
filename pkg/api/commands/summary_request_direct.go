@@ -55,7 +55,7 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 
 	logger.Debugf(e, "direct request - title: %s, description: %s", title, description)
 
-	if len(title) > 0 && len(description) > 0 && (len(title)+len(description) < standardMaximumDescriptionLength || len(title) < minimumPreferredTitleLength) {
+	if len(title) > 0 && len(description) > 0 {
 		if text.MostlyContains(title, description, 0.9) {
 			if len(description) > len(title) {
 				return createSummary(style.Bold(description)), nil

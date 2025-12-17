@@ -16,7 +16,7 @@ var rsf []func(e *irc.Event, doc *retriever.Document) (*summary, error)
 func (c *SummaryCommand) requestChain() []func(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	if rsf == nil {
 		rsf = []func(e *irc.Event, doc *retriever.Document) (*summary, error){
-			c.redditRequest,
+			//c.redditRequest,
 			c.directRequest,
 			c.braveSearchRequest,
 			c.firecrawlRequest,

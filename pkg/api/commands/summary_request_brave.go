@@ -16,7 +16,7 @@ func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Documen
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(braveSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlugs(url, braveSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, braveSearchURL); isSlugified {
 		searchURL = u
 	}
 

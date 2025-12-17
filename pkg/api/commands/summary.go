@@ -424,16 +424,6 @@ func (c *SummaryCommand) combinedSourceSummary(e *irc.Event, ub urlBundle, sourc
 		sourceSummary = disinfoWarningMessage
 	}
 
-	/*
-		if strings.ToLower(domainutil.Domain(ub.original)) == "x.com" {
-			replacementURL := strings.Replace(ub.original, "x.com", "xcancel.com", -1)
-			if len(sourceSummary) > 0 {
-				sourceSummary += " | "
-			}
-			sourceSummary += "\U000027A1\U0000FE0F " + replacementURL
-		}
-	*/
-
 	return sourceSummary
 }
 

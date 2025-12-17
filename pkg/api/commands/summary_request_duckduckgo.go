@@ -14,7 +14,7 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(duckDuckGoSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlugs(url, duckDuckGoSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, duckDuckGoSearchURL); isSlugified {
 		searchURL = u
 	}
 

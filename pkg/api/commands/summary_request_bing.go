@@ -15,7 +15,7 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(bingSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlugs(url, bingSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, bingSearchURL); isSlugified {
 		searchURL = u
 	}
 

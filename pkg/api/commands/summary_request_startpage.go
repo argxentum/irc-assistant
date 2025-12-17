@@ -16,7 +16,7 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(startPageSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlugs(url, startPageSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, startPageSearchURL); isSlugified {
 		searchURL = u
 	}
 
