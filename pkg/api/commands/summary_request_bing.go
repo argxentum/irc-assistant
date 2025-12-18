@@ -3,11 +3,16 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
+	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
@@ -15,7 +20,7 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(bingSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, bingSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, bingSearchURL, false); isSlugified {
 		searchURL = u
 	}
 
@@ -32,11 +37,38 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 		return nil, errors.New("bing search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Root.Find("ol#b_results").First().Find("h2").First().Text())
+	var ch = make(chan pageSearchResult, 1)
+	urlDomain := domainutil.Domain(url)
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected bing title: %s", title)
-		return nil, rejectedTitleError
+	go func() {
+		doc.Root.Find("ol#b_results li.b_algo").EachWithBreak(func(i int, s *goquery.Selection) bool {
+			anchorURL := getBingRedirectURL(strings.TrimSpace(s.Find("h2 a").First().AttrOr("href", "")))
+			anchorURLDomain := domainutil.Domain(anchorURL)
+			if anchorURLDomain != urlDomain {
+				logger.Debugf(e, "bing result anchor domain (%s) does not match url domain (%s), skipping...", anchorURLDomain, urlDomain)
+				return true
+			}
+
+			title := strings.TrimSpace(s.Find("h2").First().Text())
+			description := strings.TrimSpace(s.Find("div.b_caption").First().Text())
+
+			ch <- pageSearchResult{
+				title:       title,
+				description: description,
+			}
+
+			return false
+		})
+	}()
+
+	var title, description string
+	select {
+	case res := <-ch:
+		title = res.title
+		description = res.description
+	case <-time.After(3 * time.Second):
+		logger.Debugf(e, "no valid bing search results for %s (timeout)", url)
+		return nil, noContentError
 	}
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
@@ -44,17 +76,44 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 		return nil, rejectedTitleError
 	}
 
-	if len(title) == 0 {
-		logger.Debugf(e, "bing title empty")
-		return nil, summaryTooShortError
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected bing summary title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "bing summary too short - title: %s, description: %s", title, description)
+		return nil, err
+	}
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "bing summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "bing title too short: %s", title)
-		return nil, summaryTooShortError
+	logger.Debugf(e, "bing search request - title: %s, description: %s", title, description)
+	return s, nil
+}
+
+func getBingRedirectURL(anchorURL string) string {
+	if !strings.HasPrefix(anchorURL, "https://www.bing.com/") {
+		return anchorURL
 	}
 
-	logger.Debugf(e, "bing request - title: %s", title)
+	u, err := url.Parse(anchorURL)
+	if err != nil {
+		return ""
+	}
+	q := u.Query()
 
-	return createSummary(style.Bold(title)), nil
+	encoded := q.Get("u")
+	if strings.HasPrefix(encoded, "a1") {
+		encoded = strings.TrimPrefix(encoded, "a1")
+	}
+
+	buf, _ := base64.StdEncoding.DecodeString(encoded)
+	if len(buf) == 0 {
+		return anchorURL
+	}
+
+	return string(buf)
 }

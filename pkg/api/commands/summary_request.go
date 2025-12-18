@@ -19,7 +19,7 @@ func (c *SummaryCommand) requestChain() []func(e *irc.Event, doc *retriever.Docu
 			//c.redditRequest,
 			c.directRequest,
 			c.braveSearchRequest,
-			c.firecrawlRequest,
+			//c.firecrawlRequest,
 			c.startPageRequest,
 			c.duckduckgoRequest,
 			c.bingRequest,

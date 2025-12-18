@@ -3,7 +3,6 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
 	"errors"
 	"fmt"
@@ -28,17 +27,20 @@ func (c *SummaryCommand) nuggetizeRequest(e *irc.Event, doc *retriever.Document)
 
 	title := strings.TrimSpace(doc.Root.Find("span.title").First().Text())
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected nuggetize title: %s", title)
-		return nil, rejectedTitleError
+	s, err := c.createSummaryFromTitleAndDescription(title, "")
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected nuggetize summary title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "nuggetize summary too short - title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "nuggetize summary no content - title: %s", title)
+		return nil, err
 	}
 
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "nuggetize title too short: %s", title)
-		return nil, summaryTooShortError
-	}
-
-	logger.Debugf(e, "nuggetize request - title: %s", title)
-
-	return createSummary(style.Bold(title)), nil
+	logger.Debugf(e, "nuggetize search request - title: %s", title)
+	return s, nil
 }

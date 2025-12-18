@@ -26,11 +26,9 @@ const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 const braveSearchURL = "https://search.brave.com/search?q=%s&source=web"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
-const urlSlugPattern = `[a-zA-Z]+(?:-[a-zA-Z]+)+`
 const urlSlugComponentMinMatch = 3
 
 var duckDuckGoSearchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
-var urlSlugRegex = regexp.MustCompile(urlSlugPattern)
 
 type SearchCommand struct {
 	*commandStub
@@ -255,13 +253,38 @@ func createSearchResultSummary(e *irc.Event, title, url string) *summary {
 	return s
 }
 
-func getSearchURLFromSlug(originalURL, formatURL string) (string, bool) {
-	slugified := urlSlugRegex.FindString(originalURL)
-	slugComponents := strings.Split(slugified, "-")
-	if len(slugComponents) >= urlSlugComponentMinMatch {
-		domain := domainutil.Domain(originalURL)
-		escapedURL := url.QueryEscape(strings.Join(slugComponents, " ") + " site:" + domain)
-		return fmt.Sprintf(formatURL, escapedURL), true
+var alphaRegex = regexp.MustCompile(`^[a-zA-Z]+$`)
+
+func getSearchURLFromSlug(originalURL, formatURL string, addSiteParameter bool) (string, bool) {
+	pathComponents := strings.Split(strings.Trim(originalURL, "/"), "/")
+	for i := len(pathComponents) - 1; i >= 0; i-- {
+		if len(pathComponents[i]) == 0 {
+			continue
+		}
+
+		component := pathComponents[i]
+		slugComponents := make([]string, 0)
+		potentialSlugComponents := strings.Split(component, "-")
+		for _, sc := range potentialSlugComponents {
+			if alphaRegex.MatchString(sc) {
+				slugComponents = append(slugComponents, sc)
+			}
+		}
+
+		if len(slugComponents) >= urlSlugComponentMinMatch {
+			query := strings.Join(slugComponents, " ")
+			if addSiteParameter {
+				domain := domainutil.Domain(originalURL)
+				query += " site:" + domain
+			}
+			escapedURL := url.QueryEscape(query)
+			return fmt.Sprintf(formatURL, escapedURL), true
+		}
 	}
 	return "", false
+}
+
+type pageSearchResult struct {
+	title       string
+	description string
 }

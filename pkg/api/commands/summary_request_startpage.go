@@ -3,11 +3,13 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 
@@ -16,7 +18,7 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(startPageSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, startPageSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, startPageSearchURL, false); isSlugified {
 		searchURL = u
 	}
 
@@ -33,37 +35,59 @@ func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document)
 		return nil, fmt.Errorf("startpage search results doc nil")
 	}
 
-	anchorURL := strings.TrimSpace(doc.Root.Find("section#main a.result-title").First().AttrOr("href", ""))
-	anchorURLDomain := domainutil.Domain(anchorURL)
+	var ch = make(chan pageSearchResult, 1)
 	urlDomain := domainutil.Domain(url)
-	if anchorURLDomain != urlDomain {
-		logger.Debugf(e, "startpage anchor domain (%s) does not match url domain (%s)", anchorURLDomain, urlDomain)
-		return nil, fmt.Errorf("invalid search result")
-	}
 
-	title := strings.TrimSpace(doc.Root.Find("section#main h2").First().Text())
+	go func() {
+		doc.Root.Find("section#main div.result").EachWithBreak(func(i int, s *goquery.Selection) bool {
+			anchorURL := strings.TrimSpace(s.Find("a.result-title").First().AttrOr("href", ""))
+			anchorURLDomain := domainutil.Domain(anchorURL)
+			if anchorURLDomain != urlDomain {
+				logger.Debugf(e, "startpage result anchor domain (%s) does not match url domain (%s), skipping...", anchorURLDomain, urlDomain)
+				return true
+			}
+
+			title := strings.TrimSpace(s.Find("a.result-title h2").First().Text())
+			description := strings.TrimSpace(s.Find("p.description").First().Text())
+
+			ch <- pageSearchResult{
+				title:       title,
+				description: description,
+			}
+
+			return false
+		})
+	}()
+
+	var title, description string
+	select {
+	case res := <-ch:
+		title = res.title
+		description = res.description
+	case <-time.After(3 * time.Second):
+		logger.Debugf(e, "no valid startpage search results for %s (timeout)", url)
+		return nil, noContentError
+	}
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "startpage title contains url: %s", title)
 		return nil, rejectedTitleError
 	}
 
-	if len(title) == 0 {
-		logger.Debugf(e, "startpage title empty")
-		return nil, summaryTooShortError
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected startpage summary title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "startpage summary too short - title: %s, description: %s", title, description)
+		return nil, err
+	}
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "startpage summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected startpage title: %s", title)
-		return nil, rejectedTitleError
-	}
-
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "startpage title too short: %s", title)
-		return nil, summaryTooShortError
-	}
-
-	logger.Debugf(e, "startpage request - title: %s", title)
-
-	return createSummary(style.Bold(title)), nil
+	logger.Debugf(e, "startpage search request - title: %s, description: %s", title, description)
+	return s, nil
 }

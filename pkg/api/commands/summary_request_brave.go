@@ -3,8 +3,8 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,7 +16,7 @@ func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Documen
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(braveSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, braveSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, braveSearchURL, true); isSlugified {
 		searchURL = u
 	}
 
@@ -56,30 +56,20 @@ func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Documen
 		return nil, rejectedTitleError
 	}
 
-	if len(title) == 0 {
-		logger.Debugf(e, "brave search title empty")
-		return nil, summaryTooShortError
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected brave summary title: %s", title)
+		return nil, err
 	}
-
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected brave search title: %s", title)
-		return nil, rejectedTitleError
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "brave summary too short - title: %s, description: %s", title, description)
+		return nil, err
 	}
-
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "brave search title too short: %s", title)
-		return nil, summaryTooShortError
-	}
-
-	if len(description) > standardMaximumDescriptionLength {
-		description = description[:standardMaximumDescriptionLength] + "..."
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "brave summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
 	logger.Debugf(e, "brave search request - title: %s, description: %s", title, description)
-
-	if len(description) == 0 {
-		return createSummary(style.Bold(title)), nil
-	}
-
-	return createSummary(style.Bold(title) + ": " + description), nil
+	return s, nil
 }

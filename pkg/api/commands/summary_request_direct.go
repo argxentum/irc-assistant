@@ -3,10 +3,9 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -20,10 +19,6 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
 	description := strings.TrimSpace(descriptionAttr)
 	h1 := strings.TrimSpace(doc.Root.Find("html body h1").First().Text())
-
-	if len(description) > standardMaximumDescriptionLength {
-		description = description[:standardMaximumDescriptionLength] + "..."
-	}
 
 	cssIndicators := []string{"{", ":", ";", "}"}
 	if text.ContainsAll(title, cssIndicators) {
@@ -39,39 +34,20 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 		title = h1
 	}
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected direct title: %s", title)
-		return nil, rejectedTitleError
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected direct summary title: %s", title)
+		return nil, err
 	}
-
-	if len(title)+len(description) < minimumTitleLength {
+	if errors.Is(err, summaryTooShortError) {
 		logger.Debugf(e, "direct summary too short - title: %s, description: %s", title, description)
-		return nil, summaryTooShortError
+		return nil, err
 	}
-
-	if len(title) > maximumTitleLength {
-		title = title[:maximumTitleLength] + "..."
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "direct summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
 	logger.Debugf(e, "direct request - title: %s, description: %s", title, description)
-
-	if len(title) > 0 && len(description) > 0 {
-		if text.MostlyContains(title, description, 0.9) {
-			if len(description) > len(title) {
-				return createSummary(style.Bold(description)), nil
-			}
-			return createSummary(style.Bold(title)), nil
-		}
-		return createSummary(fmt.Sprintf("%s: %s", style.Bold(title), description)), nil
-	}
-
-	if len(title) > 0 {
-		return createSummary(style.Bold(title)), nil
-	}
-
-	if len(description) > 0 {
-		return createSummary(style.Bold(description)), nil
-	}
-
-	return nil, noContentError
+	return s, nil
 }

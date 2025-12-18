@@ -3,8 +3,8 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -14,7 +14,7 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(duckDuckGoSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, duckDuckGoSearchURL); isSlugified {
+	if u, isSlugified := getSearchURLFromSlug(url, duckDuckGoSearchURL, true); isSlugified {
 		searchURL = u
 	}
 
@@ -31,29 +31,28 @@ func (c *SummaryCommand) duckduckgoRequest(e *irc.Event, doc *retriever.Document
 		return nil, fmt.Errorf("duckduckgo search results doc nil")
 	}
 
-	title := strings.TrimSpace(doc.Root.Find("div.result__body").First().Find("h2.result__title").First().Text())
+	title := strings.TrimSpace(doc.Root.Find("div.serp__results").First().Find("h2.result__title").First().Text())
+	description := strings.TrimSpace(doc.Root.Find("div.serp__results").First().Find("a.result__snippet").First().Text())
 
 	if strings.Contains(strings.ToLower(title), url[:min(len(url), 24)]) {
 		logger.Debugf(e, "duckduckgo title contains url: %s", title)
 		return nil, rejectedTitleError
 	}
 
-	if len(title) == 0 {
-		logger.Debugf(e, "duckduckgo title empty")
-		return nil, summaryTooShortError
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected duckduckgo summary title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "duckduckgo summary too short - title: %s, description: %s", title, description)
+		return nil, err
+	}
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "duckduckgo summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected duckduckgo title: %s", title)
-		return nil, rejectedTitleError
-	}
-
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "duckduckgo title too short: %s", title)
-		return nil, summaryTooShortError
-	}
-
-	logger.Debugf(e, "duckduckgo request - title: %s", title)
-
-	return createSummary(style.Bold(title)), nil
+	logger.Debugf(e, "duckduckgo search request - title: %s, description: %s", title, description)
+	return s, nil
 }

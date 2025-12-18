@@ -3,10 +3,10 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/style"
 	"assistant/pkg/log"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -99,17 +99,28 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 		respBody.Data.Metadata.Title7,
 	)
 
-	if c.isRejectedTitle(title) {
-		logger.Debugf(e, "rejected firecrawl title: %s", title)
-		return nil, rejectedTitleError
+	description := coalesce(
+		respBody.Data.Metadata.Description1,
+		respBody.Data.Metadata.Description2,
+		respBody.Data.Metadata.Description3,
+		respBody.Data.Metadata.Description4,
+		respBody.Data.Metadata.Description5,
+	)
+
+	s, err := c.createSummaryFromTitleAndDescription(title, description)
+	if errors.Is(err, rejectedTitleError) {
+		logger.Debugf(e, "rejected firecrawl summary title: %s", title)
+		return nil, err
+	}
+	if errors.Is(err, summaryTooShortError) {
+		logger.Debugf(e, "firecrawl summary too short - title: %s, description: %s", title, description)
+		return nil, err
+	}
+	if errors.Is(err, noContentError) {
+		logger.Debugf(e, "firecrawl summary no content - title: %s, description: %s", title, description)
+		return nil, err
 	}
 
-	if len(title) < minimumTitleLength {
-		logger.Debugf(e, "firecrawl title too short: %s", title)
-		return nil, summaryTooShortError
-	}
-
-	logger.Debugf(e, "firecrawl request - title: %s", title)
-
-	return createSummary(style.Bold(title)), nil
+	logger.Debugf(e, "firecrawl search request - title: %s, description: %s", title, description)
+	return s, nil
 }

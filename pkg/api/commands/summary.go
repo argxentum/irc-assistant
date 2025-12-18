@@ -6,6 +6,8 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
+	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -560,4 +562,50 @@ func (c *SummaryCommand) findCommunityNotes(e *irc.Event, url string) []string {
 
 	includeCounterSourceURL := !slices.Contains(note.CounterSources, url)
 	return createCommunityNoteOutputMessages(e, note, includeCounterSourceURL)
+}
+
+func (c *SummaryCommand) createSummaryFromTitleAndDescription(title, description string) (*summary, error) {
+	if len(title) > maximumTitleLength {
+		title = title[:maximumTitleLength] + "..."
+	}
+
+	if len(description) > standardMaximumDescriptionLength {
+		description = description[:standardMaximumDescriptionLength] + "..."
+	}
+
+	if c.isRejectedTitle(title) {
+		return nil, rejectedTitleError
+	}
+
+	if len(title)+len(description) < minimumTitleLength {
+		return nil, summaryTooShortError
+	}
+
+	if len(title) > 0 && len(description) > 0 {
+		if text.MostlyContains(title, description, 0.9) {
+			if len(description) > len(title) {
+				return createSummary(style.Bold(description)), nil
+			}
+			return createSummary(style.Bold(title)), nil
+		}
+		return createSummary(fmt.Sprintf("%s%s %s", style.Bold(title), getSummaryFieldSeparator(title), description)), nil
+	}
+
+	if len(title) > 0 {
+		return createSummary(style.Bold(title)), nil
+	}
+
+	if len(description) > 0 {
+		return createSummary(style.Bold(description)), nil
+	}
+
+	return nil, noContentError
+}
+
+func getSummaryFieldSeparator(title string) string {
+	end := title[len(title)-1]
+	if end == '.' || end == '!' || end == '?' {
+		return ""
+	}
+	return ":"
 }
