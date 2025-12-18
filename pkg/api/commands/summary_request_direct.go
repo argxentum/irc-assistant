@@ -14,11 +14,21 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 	logger.Infof(e, "direct request for %s", doc.URL)
 
 	title := strings.TrimSpace(doc.Root.Find("title").First().Text())
-	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
-	titleMeta := strings.TrimSpace(titleAttr)
-	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
-	description := strings.TrimSpace(descriptionAttr)
 	h1 := strings.TrimSpace(doc.Root.Find("html body h1").First().Text())
+
+	titlePropertyAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
+	titleNameAttr, _ := doc.Root.Find("meta[name='og:title']").First().Attr("content")
+	titleMeta := strings.TrimSpace(titlePropertyAttr)
+	if titleMeta == "" {
+		titleMeta = strings.TrimSpace(titleNameAttr)
+	}
+
+	descriptionPropertyAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
+	descriptionNameAttr, _ := doc.Root.Find("html meta[name='og:description']").First().Attr("content")
+	description := strings.TrimSpace(descriptionPropertyAttr)
+	if description == "" {
+		description = strings.TrimSpace(descriptionNameAttr)
+	}
 
 	cssIndicators := []string{"{", ":", ";", "}"}
 	if text.ContainsAll(title, cssIndicators) {
@@ -28,7 +38,7 @@ func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*
 		h1 = ""
 	}
 
-	if len(titleAttr) > 0 {
+	if len(titleMeta) > 0 {
 		title = titleMeta
 	} else if len(h1) > 0 {
 		title = h1
