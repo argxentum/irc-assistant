@@ -5,7 +5,6 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/wikipedia"
 	"assistant/pkg/models"
-	"fmt"
 )
 
 func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summary, *models.Source, error) {
@@ -19,5 +18,6 @@ func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summary, *mo
 		description = description[:standardMaximumDescriptionLength] + "..."
 	}
 
-	return createSummary(fmt.Sprintf("%s: %s", style.Bold(style.Underline(page.Title)), description)), nil, nil
+	s, err := c.createSummaryFromTitleAndDescription(style.Underline(page.Title), description)
+	return s, nil, err
 }

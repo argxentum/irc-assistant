@@ -24,3 +24,16 @@ func DecorateFloatWithCommas(number float64) string {
 	}
 	return parts[0] + parts[1]
 }
+
+func ShortenNumber(number int) string {
+	if number < 1_000 {
+		return fmt.Sprintf("%d", number)
+	}
+	if number < 1_000_000 {
+		return fmt.Sprintf("%.1fK", float64(number)/1000)
+	}
+	if number < 1_000_000_000 {
+		return fmt.Sprintf("%.1fM", float64(number)/1000000)
+	}
+	return fmt.Sprintf("%.1fB", float64(number)/1000000000)
+}
