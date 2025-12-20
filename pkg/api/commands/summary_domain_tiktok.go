@@ -105,7 +105,17 @@ func (c *SummaryCommand) parseTikTok(e *irc.Event, url string) (*summary, *model
 	message := ""
 
 	title := itemData.Item.Title
+	if title == "" {
+		title = videoData.DefaultScope.VideoDetail.ShareMeta.Title
+	}
+
 	description := itemData.Item.Description
+	if description == "" {
+		description = videoData.DefaultScope.VideoDetail.ShareMeta.Description
+	}
+	if title == "" {
+		title = description
+	}
 
 	if len(title) > maximumTitleLength {
 		title = title[:maximumTitleLength] + "..."
