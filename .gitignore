@@ -121,3 +121,4 @@ config.*.yaml
 bin/*
 credentials/*
 .idea/copilot**.xml
+.idea/go.imports.xml
