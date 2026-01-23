@@ -527,17 +527,37 @@ func (c *SummaryCommand) addDisinformationPenalty(e *irc.Event, penalty int) {
 		return
 	}
 
-	logger.Debug(e, "adding disinformation penalty removal task")
+	u.ExtendedPenalty += penalty
+	if u.ExtendedPenalty < 0 {
+		u.ExtendedPenalty = 0
+	}
 
-	task := models.NewDisinformationPenaltyRemovalTask(time.Now().Add(time.Duration(c.cfg.DisinfoPenalty.TimeoutSeconds)*time.Second), e.ReplyTarget(), e.From, penalty)
-	err = firestore.Get().AddTask(task)
+	err = fs.UpdateUser(e.ReplyTarget(), u, map[string]any{"extended_penalty": u.ExtendedPenalty, "updated_at": time.Now()})
 	if err != nil {
-		logger.Errorf(e, "error adding disinformation penalty removal task, %s", err)
+		logger.Errorf(e, "error updating extended_penalty for %s: %v", e.ReplyTarget(), err)
 		return
 	}
 
-	if u.Penalty >= c.cfg.DisinfoPenalty.Threshold {
-		c.ExecuteSynthesizedEvent(e, MuteCommandName, fmt.Sprintf("%s %s disinformation threshold reached", c.cfg.DisinfoPenalty.Duration, e.From), nil)
+	logger.Debug(e, "adding disinformation penalty removal task")
+
+	task := models.NewDisinformationMutePenaltyRemovalTask(time.Now().Add(time.Duration(c.cfg.DisinfoPenalty.TempMuteIntervalMinutes)*time.Minute), e.ReplyTarget(), e.From, penalty)
+	err = firestore.Get().AddTask(task)
+	if err != nil {
+		logger.Errorf(e, "error adding mute disinformation penalty removal task, %s", err)
+		return
+	}
+
+	task = models.NewDisinformationBanPenaltyRemovalTask(time.Now().Add(time.Duration(c.cfg.DisinfoPenalty.TempBanIntervalHours)*time.Hour), e.ReplyTarget(), e.From, penalty)
+	err = firestore.Get().AddTask(task)
+	if err != nil {
+		logger.Errorf(e, "error adding ban disinformation penalty removal task, %s", err)
+		return
+	}
+
+	if u.ExtendedPenalty >= c.cfg.DisinfoPenalty.TempBanThreshold {
+		c.ExecuteSynthesizedEvent(e, BanCommandName, fmt.Sprintf("%dh %s excessive disinformation threshold reached", c.cfg.DisinfoPenalty.TempBanTimeoutHours, e.From), nil)
+	} else if u.Penalty >= c.cfg.DisinfoPenalty.TempMuteThreshold {
+		c.ExecuteSynthesizedEvent(e, MuteCommandName, fmt.Sprintf("%dm %s disinformation threshold reached", c.cfg.DisinfoPenalty.TempMuteTimeoutMinutes, e.From), nil)
 	}
 }
 

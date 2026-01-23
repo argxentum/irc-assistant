@@ -11,13 +11,14 @@ import (
 const taskIDPrefix = "task"
 
 const (
-	TaskTypeReminder                     = "reminder"
-	TaskTypeBanRemoval                   = "ban_removal"
-	TaskTypeMuteRemoval                  = "mute_removal"
-	TaskTypeNotifyVoiceRequests          = "notify_voice_requests"
-	TaskTypePersistentChannel            = "persistent_channel"
-	TaskTypeReconnect                    = "reconnect"
-	TaskTypeDisinformationPenaltyRemoval = "disinformation_penalty_removal"
+	TaskTypeReminder                         = "reminder"
+	TaskTypeBanRemoval                       = "ban_removal"
+	TaskTypeMuteRemoval                      = "mute_removal"
+	TaskTypeNotifyVoiceRequests              = "notify_voice_requests"
+	TaskTypePersistentChannel                = "persistent_channel"
+	TaskTypeReconnect                        = "reconnect"
+	TaskTypeDisinformationMutePenaltyRemoval = "disinformation_penalty_removal"
+	TaskTypeDisinformationBanPenaltyRemoval  = "disinformation_ban_penalty_removal"
 )
 
 const (
@@ -82,8 +83,12 @@ func DeserializeTask(data []byte) (*Task, error) {
 		if task.Data, err = deserializeTaskData[PersistentTaskData](d); err != nil {
 			return nil, err
 		}
-	case TaskTypeDisinformationPenaltyRemoval:
-		if task.Data, err = deserializeTaskData[DisinformationPenaltyRemovalTaskData](d); err != nil {
+	case TaskTypeDisinformationMutePenaltyRemoval:
+		if task.Data, err = deserializeTaskData[DisinformationMutePenaltyRemovalTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeDisinformationBanPenaltyRemoval:
+		if task.Data, err = deserializeTaskData[DisinformationBanPenaltyRemovalTaskData](d); err != nil {
 			return nil, err
 		}
 	}

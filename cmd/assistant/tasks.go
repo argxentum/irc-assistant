@@ -43,8 +43,10 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypePersistentChannel:
 				isScheduledTask = false
 				err = processPersistentChannel(ctx, cfg, irc, task)
-			case models.TaskTypeDisinformationPenaltyRemoval:
-				err = processDisinformationPenaltyRemoval(ctx, cfg, irc, task)
+			case models.TaskTypeDisinformationMutePenaltyRemoval:
+				err = processDisinformationMutePenaltyRemoval(ctx, cfg, irc, task)
+			case models.TaskTypeDisinformationBanPenaltyRemoval:
+				err = processDisinformationBanPenaltyRemoval(ctx, cfg, irc, task)
 			}
 
 			task.Runs++
@@ -380,11 +382,11 @@ func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.C
 	return nil
 }
 
-func processDisinformationPenaltyRemoval(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
-	data := task.Data.(models.DisinformationPenaltyRemovalTaskData)
+func processDisinformationMutePenaltyRemoval(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.DisinformationMutePenaltyRemovalTaskData)
 
 	logger := log.Logger()
-	logger.Debugf(nil, "processing disinformation penalty (%d) removal request for %s in %s", data.Penalty, data.Nick, data.Channel)
+	logger.Debugf(nil, "processing mute disinformation penalty (%d) removal request for %s in %s", data.Penalty, data.Nick, data.Channel)
 
 	var user *models.User
 
@@ -400,10 +402,10 @@ func processDisinformationPenaltyRemoval(ctx context.Context, cfg *config.Config
 	}
 
 	if user == nil {
-		return fmt.Errorf("user %s not found in %s for disinformation penalty removal request", data.Nick, data.Channel)
+		return fmt.Errorf("user %s not found in %s for mute disinformation penalty removal request", data.Nick, data.Channel)
 	}
 
-	user.Penalty -= data.Penalty
+	user.Penalty--
 
 	if user.Penalty < 0 {
 		user.Penalty = 0
@@ -411,4 +413,36 @@ func processDisinformationPenaltyRemoval(ctx context.Context, cfg *config.Config
 
 	fs := firestore.Get()
 	return fs.UpdateUser(data.Channel, user, map[string]any{"penalty": user.Penalty, "updated_at": time.Now()})
+}
+
+func processDisinformationBanPenaltyRemoval(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.DisinformationBanPenaltyRemovalTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing ban disinformation penalty (%d) removal request for %s in %s", data.Penalty, data.Nick, data.Channel)
+
+	var user *models.User
+	if len(data.Nick) > 0 {
+		u, err := repository.GetUserByNick(nil, data.Channel, data.Nick, false)
+		if err != nil {
+			return fmt.Errorf("error getting user by nick: %w", err)
+		}
+
+		if u != nil {
+			user = u
+		}
+	}
+
+	if user == nil {
+		return fmt.Errorf("user %s not found in %s for ban disinformation penalty removal request", data.Nick, data.Channel)
+	}
+
+	user.ExtendedPenalty--
+
+	if user.ExtendedPenalty < 0 {
+		user.ExtendedPenalty = 0
+	}
+
+	fs := firestore.Get()
+	return fs.UpdateUser(data.Channel, user, map[string]any{"extended_penalty": user.ExtendedPenalty, "updated_at": time.Now()})
 }

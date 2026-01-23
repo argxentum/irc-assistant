@@ -129,9 +129,12 @@ type IgnoreConfig struct {
 }
 
 type DisinfoPenaltyConfig struct {
-	TimeoutSeconds int    `yaml:"timeout_seconds"`
-	Threshold      int    `yaml:"threshold"`
-	Duration       string `yaml:"duration"`
+	TempMuteIntervalMinutes int `yaml:"temp_mute_interval_minutes"`
+	TempMuteThreshold       int `yaml:"temp_mute_threshold"`
+	TempMuteTimeoutMinutes  int `yaml:"temp_mute_timeout_minutes"`
+	TempBanIntervalHours    int `yaml:"temp_ban_interval_hours"`
+	TempBanThreshold        int `yaml:"temp_ban_threshold"`
+	TempBanTimeoutHours     int `yaml:"temp_ban_timeout_hours"`
 }
 
 type ImgflipConfig struct {

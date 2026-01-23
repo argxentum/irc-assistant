@@ -85,8 +85,11 @@ func (fs *Firestore) taskPath(task *models.Task) string {
 	case models.TaskTypePersistentChannel:
 		data := task.Data.(models.PersistentTaskData)
 		return fs.PersistentChannelTaskPath(data.Channel, task.ID)
-	case models.TaskTypeDisinformationPenaltyRemoval:
-		data := task.Data.(models.DisinformationPenaltyRemovalTaskData)
+	case models.TaskTypeDisinformationMutePenaltyRemoval:
+		data := task.Data.(models.DisinformationMutePenaltyRemovalTaskData)
+		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
+	case models.TaskTypeDisinformationBanPenaltyRemoval:
+		data := task.Data.(models.DisinformationBanPenaltyRemovalTaskData)
 		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
 	}
 	return "unknown"
@@ -100,7 +103,7 @@ func (fs *Firestore) tasksPath(user, destination, taskType string) string {
 		} else {
 			return fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathUsers, user, pathTasks)
 		}
-	case models.TaskTypeBanRemoval, models.TaskTypeMuteRemoval, models.TaskTypeNotifyVoiceRequests, models.TaskTypeDisinformationPenaltyRemoval:
+	case models.TaskTypeBanRemoval, models.TaskTypeMuteRemoval, models.TaskTypeNotifyVoiceRequests, models.TaskTypeDisinformationMutePenaltyRemoval, models.TaskTypeDisinformationBanPenaltyRemoval:
 		return fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, destination, pathTasks)
 	default:
 		log.Logger().Errorf(nil, "can't create path for unknown task type: %s", taskType)
