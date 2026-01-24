@@ -520,22 +520,9 @@ func (c *SummaryCommand) addDisinformationPenalty(e *irc.Event, penalty int) {
 		u.Penalty = 0
 	}
 
-	fs := firestore.Get()
-	err = fs.UpdateUser(e.ReplyTarget(), u, map[string]any{"penalty": u.Penalty, "updated_at": time.Now()})
-	if err != nil {
-		logger.Errorf(e, "error updating penalty for %s: %v", e.ReplyTarget(), err)
-		return
-	}
-
 	u.ExtendedPenalty += penalty
 	if u.ExtendedPenalty < 0 {
 		u.ExtendedPenalty = 0
-	}
-
-	err = fs.UpdateUser(e.ReplyTarget(), u, map[string]any{"extended_penalty": u.ExtendedPenalty, "updated_at": time.Now()})
-	if err != nil {
-		logger.Errorf(e, "error updating extended_penalty for %s: %v", e.ReplyTarget(), err)
-		return
 	}
 
 	logger.Debug(e, "adding disinformation penalty removal task")
@@ -556,8 +543,16 @@ func (c *SummaryCommand) addDisinformationPenalty(e *irc.Event, penalty int) {
 
 	if u.ExtendedPenalty >= c.cfg.DisinfoPenalty.TempBanThreshold {
 		c.ExecuteSynthesizedEvent(e, BanCommandName, fmt.Sprintf("%dh %s excessive disinformation threshold reached", c.cfg.DisinfoPenalty.TempBanTimeoutHours, e.From), nil)
+		u.ExtendedPenalty = 0
 	} else if u.Penalty >= c.cfg.DisinfoPenalty.TempMuteThreshold {
 		c.ExecuteSynthesizedEvent(e, MuteCommandName, fmt.Sprintf("%dm %s disinformation threshold reached", c.cfg.DisinfoPenalty.TempMuteTimeoutMinutes, e.From), nil)
+	}
+
+	fs := firestore.Get()
+	err = fs.UpdateUser(e.ReplyTarget(), u, map[string]any{"extended_penalty": u.ExtendedPenalty, "penalty": u.Penalty, "updated_at": time.Now()})
+	if err != nil {
+		logger.Errorf(e, "error updating penalties for %s: %v", e.ReplyTarget(), err)
+		return
 	}
 }
 
