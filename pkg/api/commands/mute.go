@@ -40,11 +40,11 @@ func (c *MuteCommand) Triggers() []string {
 }
 
 func (c *MuteCommand) Usages() []string {
-	return []string{"%s [<duration>] <nick> [<reason>]"}
+	return []string{"%s [<channel>] [<duration>] <nick> [<reason>]"}
 }
 
 func (c *MuteCommand) AllowedInPrivateMessages() bool {
-	return false
+	return true
 }
 
 func (c *MuteCommand) CanExecute(e *irc.Event) bool {
@@ -54,7 +54,12 @@ func (c *MuteCommand) CanExecute(e *irc.Event) bool {
 func (c *MuteCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	tokens := Tokens(e.Message())
+
 	channel := e.ReplyTarget()
+	if len(tokens) > 2 && irc.IsChannel(tokens[1]) {
+		channel = tokens[1]
+		tokens = append(tokens[:1], tokens[2:]...)
+	}
 
 	c.isBotAuthorizedByChannelStatus(channel, irc.ChannelStatusHalfOperator, func(authorized bool) {
 		if !authorized {
