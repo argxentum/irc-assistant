@@ -55,8 +55,10 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	tokens := Tokens(e.Message())
 
+	isGhostMute := false
 	channel := e.ReplyTarget()
 	if len(tokens) > 2 && irc.IsChannel(tokens[1]) {
+		isGhostMute = true
 		channel = tokens[1]
 		tokens = append(tokens[:1], tokens[2:]...)
 	}
@@ -96,13 +98,19 @@ func (c *MuteCommand) Execute(e *irc.Event) {
 
 		logger.Infof(e, "⚡ %s [%s/%s] %s %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick, duration)
 
-		c.mute(e, channel, nick, duration, reason)
+		c.mute(e, channel, nick, duration, reason, isGhostMute)
 	})
 }
 
-func (c *MuteCommand) mute(e *irc.Event, channel, nick, duration, reason string) {
+func (c *MuteCommand) mute(e *irc.Event, channel, nick, duration, reason string, isGhostMute bool) {
 	logger := log.Logger()
 	logger.Infof(e, "⚡ %s [%s/%s] %s %s", c.Name(), e.From, e.ReplyTarget(), channel, nick)
+
+	if isGhostMute {
+		logger.Infof(e, "handling ghost mute of %s command in channel %s", nick, channel)
+		c.irc.Mute(channel, nick)
+		return
+	}
 
 	c.authorizer.GetUser(e.ReplyTarget(), nick, func(iu *irc.User) {
 		if iu == nil {
