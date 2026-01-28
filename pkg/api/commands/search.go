@@ -26,7 +26,7 @@ const startPageSearchURL = "https://www.startpage.com/sp/search?q=%s"
 const braveSearchURL = "https://search.brave.com/search?q=%s&source=web"
 
 const duckDuckGoSearchResultURLPattern = `//duckduckgo.com/l/\?uddg=(.*?)&`
-const urlSlugComponentMinMatch = 3
+const urlSlugComponentMinMatch = 4
 
 var duckDuckGoSearchResultURLRegex = regexp.MustCompile(duckDuckGoSearchResultURLPattern)
 
@@ -254,8 +254,13 @@ func createSearchResultSummary(e *irc.Event, title, url string) *summary {
 }
 
 var alphaRegex = regexp.MustCompile(`^[a-zA-Z]+$`)
+var extensionRegex = regexp.MustCompile(`\.(?:s?html?|xml|aspx?|php|jsp|cfm|pdf|docx?)$`)
 
 func getSearchURLFromSlug(originalURL, formatURL string, addSiteParameter bool) (string, bool) {
+	if extensionRegex.MatchString(originalURL) {
+		originalURL = extensionRegex.ReplaceAllString(originalURL, "")
+	}
+
 	pathComponents := strings.Split(strings.Trim(originalURL, "/"), "/")
 	for i := len(pathComponents) - 1; i >= 0; i-- {
 		if len(pathComponents[i]) == 0 {
