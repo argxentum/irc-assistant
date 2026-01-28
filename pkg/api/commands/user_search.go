@@ -68,6 +68,11 @@ func (c *UserSearchCommand) Execute(e *irc.Event) {
 
 		nicks := make([]string, 0)
 		for _, user := range users {
+			if user == nil {
+				logger.Debug(e, "Skipping nil user in results")
+				continue
+			}
+
 			if user.Mask == nil {
 				logger.Debug(e, "Skipping user with nil mask in results")
 				continue
