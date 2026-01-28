@@ -60,10 +60,20 @@ func (c *UserSearchCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), channel)
 
-	messages := make([]string, 0)
 	c.authorizer.ListUsersByMask(channel, mask, func(users []*irc.User) {
+		if len(users) == 0 {
+			c.irc.SendMessage(e.ReplyTarget(), fmt.Sprintf("No users found matching mask %s in channel %s.", style.Bold(mask), channel))
+			return
+		}
+
 		nicks := make([]string, 0)
 		for _, user := range users {
+			if user.Mask == nil {
+				logger.Debug(e, "Skipping user with nil mask in results")
+				continue
+			}
+
+			logger.Debugf(e, "User %s matching mask %s in channel %s", user.Mask.Nick, mask, channel)
 			nicks = append(nicks, user.Mask.Nick)
 		}
 
@@ -72,7 +82,7 @@ func (c *UserSearchCommand) Execute(e *irc.Event) {
 			plural = ""
 		}
 
-		messages = append(messages, fmt.Sprintf("Found %s user%s matching mask %s in channel %s: %s", style.Bold(fmt.Sprintf("%d", len(users))), plural, style.Bold(mask), channel, strings.Join(nicks, ", ")))
+		c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Found %s user%s matching mask %s in channel %s: %s", style.Bold(fmt.Sprintf("%d", len(users))), plural, style.Bold(mask), channel, strings.Join(nicks, ", ")))
 	})
 
 }
