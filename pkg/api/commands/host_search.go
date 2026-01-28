@@ -63,7 +63,7 @@ func (c *HostSearchCommand) Execute(e *irc.Event) {
 
 	users, err := repository.GetUsersByHost(e, channel, host)
 	if err != nil {
-		logger.Errorf(e, "error retrieving users by host %s in channel %s: %s", host, channel, err)
+		logger.Errorf(e, "error retrieving users by host %s in channel %s: %v", host, channel, err)
 		c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Error while searching for users with host %s in channel %s", style.Bold(host), channel))
 		return
 	}
@@ -83,5 +83,4 @@ func (c *HostSearchCommand) Execute(e *irc.Event) {
 	}
 
 	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Found %s user%s with host %s in channel %s: %s", style.Bold(fmt.Sprintf("%d", len(users))), plural, style.Bold(host), channel, strings.Join(nicks, ", ")))
-
 }
