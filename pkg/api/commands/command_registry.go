@@ -91,7 +91,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[GIFSearchCommandName] = NewGifSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[WikipediaCommandName] = NewWikipediaCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[SeenCommandName] = NewSeenCommand(cr.ctx, cr.cfg, cr.irc)
-	cr.commands[UserSearchCommandName] = NewUserSearchCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[HostSearchCommandName] = NewHostSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[QuoteAddCommandName] = NewQuoteAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[QuotesSearchCommandName] = NewQuotesSearchCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[QuoteRandomCommandName] = NewQuoteRandomCommand(cr.ctx, cr.cfg, cr.irc)
