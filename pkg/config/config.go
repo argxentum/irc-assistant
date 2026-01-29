@@ -157,8 +157,9 @@ type FirecrawlConfig struct {
 }
 
 type SummaryConfig struct {
-	AvoidanceDomains  map[string]string `yaml:"avoidance_domains"`
-	TranslatedDomains map[string]string `yaml:"translated_domains"`
+	DisabledDirectDomains []string          `yaml:"disabled_direct_domains"`
+	AvoidanceDomains      map[string]string `yaml:"avoidance_domains"`
+	TranslatedDomains     map[string]string `yaml:"translated_domains"`
 }
 
 func ReadConfig(filename string) (*Config, error) {

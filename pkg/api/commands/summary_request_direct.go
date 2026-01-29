@@ -6,12 +6,20 @@ import (
 	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"errors"
+	"slices"
 	"strings"
+
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 func (c *SummaryCommand) directRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
 	logger := log.Logger()
 	logger.Infof(e, "direct request for %s", doc.URL)
+
+	if slices.Contains(c.cfg.Summary.DisabledDirectDomains, domainutil.Domain(doc.URL)) {
+		logger.Debugf(e, "direct requests disabled for domain: %s", domainutil.Domain(doc.URL))
+		return nil, nil
+	}
 
 	title := strings.TrimSpace(doc.Root.Find("title").First().Text())
 	h1 := strings.TrimSpace(doc.Root.Find("html body h1").First().Text())
