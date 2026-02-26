@@ -7,7 +7,6 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -597,12 +596,6 @@ func (c *SummaryCommand) createSummaryFromTitleAndDescription(title, description
 	}
 
 	if len(title) > 0 && len(description) > 0 {
-		if text.MostlyContains(title, description, 0.9) {
-			if len(description) > len(title) {
-				return createSummary(style.Bold(description)), nil
-			}
-			return createSummary(style.Bold(title)), nil
-		}
 		return createSummary(fmt.Sprintf("%s%s %s", style.Bold(title), getSummaryFieldSeparator(title), description)), nil
 	}
 
