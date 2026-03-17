@@ -7,7 +7,7 @@ import (
 	"net/url"
 )
 
-const submissionURL = "https://archive.today/submit/?url=%s"
+const submissionURL = "https://archive.is/submit/?url=%s"
 
 func GetShortcut(sourceURL, redirectURL string) (*models.Shortcut, error) {
 	fs := firestore.Get()
