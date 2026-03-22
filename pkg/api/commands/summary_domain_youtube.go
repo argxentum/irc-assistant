@@ -16,29 +16,38 @@ import (
 	"time"
 )
 
+const youTubeMaxRetries = 3
+const youTubeRetryDelay = 2 * time.Second
+
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
 
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, *models.Source, error) {
-	body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s: %s", url, err)
-	}
-
-	if body == nil {
-		return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s", url)
-	}
-
-	html := string(body.Data)
-	matches := ytInitialDataRegexp.FindStringSubmatch(html)
-	if len(matches) < 2 {
-		return nil, nil, fmt.Errorf("unable to find ytInitialData for %s", url)
-	}
-
 	var data ytData
-	err = json.Unmarshal([]byte(matches[1]), &data)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to unmarshal post JSON for %s: %s", url, err)
+
+	for attempt := 1; attempt <= youTubeMaxRetries; attempt++ {
+		body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
+		if err != nil {
+			log.Logger().Debugf(e, "attempt %d: unable to retrieve YouTube page for %s: %s", attempt, url, err)
+		} else if body == nil {
+			log.Logger().Debugf(e, "attempt %d: nil body for YouTube page %s", attempt, url)
+		} else {
+			matches := ytInitialDataRegexp.FindStringSubmatch(string(body.Data))
+			if len(matches) < 2 {
+				log.Logger().Debugf(e, "attempt %d: unable to find ytInitialData for %s", attempt, url)
+			} else if err = json.Unmarshal([]byte(matches[1]), &data); err != nil {
+				log.Logger().Debugf(e, "attempt %d: unable to unmarshal ytInitialData for %s: %s", attempt, url, err)
+			} else {
+				break
+			}
+		}
+
+		if attempt < youTubeMaxRetries {
+			log.Logger().Debugf(e, "attempt %d: unable to retrieve YouTube page for %s", attempt, url)
+			time.Sleep(youTubeRetryDelay)
+		} else {
+			return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s after %d attempts", url, youTubeMaxRetries)
+		}
 	}
 
 	if strings.Contains(url, "/post/") {
