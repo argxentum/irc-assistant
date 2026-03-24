@@ -61,7 +61,7 @@
         }
 
         function renderEntry(prompt, content, created, complete) {
-            const normalized = content.replace(/([^\n])\n?(\d+\. )/g, '$1\n\n$2');
+            const normalized = content.replace(/([^\n])\n?(\d{1,2}\. )/g, '$1\n\n$2');
             const responseBody = complete
                 ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
                 : `<div class="flex items-center gap-2 tx-meta text-sm">
