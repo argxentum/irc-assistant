@@ -50,7 +50,10 @@ func (c *LLMCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 
 	tokens := Tokens(e.Message())
-	prompt := strings.Join(tokens[1:], " ")
+	prompt := e.Message()
+	if !e.IsPrivateMessage() {
+		prompt = strings.Join(tokens[1:], " ")
+	}
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), prompt)
 
 	task := models.NewProxyLLMRequestTask(e.ReplyTarget(), e.From, "llm", prompt)
