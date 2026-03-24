@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	stripmd "github.com/writeas/go-strip-markdown/v2"
 )
 
 const defaultSessionTimeout = 10 * time.Minute
@@ -119,7 +121,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		return fmt.Errorf("error unmarshaling ollama response: %w", err)
 	}
 
-	content := strings.TrimSpace(thinkPattern.ReplaceAllString(ollamaResp.Message.Content, ""))
+	content := strings.TrimSpace(stripmd.Strip(thinkPattern.ReplaceAllString(ollamaResp.Message.Content, "")))
 	if len(content) == 0 {
 		return fmt.Errorf("empty response from ollama")
 	}
