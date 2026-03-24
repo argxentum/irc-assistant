@@ -30,6 +30,15 @@
         .tx-meta  { color: var(--tx-meta); }
         .tx-label { color: var(--tx-label); }
         .tx-body  { color: var(--tx-body); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid var(--tx-label);
+            border-top-color: var(--tx-meta);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
         .response ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
         .response ul { list-style: disc;    padding-left: 1.5rem; margin: 0.5rem 0; }
         .response li { margin: 0.25rem 0; }
@@ -64,12 +73,9 @@
             const normalized = content.replace(/([.!?:])\s*(\d+\. )/g, '$1\n\n$2');
             const responseBody = complete
                 ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
-                : `<div class="flex items-center gap-2 tx-meta text-sm">
-                       <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                       </svg>
-                       Processing…${content.length > 0 ? ' <span class="tx-body ml-2">' + escapeHtml(content.split('\n')[0].slice(0, 120)) + '…</span>' : ''}
+                : `<div style="display:flex;align-items:center;gap:10px" class="tx-meta text-sm">
+                       <div class="spinner"></div>
+                       Processing…${content.length > 0 ? ' <span class="tx-body" style="margin-left:4px">' + escapeHtml(content.split('\n')[0].slice(0, 120)) + '…</span>' : ''}
                    </div>`;
             return `
                 <div class="card border rounded-lg mb-4 overflow-hidden">

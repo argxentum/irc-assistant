@@ -504,10 +504,7 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 	if truncated || data.Processing {
 		sessionURL := cfg.Web.ExternalRootURL + "/chat/" + data.SessionID + "#" + data.ResponseID
 		shortcut, err := repository.GetShortcut(sessionURL, sessionURL)
-		label := "Truncated, see full response: "
-		if data.Processing {
-			label = "Processing, see complete response: "
-		}
+		label := "Full response: "
 		if err != nil || shortcut == nil {
 			messages = append(messages, label+sessionURL)
 		} else {

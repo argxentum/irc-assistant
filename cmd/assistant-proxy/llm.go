@@ -18,7 +18,7 @@ import (
 )
 
 const defaultSessionTimeout = 10 * time.Minute
-const streamTimeout = 30 * time.Second
+const streamTimeout = 15 * time.Second
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
