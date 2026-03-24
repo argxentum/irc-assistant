@@ -79,6 +79,12 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 		}
 	}
 
+	llm := eh.registry.Command(commands.LLMCommandName)
+
+	if e.IsPrivateMessage() {
+		return llm
+	}
+
 	if slices.Contains(channelDisabled, commands.LLMCommandName) {
 		return nil
 	}
@@ -96,7 +102,7 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 
 	for _, format := range mentionFormats {
 		if strings.HasPrefix(e.Message(), format) {
-			return eh.registry.Command(commands.LLMCommandName)
+			return llm
 		}
 	}
 
