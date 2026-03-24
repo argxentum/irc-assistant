@@ -18,6 +18,49 @@ type sessionEntry struct {
 	Complete bool
 }
 
+type sessionPollEntry struct {
+	ID       string `json:"id"`
+	Prompt   string `json:"prompt"`
+	Content  string `json:"content"`
+	Created  string `json:"created"`
+	Complete bool   `json:"complete"`
+}
+
+type sessionPollResponse struct {
+	Entries       []sessionPollEntry `json:"entries"`
+	AnyProcessing bool               `json:"anyProcessing"`
+}
+
+func (s *server) llmSessionPollHandler(w http.ResponseWriter, r *http.Request) {
+	logger := log.Logger()
+	id := r.PathValue("id")
+
+	fs := firestore.Get()
+	responses, err := fs.LLMResponsesBySession(id)
+	if err != nil {
+		logger.Rawf(log.Error, "error fetching session %s, %s", id, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	poll := sessionPollResponse{Entries: make([]sessionPollEntry, 0, len(responses))}
+	for _, resp := range responses {
+		poll.Entries = append(poll.Entries, sessionPollEntry{
+			ID:       resp.ID,
+			Prompt:   resp.Prompt,
+			Content:  resp.Content,
+			Created:  resp.CreatedAt.UTC().Format(time.RFC3339),
+			Complete: resp.Complete,
+		})
+		if !resp.Complete {
+			poll.AnyProcessing = true
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(poll)
+}
+
 func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
 	logger := log.Logger()
 	id := r.PathValue("id")

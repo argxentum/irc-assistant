@@ -103,11 +103,12 @@
 
         {{if .anyProcessing}}
         async function pollUpdates() {
-            const res = await fetch(location.href);
-            const html = await res.text();
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            document.getElementById('entries').innerHTML = doc.getElementById('entries').innerHTML;
-            if (doc.querySelector('.spinner')) {
+            const res = await fetch(location.pathname + '/poll');
+            if (!res.ok) { setTimeout(pollUpdates, 5000); return; }
+            const data = await res.json();
+            if (!data.anyProcessing) {
+                location.reload();
+            } else {
                 setTimeout(pollUpdates, 5000);
             }
         }

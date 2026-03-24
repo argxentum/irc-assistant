@@ -501,7 +501,7 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 		if len(ircLines) > 1 && len(ircLines[len(ircLines)-1]) < minTailingMessageLength {
 			ircLines = ircLines[:len(ircLines)-1]
 		}
-		if !truncated {
+		if !strings.HasSuffix(ircLines[len(ircLines)-1], "...") {
 			ircLines[len(ircLines)-1] += "..."
 		}
 	}
