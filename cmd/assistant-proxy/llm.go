@@ -54,6 +54,7 @@ type ollamaRequest struct {
 	Model    string          `json:"model"`
 	Messages []ollamaMessage `json:"messages"`
 	Stream   bool            `json:"stream"`
+	Options  map[string]any  `json:"options"`
 }
 
 type ollamaMessage struct {
@@ -87,6 +88,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		Model:    p.cfg.Proxy.Ollama.Model,
 		Messages: messages,
 		Stream:   false,
+		Options:  map[string]any{"num_predict": 512},
 	}
 
 	body, err := json.Marshal(req)
