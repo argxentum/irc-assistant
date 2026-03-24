@@ -4,19 +4,21 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const defaultSessionTimeout = 10 * time.Minute
+const streamTimeout = 30 * time.Second
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
@@ -66,8 +68,9 @@ type ollamaMessage struct {
 	Content string `json:"content"`
 }
 
-type ollamaResponse struct {
+type ollamaStreamChunk struct {
 	Message ollamaMessage `json:"message"`
+	Done    bool          `json:"done"`
 }
 
 func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData) error {
@@ -91,8 +94,8 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	req := ollamaRequest{
 		Model:    p.cfg.Proxy.Ollama.Model,
 		Messages: messages,
-		Stream:   false,
-		Options:  map[string]any{"num_predict": 512, "temperature": 0.2, "num_ctx": 4096},
+		Stream:   true,
+		Options:  map[string]any{"num_predict": 1024, "temperature": 0.2, "num_ctx": 4096},
 	}
 
 	body, err := json.Marshal(req)
@@ -100,44 +103,105 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		return fmt.Errorf("error marshaling ollama request: %w", err)
 	}
 
-	resp, err := http.Post(p.cfg.Proxy.Ollama.Endpoint+"/api/chat", "application/json", bytes.NewReader(body))
+	httpResp, err := http.Post(p.cfg.Proxy.Ollama.Endpoint+"/api/chat", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("error calling ollama: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("ollama returned status %d", resp.StatusCode)
+	if httpResp.StatusCode != http.StatusOK {
+		httpResp.Body.Close()
+		return fmt.Errorf("ollama returned status %d", httpResp.StatusCode)
 	}
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("error reading ollama response: %w", err)
+	// Stream tokens into content buffer until done or timeout
+	var (
+		content    strings.Builder
+		contentMu  sync.Mutex
+		streamDone = make(chan struct{})
+	)
+
+	go func() {
+		defer httpResp.Body.Close()
+		defer close(streamDone)
+		scanner := bufio.NewScanner(httpResp.Body)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			if len(line) == 0 {
+				continue
+			}
+			var chunk ollamaStreamChunk
+			if json.Unmarshal(line, &chunk) != nil {
+				continue
+			}
+			contentMu.Lock()
+			content.WriteString(chunk.Message.Content)
+			contentMu.Unlock()
+			if chunk.Done {
+				return
+			}
+		}
+	}()
+
+	// Wait for completion or timeout
+	complete := false
+	timer := time.NewTimer(streamTimeout)
+	select {
+	case <-streamDone:
+		timer.Stop()
+		complete = true
+	case <-timer.C:
 	}
 
-	var ollamaResp ollamaResponse
-	if err = json.Unmarshal(respBody, &ollamaResp); err != nil {
-		return fmt.Errorf("error unmarshaling ollama response: %w", err)
-	}
+	contentMu.Lock()
+	snapshot := strings.TrimSpace(thinkPattern.ReplaceAllString(content.String(), ""))
+	contentMu.Unlock()
 
-	content := strings.TrimSpace(thinkPattern.ReplaceAllString(ollamaResp.Message.Content, ""))
-	if len(content) == 0 {
+	if len(snapshot) == 0 {
 		return fmt.Errorf("empty response from ollama")
 	}
 
-	p.mu.Lock()
-	s.messages = append(s.messages, ollamaMessage{Role: "user", Content: data.Prompt})
-	s.messages = append(s.messages, ollamaMessage{Role: "assistant", Content: content})
-	s.lastActive = time.Now()
-	p.mu.Unlock()
+	// Update session history immediately for complete responses
+	if complete {
+		p.mu.Lock()
+		s.messages = append(s.messages, ollamaMessage{Role: "user", Content: data.Prompt})
+		s.messages = append(s.messages, ollamaMessage{Role: "assistant", Content: snapshot})
+		s.lastActive = time.Now()
+		p.mu.Unlock()
+	}
 
 	fs := firestore.Get()
-	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, data.Prompt, content)
+	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, data.Prompt, snapshot, complete)
 	if err = fs.CreateLLMResponse(r); err != nil {
 		return fmt.Errorf("error saving LLM response to firestore: %w", err)
 	}
 
-	logger.Debugf(nil, "LLM response saved to firestore for %s in %s", data.Nick, data.Channel)
+	logger.Debugf(nil, "LLM response saved to firestore for %s in %s [complete: %v]", data.Nick, data.Channel, complete)
 
-	return p.publishResponse(requestID, data.Channel, data.Nick, r.ID, sessionID)
+	if err = p.publishResponse(requestID, data.Channel, data.Nick, r.ID, sessionID, !complete); err != nil {
+		return err
+	}
+
+	// If still streaming, update Firestore and session history when done
+	if !complete {
+		go func() {
+			<-streamDone
+			contentMu.Lock()
+			final := strings.TrimSpace(thinkPattern.ReplaceAllString(content.String(), ""))
+			contentMu.Unlock()
+
+			p.mu.Lock()
+			s.messages = append(s.messages, ollamaMessage{Role: "user", Content: data.Prompt})
+			s.messages = append(s.messages, ollamaMessage{Role: "assistant", Content: final})
+			s.lastActive = time.Now()
+			p.mu.Unlock()
+
+			if err := fs.UpdateLLMResponse(r.ID, final); err != nil {
+				logger.Errorf(nil, "error updating LLM response %s: %s", r.ID, err)
+			} else {
+				logger.Debugf(nil, "LLM response %s completed and updated in firestore", r.ID)
+			}
+		}()
+	}
+
+	return nil
 }

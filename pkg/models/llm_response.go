@@ -14,10 +14,11 @@ type LLMResponse struct {
 	Nick      string    `firestore:"nick" json:"nick"`
 	Prompt    string    `firestore:"prompt" json:"prompt"`
 	Content   string    `firestore:"content" json:"content"`
+	Complete  bool      `firestore:"complete" json:"complete"`
 	CreatedAt time.Time `firestore:"created_at" json:"created_at"`
 }
 
-func NewLLMResponse(taskID, sessionID, channel, nick, prompt, content string) *LLMResponse {
+func NewLLMResponse(taskID, sessionID, channel, nick, prompt, content string, complete bool) *LLMResponse {
 	return &LLMResponse{
 		ID:        uuid.NewString(),
 		TaskID:    taskID,
@@ -26,6 +27,7 @@ func NewLLMResponse(taskID, sessionID, channel, nick, prompt, content string) *L
 		Nick:      nick,
 		Prompt:    prompt,
 		Content:   content,
+		Complete:  complete,
 		CreatedAt: time.Now(),
 	}
 }

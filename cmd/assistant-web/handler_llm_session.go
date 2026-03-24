@@ -11,10 +11,11 @@ import (
 )
 
 type sessionEntry struct {
-	ID      string
-	Prompt  template.JS
-	Content template.JS
-	Created template.JS
+	ID       string
+	Prompt   template.JS
+	Content  template.JS
+	Created  template.JS
+	Complete bool
 }
 
 func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -41,24 +42,30 @@ func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entries := make([]sessionEntry, 0, len(responses))
+	anyProcessing := false
 	for _, resp := range responses {
 		promptJSON, _ := json.Marshal(resp.Prompt)
 		contentJSON, _ := json.Marshal(resp.Content)
 		createdJSON, _ := json.Marshal(resp.CreatedAt.UTC().Format(time.RFC3339))
 		entries = append(entries, sessionEntry{
-			ID:      resp.ID,
-			Prompt:  template.JS(promptJSON),
-			Content: template.JS(contentJSON),
-			Created: template.JS(createdJSON),
+			ID:       resp.ID,
+			Prompt:   template.JS(promptJSON),
+			Content:  template.JS(contentJSON),
+			Created:  template.JS(createdJSON),
+			Complete: resp.Complete,
 		})
+		if !resp.Complete {
+			anyProcessing = true
+		}
 	}
 
 	first := responses[0]
 	args := map[string]any{
-		"name":    s.cfg.IRC.Nick,
-		"channel": first.Channel,
-		"nick":    first.Nick,
-		"entries": entries,
+		"name":          s.cfg.IRC.Nick,
+		"channel":       first.Channel,
+		"nick":          first.Nick,
+		"entries":       entries,
+		"anyProcessing": anyProcessing,
 	}
 
 	if err = t.Execute(w, args); err != nil {

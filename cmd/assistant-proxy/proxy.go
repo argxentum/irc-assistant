@@ -53,7 +53,7 @@ func (p *proxy) handleLLMProxyRequest(task *models.Task) error {
 	}
 }
 
-func (p *proxy) publishResponse(requestID, channel, nick, responseID, sessionID string) error {
-	task := models.NewProxyLLMResponseTask(requestID, channel, nick, responseID, sessionID)
+func (p *proxy) publishResponse(requestID, channel, nick, responseID, sessionID string, processing bool) error {
+	task := models.NewProxyLLMResponseTask(requestID, channel, nick, responseID, sessionID, processing)
 	return queue.GetDefault().Publish(task)
 }

@@ -56,31 +56,48 @@
     <script>
         marked.use({ breaks: true });
 
-        function renderEntry(prompt, content, created) {
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderEntry(prompt, content, created, complete) {
             const normalized = content.replace(/([^\n])\n?(\d+\. )/g, '$1\n\n$2');
+            const responseBody = complete
+                ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
+                : `<div class="flex items-center gap-2 tx-meta text-sm">
+                       <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                       </svg>
+                       Processing…${content.length > 0 ? ' <span class="tx-body ml-2">' + escapeHtml(content.split('\n')[0].slice(0, 120)) + '…</span>' : ''}
+                   </div>`;
             return `
                 <div class="card border rounded-lg mb-4 overflow-hidden">
                     <div class="px-4 pt-4 pb-3 border-b" style="border-color: var(--bd-card)">
                         <p class="tx-label text-xs font-semibold uppercase tracking-wide mb-1">Prompt</p>
-                        <p class="tx-body text-sm">${prompt.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+                        <p class="tx-body text-sm">${escapeHtml(prompt)}</p>
                         <p class="tx-meta text-xs mt-2">${new Date(created).toLocaleString()}</p>
                     </div>
                     <div class="px-4 py-3">
                         <p class="tx-label text-xs font-semibold uppercase tracking-wide mb-2">Response</p>
-                        <div class="response tx-body">${marked.parse(normalized)}</div>
+                        ${responseBody}
                     </div>
                 </div>`;
         }
 
         const entries = [
-            {{range .entries}}[{{.Prompt}}, {{.Content}}, {{.Created}}, "{{.ID}}"],
+            {{range .entries}}[{{.Prompt}}, {{.Content}}, {{.Created}}, "{{.ID}}", {{.Complete}}],
             {{end}}
         ];
 
         const container = document.getElementById('entries');
-        entries.forEach(([prompt, content, created, id]) => {
-            container.insertAdjacentHTML('beforeend', `<div id="${id}">${renderEntry(prompt, content, created)}</div>`);
+        entries.forEach(([prompt, content, created, id, complete]) => {
+            container.insertAdjacentHTML('beforeend', `<div id="${id}">${renderEntry(prompt, content, created, complete)}</div>`);
         });
+
+        {{if .anyProcessing}}
+        setTimeout(() => location.reload(), 5000);
+        {{end}}
 
         function toggleTheme() {
             const isDark = document.documentElement.classList.toggle('dark');
