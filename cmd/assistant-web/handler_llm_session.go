@@ -109,7 +109,7 @@ func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
 		"nick":          first.Nick,
 		"entries":       entries,
 		"anyProcessing": anyProcessing,
-		"model":         s.cfg.Proxy.Ollama.Model,
+		"model":         first.Model,
 	}
 
 	if err = t.Execute(w, args); err != nil {

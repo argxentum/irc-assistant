@@ -170,7 +170,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	}
 
 	fs := firestore.Get()
-	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, data.Prompt, snapshot, complete)
+	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, p.cfg.Proxy.Ollama.Model, data.Prompt, snapshot, complete)
 	if err = fs.CreateLLMResponse(r); err != nil {
 		return fmt.Errorf("error saving LLM response to firestore: %w", err)
 	}
