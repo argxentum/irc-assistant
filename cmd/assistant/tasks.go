@@ -496,6 +496,10 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 		}
 	}
 
+	if data.Processing && !truncated {
+		ircLines[len(ircLines)-1] += "..."
+	}
+
 	if irc.IsChannel(data.Channel) {
 		ircLines[0] = data.Nick + ": " + ircLines[0]
 	}

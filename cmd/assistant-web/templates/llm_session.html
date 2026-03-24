@@ -73,9 +73,12 @@
             const normalized = content.replace(/([.!?:])\s*(\d+\. )/g, '$1\n\n$2');
             const responseBody = complete
                 ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
-                : `<div style="display:flex;align-items:center;gap:10px" class="tx-meta text-sm">
-                       <div class="spinner"></div>
-                       Processing…${content.length > 0 ? ' <span class="tx-body" style="margin-left:4px">' + escapeHtml(content.split('\n')[0].slice(0, 120)) + '…</span>' : ''}
+                : `<div>
+                       <div style="display:flex;align-items:center;gap:8px;margin-bottom:${content.length > 0 ? '10px' : '0'}" class="tx-meta text-sm">
+                           <div class="spinner"></div>
+                           Processing…
+                       </div>
+                       ${content.length > 0 ? '<div class="response tx-body">' + marked.parse(normalized) + '</div>' : ''}
                    </div>`;
             return `
                 <div class="card border rounded-lg mb-4 overflow-hidden">
