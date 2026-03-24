@@ -110,6 +110,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[CommunityNoteAddCommandName] = NewCommunityNoteAddCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[CommunityNoteEditCommandName] = NewCommunityNoteEditCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[DrudgeHeadlinesCommandName] = NewDrudgeHeadlinesCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[LLMCommandName] = NewLLMCommand(cr.ctx, cr.cfg, cr.irc)
 
 	cr.commands["r/politics"] = NewRedditTemplateCommand(
 		cr.ctx, cr.cfg, cr.irc,

@@ -2,7 +2,6 @@ package main
 
 import (
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/queue"
 	"context"
@@ -27,16 +26,10 @@ func main() {
 	initializeLogger(ctx, cfg)
 	defer log.Logger().Close()
 
-	initializeFirestore(ctx, cfg)
-	defer firestore.Get().Close()
-
-	initializeQueue(ctx, cfg)
+	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
+	defer queue.GetProxy().Close()
 
-	s := &scheduler{
-		ctx: ctx,
-		cfg: cfg,
-	}
-
-	s.start()
+	p := &proxy{cfg: cfg, sessions: make(map[string]*session)}
+	p.start()
 }

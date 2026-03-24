@@ -12,9 +12,13 @@ elif [ "$1" == "--web" ]; then
 elif [ "$1" == "--scheduler" ]; then
 	echo "Rebuilding assistant-scheduler"
 	go build -o bin/assistant-scheduler assistant/cmd/assistant-scheduler
+elif [ "$1" == "--proxy" ]; then
+	echo "Rebuilding assistant-proxy"
+	go build -o bin/assistant-proxy assistant/cmd/assistant-proxy
 else
-	echo "Rebuilding assistant, assistant-web, and assistant-scheduler"
+	echo "Rebuilding assistant, assistant-web, assistant-scheduler, and assistant-proxy"
 	go build -o bin/assistant assistant/cmd/assistant
 	go build -o bin/assistant-web assistant/cmd/assistant-web
 	go build -o bin/assistant-scheduler assistant/cmd/assistant-scheduler
+	go build -o bin/assistant-proxy assistant/cmd/assistant-proxy
 fi

@@ -30,15 +30,25 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 	}
 }
 
-func initializeQueue(ctx context.Context, cfg *config.Config) {
-	q, err := queue.Initialize(ctx, cfg)
+func initializeQueues(ctx context.Context, cfg *config.Config) {
+	dq, err := queue.InitializeDefault(ctx, cfg, cfg.Queue.Topic, cfg.Queue.Subscription)
 	if err != nil {
-		panic(fmt.Errorf("error initializing queue, %s", err))
+		panic(fmt.Errorf("error initializing default queue, %s", err))
 	}
 
-	err = q.Clear()
+	err = dq.Clear()
 	if err != nil {
-		panic(fmt.Errorf("error clearing queue, %s", err))
+		panic(fmt.Errorf("error clearing default queue, %s", err))
+	}
+
+	pq, err := queue.InitializeProxy(ctx, cfg, cfg.Proxy.Queue.Topic, cfg.Proxy.Queue.Subscription)
+	if err != nil {
+		panic(fmt.Errorf("error initializing proxy queue, %s", err))
+	}
+
+	err = pq.Clear()
+	if err != nil {
+		panic(fmt.Errorf("error clearing proxy queue, %s", err))
 	}
 }
 

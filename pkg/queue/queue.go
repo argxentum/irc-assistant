@@ -4,14 +4,18 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
-	"google.golang.org/api/option"
 	"time"
+
+	"cloud.google.com/go/pubsub"
+	"google.golang.org/api/option"
 )
 
-var instance Queue
+const defaultQueue = "default"
+const proxyQueue = "proxy"
+
+var instances = map[string]Queue{}
 
 type Queue interface {
 	Publish(task *models.Task) error
@@ -20,45 +24,63 @@ type Queue interface {
 	Close() error
 }
 
-func Get() Queue {
-	if instance == nil {
-		panic("queue is not initialized")
-	}
-
-	return instance
+func GetDefault() Queue {
+	return getNamed(defaultQueue)
 }
 
-func Initialize(ctx context.Context, cfg *config.Config) (Queue, error) {
-	if instance != nil {
-		return instance, nil
+func GetProxy() Queue {
+	return getNamed(proxyQueue)
+}
+
+func getNamed(name string) Queue {
+	q, ok := instances[name]
+	if !ok {
+		panic(fmt.Sprintf("queue %s is not initialized", name))
+	}
+	return q
+}
+
+func InitializeDefault(ctx context.Context, cfg *config.Config, topic, subscription string) (Queue, error) {
+	return initializeNamed(ctx, cfg, defaultQueue, topic, subscription)
+}
+
+func InitializeProxy(ctx context.Context, cfg *config.Config, topic, subscription string) (Queue, error) {
+	return initializeNamed(ctx, cfg, proxyQueue, topic, subscription)
+}
+
+func initializeNamed(ctx context.Context, cfg *config.Config, name, topic, subscription string) (Queue, error) {
+	if q, ok := instances[name]; ok {
+		return q, nil
 	}
 
-	var client *pubsub.Client
-	var err error
-	client, err = pubsub.NewClient(ctx, cfg.GoogleCloud.ProjectID, option.WithCredentialsFile(cfg.GoogleCloud.ServiceAccountFilename))
+	client, err := pubsub.NewClient(ctx, cfg.GoogleCloud.ProjectID, option.WithCredentialsFile(cfg.GoogleCloud.ServiceAccountFilename))
 	if err != nil {
-		return nil, fmt.Errorf("error creating firestore client, %s", err)
+		return nil, fmt.Errorf("error creating pubsub client, %s", err)
 	}
 
-	topic := client.Topic(cfg.Queue.Topic)
-	if topic == nil {
-		return nil, fmt.Errorf("invalid topic, %s", cfg.Queue.Topic)
+	t := client.Topic(topic)
+	if t == nil {
+		return nil, fmt.Errorf("invalid topic, %s", topic)
 	}
 
-	subscription := client.Subscription(cfg.Queue.Subscription)
-	if subscription == nil {
-		return nil, fmt.Errorf("invalid subscription, %s", cfg.Queue.Subscription)
+	var s *pubsub.Subscription
+	if subscription != "" {
+		s = client.Subscription(subscription)
+		if s == nil {
+			return nil, fmt.Errorf("invalid subscription, %s", subscription)
+		}
 	}
 
-	instance = &queue{
+	q := &queue{
 		ctx:          ctx,
 		cfg:          cfg,
 		client:       client,
-		topic:        topic,
-		subscription: subscription,
+		topic:        t,
+		subscription: s,
 	}
 
-	return instance, nil
+	instances[name] = q
+	return q, nil
 }
 
 type queue struct {
@@ -92,6 +114,10 @@ func (q *queue) Publish(task *models.Task) error {
 }
 
 func (q *queue) Receive(callback func(*models.Task)) error {
+	if q.subscription == nil {
+		return fmt.Errorf("queue has no subscription configured")
+	}
+
 	logger := log.Logger()
 
 	return q.subscription.Receive(q.ctx, func(ctx context.Context, msg *pubsub.Message) {
@@ -109,5 +135,8 @@ func (q *queue) Receive(callback func(*models.Task)) error {
 }
 
 func (q *queue) Clear() error {
+	if q.subscription == nil {
+		return nil
+	}
 	return q.subscription.SeekToTime(q.ctx, time.Now())
 }

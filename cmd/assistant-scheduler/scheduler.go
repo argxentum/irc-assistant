@@ -21,7 +21,7 @@ func (s *scheduler) start() {
 	fs := firestore.Get()
 	logger.Debug(nil, "starting scheduler")
 
-	err := queue.Get().Clear()
+	err := queue.GetDefault().Clear()
 	if err != nil {
 		panic(fmt.Errorf("error clearing queue, %s", err))
 	}
@@ -52,7 +52,7 @@ func publishTasks(tasks []*models.Task) {
 	}
 
 	logger := log.Logger()
-	q := queue.Get()
+	q := queue.GetDefault()
 
 	for _, task := range tasks {
 		if task == nil {

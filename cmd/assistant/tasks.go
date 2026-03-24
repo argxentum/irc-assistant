@@ -23,7 +23,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 	logger := log.Logger()
 
 	go func() {
-		err := queue.Get().Receive(func(task *models.Task) {
+		err := queue.GetDefault().Receive(func(task *models.Task) {
 			logger.Debugf(nil, "received task %s: %s [%d runs]", task.ID, task.Type, task.Runs)
 
 			isScheduledTask := true
@@ -47,6 +47,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				err = processDisinformationMutePenaltyRemoval(ctx, cfg, irc, task)
 			case models.TaskTypeDisinformationBanPenaltyRemoval:
 				err = processDisinformationBanPenaltyRemoval(ctx, cfg, irc, task)
+			case models.TaskTypeProxyLLMResponse:
+				isScheduledTask = false
+				err = processProxyLLMResponse(irc, task)
 			}
 
 			task.Runs++
@@ -66,7 +69,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				if err != nil {
 					logger.Errorf(nil, "error completing %s, %s", task.ID, err)
 				}
-			} else {
+			} else if task.Type == models.TaskTypePersistentChannel {
 				channel, err := fs.Channel(task.Data.(models.PersistentTaskData).Channel)
 				if err != nil {
 					logger.Errorf(nil, "error getting channel for %s, %s", task.ID, err)
@@ -445,4 +448,26 @@ func processDisinformationBanPenaltyRemoval(ctx context.Context, cfg *config.Con
 
 	fs := firestore.Get()
 	return fs.UpdateUser(data.Channel, user, map[string]any{"extended_penalty": user.ExtendedPenalty, "updated_at": time.Now()})
+}
+
+const maxLLMMessages = 3
+
+func processProxyLLMResponse(irc irc.IRC, task *models.Task) error {
+	data := task.Data.(models.ProxyLLMResponseTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing LLM response for %s in %s [%d message(s)]", data.Nick, data.Channel, len(data.Messages))
+
+	if len(data.Messages) == 0 {
+		return nil
+	}
+
+	data.Messages[0] = data.Nick + ": " + data.Messages[0]
+	if len(data.Messages) > maxLLMMessages {
+		data.Messages = data.Messages[0:maxLLMMessages]
+		data.Messages[maxLLMMessages-1] = data.Messages[maxLLMMessages-1] + "... (truncated)"
+	}
+
+	irc.SendMessages(data.Channel, data.Messages)
+	return nil
 }

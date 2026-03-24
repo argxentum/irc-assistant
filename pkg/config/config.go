@@ -26,6 +26,7 @@ type Config struct {
 	Polygon        APIKeyConfig
 	MarketData     APIKeyConfig `yaml:"market_data"`
 	Summary        SummaryConfig
+	Proxy          ProxyConfig
 }
 
 type IRCConfig struct {
@@ -154,6 +155,18 @@ type MerriamWebsterConfig struct {
 
 type FirecrawlConfig struct {
 	APIKey string `yaml:"api_key"`
+}
+
+type ProxyConfig struct {
+	Queue  QueueConfig
+	Ollama OllamaConfig
+}
+
+type OllamaConfig struct {
+	Endpoint       string
+	Model          string
+	Prompt         string
+	SessionTimeout string `yaml:"session_timeout"`
 }
 
 type SummaryConfig struct {

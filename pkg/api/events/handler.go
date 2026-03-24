@@ -79,6 +79,27 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 		}
 	}
 
+	if slices.Contains(channelDisabled, commands.LLMCommandName) {
+		return nil
+	}
+
+	mentionFormats := []string{
+		"@" + eh.cfg.IRC.Nick,
+		"%" + eh.cfg.IRC.Nick,
+		eh.cfg.IRC.Nick + " ",
+		eh.cfg.IRC.Nick + ":",
+		eh.cfg.IRC.Nick + ",",
+		eh.cfg.IRC.Nick + "!",
+		eh.cfg.IRC.Nick + ".",
+		eh.cfg.IRC.Nick + "?",
+	}
+
+	for _, format := range mentionFormats {
+		if strings.HasPrefix(e.Message(), format) {
+			return eh.registry.Command(commands.LLMCommandName)
+		}
+	}
+
 	return nil
 }
 

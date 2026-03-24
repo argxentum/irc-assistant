@@ -24,7 +24,7 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 }
 
 func initializeQueue(ctx context.Context, cfg *config.Config) {
-	_, err := queue.Initialize(ctx, cfg)
+	_, err := queue.InitializeDefault(ctx, cfg, cfg.Queue.Topic, cfg.Queue.Subscription)
 	if err != nil {
 		panic(fmt.Errorf("error initializing queue, %s", err))
 	}

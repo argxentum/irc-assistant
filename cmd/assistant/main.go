@@ -32,8 +32,9 @@ func main() {
 	initializeFirestore(ctx, cfg)
 	defer firestore.Get().Close()
 
-	initializeQueue(ctx, cfg)
-	defer queue.Get().Close()
+	initializeQueues(ctx, cfg)
+	defer queue.GetDefault().Close()
+	defer queue.GetProxy().Close()
 
 	svc := irc.NewIRC(ctx)
 	err = connect(ctx, svc, cfg)
