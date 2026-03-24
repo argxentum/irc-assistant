@@ -454,6 +454,7 @@ func processDisinformationBanPenaltyRemoval(ctx context.Context, cfg *config.Con
 }
 
 const maxLLMResponseLength = 350
+const minTailingMessageLength = 50
 
 func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.ProxyLLMResponseTaskData)
@@ -470,7 +471,7 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 		return fmt.Errorf("LLM response %s not found", data.ResponseID)
 	}
 
-	content := strings.TrimSpace(stripmd.Strip(r.Content))
+	content := strings.TrimSpace(strings.NewReplacer("*", "", "_", "").Replace(stripmd.Strip(r.Content)))
 	if len(content) == 0 {
 		return nil
 	}
@@ -496,8 +497,13 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 		}
 	}
 
-	if data.Processing && !truncated {
-		ircLines[len(ircLines)-1] += "..."
+	if data.Processing {
+		if len(ircLines) > 1 && len(ircLines[len(ircLines)-1]) < minTailingMessageLength {
+			ircLines = ircLines[:len(ircLines)-1]
+		}
+		if !truncated {
+			ircLines[len(ircLines)-1] += "..."
+		}
 	}
 
 	if irc.IsChannel(data.Channel) {

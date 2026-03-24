@@ -102,7 +102,16 @@
         });
 
         {{if .anyProcessing}}
-        setTimeout(() => location.reload(), 5000);
+        async function pollUpdates() {
+            const res = await fetch(location.href);
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            document.getElementById('entries').innerHTML = doc.getElementById('entries').innerHTML;
+            if (doc.querySelector('.spinner')) {
+                setTimeout(pollUpdates, 5000);
+            }
+        }
+        setTimeout(pollUpdates, 5000);
         {{end}}
 
         function toggleTheme() {
