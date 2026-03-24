@@ -15,7 +15,10 @@ import (
 	"assistant/pkg/queue"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
+
+	stripmd "github.com/writeas/go-strip-markdown/v2"
 )
 
 func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
@@ -49,7 +52,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				err = processDisinformationBanPenaltyRemoval(ctx, cfg, irc, task)
 			case models.TaskTypeProxyLLMResponse:
 				isScheduledTask = false
-				err = processProxyLLMResponse(irc, task)
+				err = processProxyLLMResponse(cfg, irc, task)
 			}
 
 			task.Runs++
@@ -450,20 +453,66 @@ func processDisinformationBanPenaltyRemoval(ctx context.Context, cfg *config.Con
 	return fs.UpdateUser(data.Channel, user, map[string]any{"extended_penalty": user.ExtendedPenalty, "updated_at": time.Now()})
 }
 
-func processProxyLLMResponse(ircs irc.IRC, task *models.Task) error {
+const maxLLMResponseLength = 350
+
+func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.ProxyLLMResponseTaskData)
 
 	logger := log.Logger()
-	logger.Debugf(nil, "processing LLM response for %s in %s [%d message(s)]", data.Nick, data.Channel, len(data.Messages))
+	logger.Debugf(nil, "processing LLM response for %s in %s [response: %s]", data.Nick, data.Channel, data.ResponseID)
 
-	if len(data.Messages) == 0 {
+	fs := firestore.Get()
+	r, err := fs.LLMResponse(data.ResponseID)
+	if err != nil {
+		return fmt.Errorf("error fetching LLM response %s: %w", data.ResponseID, err)
+	}
+	if r == nil {
+		return fmt.Errorf("LLM response %s not found", data.ResponseID)
+	}
+
+	content := strings.TrimSpace(stripmd.Strip(r.Content))
+	if len(content) == 0 {
 		return nil
 	}
 
-	if irc.IsChannel(data.Channel) {
-		data.Messages[0] = data.Nick + ": " + data.Messages[0]
+	// use only the first two non-empty lines
+	lines := strings.SplitN(content, "\n", 3)
+	ircLines := make([]string, 0, 2)
+	for _, line := range lines {
+		if trimmed := strings.TrimSpace(line); len(trimmed) > 0 {
+			ircLines = append(ircLines, trimmed)
+			if len(ircLines) == 2 {
+				break
+			}
+		}
 	}
 
-	ircs.SendMessages(data.Channel, data.Messages)
+	truncated := len(lines) > len(ircLines)
+
+	for i, line := range ircLines {
+		if len(line) > maxLLMResponseLength {
+			ircLines[i] = line[:maxLLMResponseLength] + "..."
+			truncated = true
+		}
+	}
+
+	if irc.IsChannel(data.Channel) {
+		ircLines[0] = data.Nick + ": " + ircLines[0]
+	}
+
+	messages := ircLines
+	if truncated {
+		llmURL := cfg.Web.ExternalRootURL + "/llm/" + data.ResponseID
+		shortcut, err := repository.GetShortcut(llmURL, llmURL)
+		if err != nil || shortcut == nil {
+			messages = append(messages, "Truncated, see full response: "+llmURL)
+		} else {
+			messages = append(messages, "Truncated, see full response: "+cfg.Web.ExternalRootURL+"/s/"+shortcut.ID)
+		}
+	}
+
+	logger.Debugf(nil, "sending LLM response to %s in %s [truncated: %v]", data.Nick, data.Channel, truncated)
+
+	ircs.SendMessages(data.Channel, messages)
 	return nil
 }

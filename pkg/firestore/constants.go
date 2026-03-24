@@ -12,4 +12,5 @@ const (
 	pathSources               = "sources"
 	pathDisinformationSources = "disinformation-sources"
 	pathShortcuts             = "shortcuts"
+	pathLLMResponses          = "llm-responses"
 )

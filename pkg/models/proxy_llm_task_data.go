@@ -3,10 +3,10 @@ package models
 import "time"
 
 type ProxyLLMRequestTaskData struct {
-	Handler string `firestore:"handler" json:"handler"`
-	Channel string `firestore:"channel" json:"channel"`
-	Nick    string `firestore:"nick" json:"nick"`
-	Prompt  string `firestore:"prompt" json:"prompt"`
+	Handler string `json:"handler"`
+	Channel string `json:"channel"`
+	Nick    string `json:"nick"`
+	Prompt  string `json:"prompt"`
 }
 
 func NewProxyLLMRequestTask(channel, nick, handler, prompt string) *Task {
@@ -19,17 +19,17 @@ func NewProxyLLMRequestTask(channel, nick, handler, prompt string) *Task {
 }
 
 type ProxyLLMResponseTaskData struct {
-	RequestID string   `firestore:"request_id" json:"request_id"`
-	Channel   string   `firestore:"channel" json:"channel"`
-	Nick      string   `firestore:"nick" json:"nick"`
-	Messages  []string `firestore:"messages" json:"messages"`
+	RequestID  string `json:"request_id"`
+	Channel    string `json:"channel"`
+	Nick       string `json:"nick"`
+	ResponseID string `json:"response_id"`
 }
 
-func NewProxyLLMResponseTask(requestID, channel, nick string, messages []string) *Task {
+func NewProxyLLMResponseTask(requestID, channel, nick, responseID string) *Task {
 	return newTask(TaskTypeProxyLLMResponse, time.Now(), ProxyLLMResponseTaskData{
-		RequestID: requestID,
-		Channel:   channel,
-		Nick:      nick,
-		Messages:  messages,
+		RequestID:  requestID,
+		Channel:    channel,
+		Nick:       nick,
+		ResponseID: responseID,
 	})
 }

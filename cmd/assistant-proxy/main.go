@@ -2,6 +2,7 @@ package main
 
 import (
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/queue"
 	"context"
@@ -25,6 +26,9 @@ func main() {
 
 	initializeLogger(ctx, cfg)
 	defer log.Logger().Close()
+
+	initializeFirestore(ctx, cfg)
+	defer firestore.Get().Close()
 
 	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
