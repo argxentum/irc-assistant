@@ -30,7 +30,7 @@ func (s *server) start() {
 
 	// page routes
 	http.HandleFunc("/about", s.aboutPageHandler)
-	http.HandleFunc("/llm/{id}", s.llmResponseHandler)
+	http.HandleFunc("/chat/{id}", s.llmSessionHandler)
 
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }

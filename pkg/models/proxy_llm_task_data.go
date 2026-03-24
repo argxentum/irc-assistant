@@ -23,13 +23,15 @@ type ProxyLLMResponseTaskData struct {
 	Channel    string `json:"channel"`
 	Nick       string `json:"nick"`
 	ResponseID string `json:"response_id"`
+	SessionID  string `json:"session_id"`
 }
 
-func NewProxyLLMResponseTask(requestID, channel, nick, responseID string) *Task {
+func NewProxyLLMResponseTask(requestID, channel, nick, responseID, sessionID string) *Task {
 	return newTask(TaskTypeProxyLLMResponse, time.Now(), ProxyLLMResponseTaskData{
 		RequestID:  requestID,
 		Channel:    channel,
 		Nick:       nick,
 		ResponseID: responseID,
+		SessionID:  sessionID,
 	})
 }

@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const defaultSessionTimeout = 10 * time.Minute
@@ -19,6 +21,7 @@ const defaultSessionTimeout = 10 * time.Minute
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
 type session struct {
+	id         string
 	messages   []ollamaMessage
 	lastActive time.Time
 }
@@ -36,7 +39,7 @@ func (p *proxy) sessionTimeout() time.Duration {
 	return defaultSessionTimeout
 }
 
-func (p *proxy) getOrCreateSession(channel, nick string) (*session, []ollamaMessage) {
+func (p *proxy) getOrCreateSession(channel, nick string) (*session, string, []ollamaMessage) {
 	key := sessionKey(channel, nick)
 	timeout := p.sessionTimeout()
 
@@ -45,10 +48,10 @@ func (p *proxy) getOrCreateSession(channel, nick string) (*session, []ollamaMess
 
 	s, ok := p.sessions[key]
 	if !ok || time.Since(s.lastActive) > timeout {
-		s = &session{}
+		s = &session{id: uuid.NewString()}
 		p.sessions[key] = s
 	}
-	return s, append([]ollamaMessage{}, s.messages...)
+	return s, s.id, append([]ollamaMessage{}, s.messages...)
 }
 
 type ollamaRequest struct {
@@ -71,7 +74,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	logger := log.Logger()
 	logger.Debugf(nil, "LLM request from %s in %s: %s", data.Nick, data.Channel, data.Prompt)
 
-	s, history := p.getOrCreateSession(data.Channel, data.Nick)
+	s, sessionID, history := p.getOrCreateSession(data.Channel, data.Nick)
 
 	messages := []ollamaMessage{}
 	if p.cfg.Proxy.Ollama.Prompt != "" {
@@ -129,12 +132,12 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	p.mu.Unlock()
 
 	fs := firestore.Get()
-	r := models.NewLLMResponse(requestID, data.Channel, data.Nick, data.Prompt, content)
+	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, data.Prompt, content)
 	if err = fs.CreateLLMResponse(r); err != nil {
 		return fmt.Errorf("error saving LLM response to firestore: %w", err)
 	}
 
 	logger.Debugf(nil, "LLM response saved to firestore for %s in %s", data.Nick, data.Channel)
 
-	return p.publishResponse(requestID, data.Channel, data.Nick, r.ID)
+	return p.publishResponse(requestID, data.Channel, data.Nick, r.ID, sessionID)
 }
