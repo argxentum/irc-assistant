@@ -450,8 +450,6 @@ func processDisinformationBanPenaltyRemoval(ctx context.Context, cfg *config.Con
 	return fs.UpdateUser(data.Channel, user, map[string]any{"extended_penalty": user.ExtendedPenalty, "updated_at": time.Now()})
 }
 
-const maxLLMMessages = 3
-
 func processProxyLLMResponse(ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.ProxyLLMResponseTaskData)
 
@@ -464,11 +462,6 @@ func processProxyLLMResponse(ircs irc.IRC, task *models.Task) error {
 
 	if irc.IsChannel(data.Channel) {
 		data.Messages[0] = data.Nick + ": " + data.Messages[0]
-	}
-
-	if len(data.Messages) > maxLLMMessages {
-		data.Messages = data.Messages[0:maxLLMMessages]
-		data.Messages[maxLLMMessages-1] = data.Messages[maxLLMMessages-1] + "... (truncated)"
 	}
 
 	ircs.SendMessages(data.Channel, data.Messages)

@@ -66,6 +66,9 @@ type ollamaResponse struct {
 	Message ollamaMessage `json:"message"`
 }
 
+const maxLLMResponseLength = 350
+const maxLLMResponseMessages = 3
+
 func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData) error {
 	logger := log.Logger()
 	logger.Debugf(nil, "LLM request from %s in %s: %s", data.Nick, data.Channel, data.Prompt)
@@ -127,10 +130,30 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	s.lastActive = time.Now()
 	p.mu.Unlock()
 
-	responseMessages := splitMessages(content)
+	truncated := len(content) > maxLLMResponseLength
+	responseMessages := splitMessages(truncate(content, maxLLMResponseLength))
+	if len(responseMessages) > maxLLMResponseMessages {
+		responseMessages = responseMessages[:maxLLMResponseMessages]
+		truncated = true
+	}
+	if truncated {
+		responseMessages[len(responseMessages)-1] += " (truncated)"
+	}
 	logger.Debugf(nil, "LLM response to %s in %s: %d message(s)", data.Nick, data.Channel, len(responseMessages))
 
 	return p.publishResponse(requestID, data.Channel, data.Nick, responseMessages)
+}
+
+// truncate shortens content to at most maxLen characters, cutting at the last word boundary and appending "..." if truncation occurred.
+func truncate(content string, maxLen int) string {
+	if len(content) <= maxLen {
+		return content
+	}
+	cut := strings.LastIndex(content[:maxLen], " ")
+	if cut <= 0 {
+		cut = maxLen
+	}
+	return content[:cut]
 }
 
 // splitMessages splits content on newlines, discarding blank lines.
