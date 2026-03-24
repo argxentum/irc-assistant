@@ -95,7 +95,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		Model:    p.cfg.Proxy.Ollama.Model,
 		Messages: messages,
 		Stream:   true,
-		Options:  map[string]any{"num_predict": 1024, "temperature": 0.2, "num_ctx": 4096},
+		Options:  map[string]any{"num_predict": 1024, "temperature": 0.2, "num_ctx": 8192},
 	}
 
 	body, err := json.Marshal(req)
