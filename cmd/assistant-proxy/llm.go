@@ -91,6 +91,15 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	messages = append(messages, history...)
 	messages = append(messages, ollamaMessage{Role: "user", Content: data.Prompt})
 
+	logger.Debugf(nil, "ollama request: %d messages", len(messages))
+	for i, msg := range messages {
+		preview := msg.Content
+		if len(preview) > 25 {
+			preview = preview[:25] + "..."
+		}
+		logger.Debugf(nil, "  [%d] %s: %s", i, msg.Role, preview)
+	}
+
 	req := ollamaRequest{
 		Model:    p.cfg.Proxy.Ollama.Model,
 		Messages: messages,
