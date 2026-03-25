@@ -21,6 +21,10 @@ const (
 	TaskTypeDisinformationBanPenaltyRemoval  = "disinformation_ban_penalty_removal"
 	TaskTypeProxyLLMRequest                  = "proxy_llm_request"
 	TaskTypeProxyLLMResponse                 = "proxy_llm_response"
+	TaskTypeProxySummaryRequest              = "proxy_summary_request"
+	TaskTypeProxySummaryResponse             = "proxy_summary_response"
+	TaskTypeProxyInactivityRequest           = "proxy_inactivity_request"
+	TaskTypeProxyInactivityResponse          = "proxy_inactivity_response"
 )
 
 const (
@@ -99,6 +103,22 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypeProxyLLMResponse:
 		if task.Data, err = deserializeTaskData[ProxyLLMResponseTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxySummaryRequest:
+		if task.Data, err = deserializeTaskData[ProxySummaryRequestTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxySummaryResponse:
+		if task.Data, err = deserializeTaskData[ProxySummaryResponseTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxyInactivityRequest:
+		if task.Data, err = deserializeTaskData[ProxyInactivityRequestTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxyInactivityResponse:
+		if task.Data, err = deserializeTaskData[ProxyInactivityResponseTaskData](d); err != nil {
 			return nil, err
 		}
 	}

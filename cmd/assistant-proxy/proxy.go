@@ -26,6 +26,10 @@ func (p *proxy) start() {
 		switch task.Type {
 		case models.TaskTypeProxyLLMRequest:
 			err = p.handleLLMProxyRequest(task)
+		case models.TaskTypeProxySummaryRequest:
+			err = p.handleSummaryProxyRequest(task)
+		case models.TaskTypeProxyInactivityRequest:
+			err = p.handleInactivityProxyRequest(task)
 		default:
 			logger.Warningf(nil, "unknown task type: %s", task.Type)
 		}

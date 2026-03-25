@@ -47,17 +47,34 @@ func (p Post) FormattedTitle() string {
 	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
 }
 
+type postDetailChild struct {
+	// Post fields
+	Title       string  `json:"title"`
+	URL         string  `json:"url"`
+	Permalink   string  `json:"permalink"`
+	Created     float64 `json:"created_utc"`
+	Subreddit   string  `json:"subreddit"`
+	Author      string  `json:"author"`
+	Score       int     `json:"score"`
+	NumComments int     `json:"num_comments"`
+	Stickied    bool    `json:"stickied"`
+
+	// Comment fields
+	Body          string `json:"body"`
+	Distinguished string `json:"distinguished"`
+}
+
 type PostDetail []struct {
 	Data struct {
 		Children []struct {
-			Data Comment
+			Data postDetailChild
 		}
 	}
 }
 
 type PostWithTopComment struct {
-	Post    Post
-	Comment *Comment
+	Post    Post     `json:"post"`
+	Comment *Comment `json:"comment,omitempty"`
 }
 
 type Comment struct {
@@ -151,6 +168,12 @@ func login(username, password, clientID, clientSecret string) (*context.RedditSe
 	return &session, nil
 }
 
+func setUserAgent(req *http.Request, cfg *config.Config) {
+	if cfg.Reddit.UserAgent != "" {
+		req.Header.Set("User-Agent", cfg.Reddit.UserAgent)
+	}
+}
+
 const redditBaseURL = "https://api.reddit.com"
 const searchNewSubredditPosts = "%s/r/%s/search.json?sort=new&limit=1&restrict_sr=on&q=title:%s"
 const searchRelevantSubredditPosts = "%s/r/%s/search.json?sort=relevance&t=all&limit=1&restrict_sr=on&q=%s"
@@ -194,10 +217,7 @@ func searchSubredditPosts(ctx context.Context, cfg *config.Config, u string) ([]
 		return nil, err
 	}
 
-	rhs := retriever.RandomHeaderSet()
-	for k, v := range rhs {
-		req.Header.Set(k, v)
-	}
+	setUserAgent(req, cfg)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -241,10 +261,7 @@ func SearchPostsForURL(ctx context.Context, cfg *config.Config, bodyURL string) 
 		return nil, err
 	}
 
-	rhs := retriever.RandomHeaderSet()
-	for k, v := range rhs {
-		req.Header.Set(k, v)
-	}
+	setUserAgent(req, cfg)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -304,10 +321,7 @@ func SubredditCategoryPostsWithTopComment(ctx context.Context, cfg *config.Confi
 		return nil, err
 	}
 
-	rhs := retriever.RandomHeaderSet()
-	for k, v := range rhs {
-		req.Header.Set(k, v)
-	}
+	setUserAgent(req, cfg)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -358,10 +372,7 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 		return nil, err
 	}
 
-	rhs := retriever.RandomHeaderSet()
-	for k, v := range rhs {
-		req.Header.Set(k, v)
-	}
+	setUserAgent(req, cfg)
 
 	logger := log.Logger()
 	logger.Debugf(retriever.NewRequestLabeler(req), "requesting reddit API URL %s", apiURL)
@@ -378,26 +389,29 @@ func GetPostWithTopComment(ctx context.Context, cfg *config.Config, apiURL strin
 
 	defer resp.Body.Close()
 
-	var listings []Listing
-	if err := marshaling.Unmarshal(resp.Body, &listings); err != nil {
+	var detail PostDetail
+	if err := marshaling.Unmarshal(resp.Body, &detail); err != nil {
 		return nil, err
 	}
 
-	if len(listings) == 0 {
-		return nil, fmt.Errorf("no reddit parent found")
-	}
-
-	if len(listings[0].Data.Children) == 0 {
+	if len(detail) == 0 || len(detail[0].Data.Children) == 0 {
 		return nil, fmt.Errorf("no posts found in reddit listing")
 	}
 
-	post := listings[0].Data.Children[0].Data
-	comment, err := getTopComment(ctx, cfg, post.Permalink)
-	if err != nil {
-		logger.Warningf(nil, "error getting top comment for %s, %s", post.Permalink, err)
+	child := detail[0].Data.Children[0].Data
+	post := Post{
+		Title:       child.Title,
+		URL:         child.URL,
+		Permalink:   child.Permalink,
+		Created:     child.Created,
+		Subreddit:   child.Subreddit,
+		Author:      child.Author,
+		Score:       child.Score,
+		NumComments: child.NumComments,
+		Stickied:    child.Stickied,
 	}
 
-	return &PostWithTopComment{Post: post, Comment: comment}, nil
+	return &PostWithTopComment{Post: post, Comment: filterTopComment(detail)}, nil
 }
 
 func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*Comment, error) {
@@ -415,6 +429,8 @@ func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*
 		return nil, err
 	}
 
+	setUserAgent(req, cfg)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		logger.Debugf(retriever.NewResponseLabeler(resp), "error fetching %s, %v", u, err)
@@ -428,15 +444,31 @@ func getTopComment(ctx context.Context, cfg *config.Config, permalink string) (*
 
 	defer resp.Body.Close()
 
-	if len(detail) < 2 || len(detail[1].Data.Children) == 0 || (len(detail[1].Data.Children) == 1 && (detail[1].Data.Children[0].Data.Author == "AutoModerator" || detail[1].Data.Children[0].Data.Body == "[deleted]")) {
-		return nil, nil
+	return filterTopComment(detail), nil
+}
+
+func filterTopComment(detail PostDetail) *Comment {
+	if len(detail) < 2 || len(detail[1].Data.Children) == 0 {
+		return nil
 	}
 
-	for _, comment := range detail[1].Data.Children {
-		if comment.Data.Author != "AutoModerator" && !comment.Data.IsFromModerator() && comment.Data.Body != "[deleted]" && len(comment.Data.Body) > 0 {
-			return &comment.Data, nil
+	if len(detail[1].Data.Children) == 1 {
+		child := detail[1].Data.Children[0].Data
+		if child.Author == "AutoModerator" || child.Body == "[deleted]" {
+			return nil
 		}
 	}
 
-	return nil, nil
+	for _, child := range detail[1].Data.Children {
+		c := child.Data
+		if c.Author != "AutoModerator" && !c.IsFromModerator() && c.Body != "[deleted]" && len(c.Body) > 0 {
+			return &Comment{Body: c.Body, Author: c.Author, Distinguished: c.Distinguished}
+		}
+	}
+
+	return nil
+}
+
+func (c *postDetailChild) IsFromModerator() bool {
+	return strings.ToLower(c.Distinguished) == "moderator"
 }

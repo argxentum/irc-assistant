@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/models"
+	"slices"
 
 	"github.com/bobesa/go-domain-util/domainutil"
 )
@@ -44,4 +45,9 @@ func (c *SummaryCommand) domainSummary(e *irc.Event, url string) (*summary, *mod
 	}
 
 	return c.domainSummarization()[domain](e, url)
+}
+
+func (c *SummaryCommand) isProxiedDomain(url string) bool {
+	domain := domainutil.Domain(url)
+	return slices.Contains(c.cfg.Summary.ProxiedDomains, domain)
 }

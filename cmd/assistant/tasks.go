@@ -13,6 +13,7 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -53,6 +54,12 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypeProxyLLMResponse:
 				isScheduledTask = false
 				err = processProxyLLMResponse(cfg, irc, task)
+			case models.TaskTypeProxySummaryResponse:
+				isScheduledTask = false
+				err = processProxySummaryResponse(irc, task)
+			case models.TaskTypeProxyInactivityResponse:
+				isScheduledTask = false
+				err = processProxyInactivityResponse(cfg, irc, task)
 			}
 
 			task.Runs++
@@ -232,9 +239,9 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			//return processInactivityTaskUsingDrudgeModel(ctx, cfg, irc, task)
 			logger.Debugf(nil, "skipping drudge inactivity task temporarily...")
 			return nil
-		} else {
-			return processInactivityTaskUsingSubredditModel(ctx, cfg, irc, task)
 		}
+
+		return processInactivityTaskUsingSubredditModel(ctx, cfg, irc, task)
 	default:
 		return fmt.Errorf("unknown persistent channel task, %s", task.ID)
 	}
@@ -305,27 +312,55 @@ func processInactivityTaskUsingDrudgeModel(ctx context.Context, cfg *config.Conf
 
 func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
-	fs := firestore.Get()
-
-	posts, err := reddit.SubredditCategoryPostsWithTopComment(ctx, cfg, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts+inactivityPostsBuffer)
-	if err != nil {
-		logger.Errorf(nil, "error getting subreddit category posts, %s", err)
-		return err
-	}
 
 	channelName := task.Data.(models.PersistentTaskData).Channel
 	if len(channelName) == 0 {
 		return fmt.Errorf("channel name is empty")
 	}
 
-	channel, err := fs.Channel(channelName)
+	proxyTask := models.NewProxyInactivityRequestTask(channelName, cfg.IRC.Inactivity.Subreddit, cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Posts+inactivityPostsBuffer)
+	if err := queue.GetProxy().Publish(proxyTask); err != nil {
+		logger.Errorf(nil, "error publishing proxy inactivity request, %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func processProxyInactivityResponse(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
+	data := task.Data.(models.ProxyInactivityResponseTaskData)
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if len(data.Posts) == 0 {
+		logger.Debugf(nil, "no inactivity posts received for %s", data.Channel)
+		return nil
+	}
+
+	channel, err := fs.Channel(data.Channel)
 	if err != nil {
 		logger.Errorf(nil, "error getting channel, %s", err)
 	}
 
 	if channel == nil {
-		logger.Errorf(nil, "channel %s does not exist, exiting", channelName)
+		logger.Errorf(nil, "channel %s does not exist, exiting", data.Channel)
 		return nil
+	}
+
+	// Deserialize posts from the proxy response
+	posts := make([]reddit.PostWithTopComment, 0)
+	for _, p := range data.Posts {
+		raw, err := json.Marshal(p)
+		if err != nil {
+			logger.Errorf(nil, "error marshaling post: %s", err)
+			continue
+		}
+		var post reddit.PostWithTopComment
+		if err := json.Unmarshal(raw, &post); err != nil {
+			logger.Errorf(nil, "error unmarshaling post: %s", err)
+			continue
+		}
+		posts = append(posts, post)
 	}
 
 	filteredPosts := make([]reddit.PostWithTopComment, 0)
@@ -342,7 +377,7 @@ func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.C
 	}
 
 	if len(filteredPosts) == 0 {
-		logger.Debugf(nil, "no inactivity posts found for channel %s matching filter requirements", channelName)
+		logger.Debugf(nil, "no inactivity posts found for channel %s matching filter requirements", data.Channel)
 		return nil
 	}
 
@@ -350,7 +385,7 @@ func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.C
 	if len(filteredPosts) > 1 {
 		message = fmt.Sprintf("🕑 %s of inactivity, sharing %d %s posts from r/%s:", elapse.ParseDurationDescription(channel.InactivityDuration), len(filteredPosts), cfg.IRC.Inactivity.Category, cfg.IRC.Inactivity.Subreddit)
 	}
-	irc.SendMessage(channelName, message)
+	ircs.SendMessage(data.Channel, message)
 	time.Sleep(1 * time.Second)
 
 	for i, post := range filteredPosts {
@@ -377,8 +412,8 @@ func processInactivityTaskUsingSubredditModel(ctx context.Context, cfg *config.C
 			messages = append(messages, sourceSummary)
 		}
 
-		irc.SendMessages(channelName, messages)
-		logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, channelName)
+		ircs.SendMessages(data.Channel, messages)
+		logger.Debugf(nil, "shared r/%s post \"%s\" in %s due to inactivity", cfg.IRC.Inactivity.Subreddit, post.Post.Title, data.Channel)
 
 		if i < len(filteredPosts)-1 {
 			time.Sleep(3 * time.Second)
@@ -524,5 +559,19 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 	logger.Debugf(nil, "sending LLM response to %s in %s [truncated: %v]", data.Nick, data.Channel, truncated)
 
 	ircs.SendMessages(data.Channel, messages)
+	return nil
+}
+
+func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
+	data := task.Data.(models.ProxySummaryResponseTaskData)
+
+	logger := log.Logger()
+	logger.Debugf(nil, "processing proxy summary response for %s in %s", data.URL, data.Channel)
+
+	if len(data.Messages) == 0 {
+		return nil
+	}
+
+	ircs.SendMessages(data.Channel, data.Messages)
 	return nil
 }

@@ -173,6 +173,7 @@ type SummaryConfig struct {
 	DisabledDirectDomains []string          `yaml:"disabled_direct_domains"`
 	AvoidanceDomains      map[string]string `yaml:"avoidance_domains"`
 	TranslatedDomains     map[string]string `yaml:"translated_domains"`
+	ProxiedDomains        []string          `yaml:"proxied_domains"`
 }
 
 func ReadConfig(filename string) (*Config, error) {

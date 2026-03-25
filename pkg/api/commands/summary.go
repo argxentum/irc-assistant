@@ -11,6 +11,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"assistant/pkg/queue"
 	"bytes"
 	"errors"
 	"fmt"
@@ -206,6 +207,15 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	}
 
 	if c.requiresDomainSummary(ub.url) {
+		if c.isProxiedDomain(ub.url) {
+			logger.Debugf(e, "proxying domain summarization for %s", ub.url)
+			task := models.NewProxySummaryRequestTask(e.ReplyTarget(), e.From, ub.url)
+			if err := queue.GetProxy().Publish(task); err != nil {
+				logger.Errorf(e, "error publishing proxy summary request, %s", err)
+			}
+			return
+		}
+
 		logger.Debugf(e, "performing domain summarization for %s", ub.url)
 
 		var ds *summary
