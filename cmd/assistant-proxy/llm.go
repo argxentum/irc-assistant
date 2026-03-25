@@ -20,6 +20,7 @@ import (
 const defaultSessionTimeout = 10 * time.Minute
 const streamTimeout = 30 * time.Second
 const streamContentThreshold = 200
+const maxHistoryAssistantLength = 200
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
@@ -89,7 +90,12 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		).Replace(p.cfg.Proxy.Ollama.Prompt)
 		messages = append(messages, ollamaMessage{Role: "system", Content: prompt})
 	}
-	messages = append(messages, history...)
+	for _, msg := range history {
+		if msg.Role == "assistant" && len(msg.Content) > maxHistoryAssistantLength {
+			msg.Content = msg.Content[:maxHistoryAssistantLength] + " [truncated]"
+		}
+		messages = append(messages, msg)
+	}
 	messages = append(messages, ollamaMessage{Role: "user", Content: data.Prompt})
 
 	logger.Debugf(nil, "ollama request: %d messages", len(messages))
