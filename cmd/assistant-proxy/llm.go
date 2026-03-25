@@ -92,7 +92,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	}
 	for _, msg := range history {
 		if msg.Role == "assistant" && len(msg.Content) > maxHistoryAssistantLength {
-			msg.Content = msg.Content[:maxHistoryAssistantLength] + "..."
+			msg.Content = truncateAtSentence(msg.Content, maxHistoryAssistantLength)
 		}
 		messages = append(messages, msg)
 	}
@@ -242,4 +242,18 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	}
 
 	return nil
+}
+
+func truncateAtSentence(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	// search backwards from maxLen for a sentence-ending punctuation
+	for i := maxLen; i > 0; i-- {
+		if s[i-1] == '.' || s[i-1] == '!' || s[i-1] == '?' {
+			return s[:i]
+		}
+	}
+	// no sentence boundary found, hard cut
+	return s[:maxLen]
 }

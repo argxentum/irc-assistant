@@ -76,7 +76,7 @@
                 ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
                 : `<div style="display:flex;align-items:center;gap:10px" class="tx-meta text-sm">
                        <div class="spinner"></div>
-                       Processing…${content.length > 0 ? ' <span class="tx-body" style="margin-left:4px">' + escapeHtml(content.split('\n')[0].slice(0, 200)) + '…</span>' : ''}
+                       Processing…${content.length > 0 ? ' <span class="tx-body" style="margin-left:4px">' + escapeHtml(content.replace(/\n/g, ' ').slice(0, 200)) + '…</span>' : ''}
                    </div>`;
             return `
                 <div class="card border rounded-lg mb-4 overflow-hidden">
