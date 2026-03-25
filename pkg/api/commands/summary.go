@@ -167,7 +167,9 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 		// ugly hack to parse out canonical url in translated urls
 		if resp, _ := http.Get(ub.url); resp != nil {
-			if data, _ := io.ReadAll(resp.Body); len(data) > 0 {
+			data, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if len(data) > 0 {
 				if doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(data)); doc != nil {
 					canonical := doc.Find(`link[rel="canonical"]`).First().AttrOr("href", "")
 					if canonical != "" {
@@ -179,7 +181,6 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 					}
 				}
 			}
-			defer resp.Body.Close()
 		}
 	}
 

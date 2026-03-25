@@ -57,70 +57,40 @@ func (r *docRetriever) RetrieveDocument(e *irc.Event, params RetrievalParams) (*
 func (r *docRetriever) RetrieveDocumentSelection(e *irc.Event, params RetrievalParams, selector string) (*goquery.Selection, error) {
 	logger := log.Logger()
 
-	var selection docResult
-	res := make(chan docResult)
-
-	attempts := 0
-
-	for {
-		if attempts+1 > params.Retries {
-			logger.Debugf(e, "stopping after %d attempts", attempts)
-			selection = docResult{nil, errors.New("reached max attempts")}
-			break
-		}
-
-		attempts++
-
-		if attempts > 1 {
+	for attempt := 1; attempt <= params.Retries; attempt++ {
+		if attempt > 1 {
 			delay := (retryDelayOffset * time.Millisecond) + (time.Duration(rand.IntN(params.RetryDelay)) * time.Millisecond)
-			logger.Debugf(e, "waiting %s before attempt %d", delay, attempts)
+			logger.Debugf(e, "waiting %s before attempt %d", delay, attempt)
 			time.Sleep(delay)
 		}
 
-		logger.Debugf(e, "%s %s, attempt %d", params.Method, params.URL, attempts)
+		logger.Debugf(e, "%s %s, attempt %d", params.Method, params.URL, attempt)
 
-		go func() {
-			doc, err := r.RetrieveDocument(e, params)
-			if err != nil {
-				if errors.Is(err, DisallowedContentTypeError) {
-					logger.Debugf(e, "exiting due to disallowed content type")
-					res <- docResult{nil, err}
-				} else {
-					logger.Debugf(e, "retrieval error: %s", err)
-				}
-				return
+		doc, err := r.RetrieveDocument(e, params)
+		if err != nil {
+			if errors.Is(err, DisallowedContentTypeError) {
+				logger.Debugf(e, "exiting due to disallowed content type")
+				return nil, err
 			}
-
-			node := doc.Root.Find(selector)
-			if node.Nodes == nil {
-				logger.Debugf(e, "no nodes found for selector %s", selector)
-				return
+			if errors.Is(err, RequestTimedOutError) {
+				logger.Debugf(e, "retrieval attempt %d timed out", attempt)
+				continue
 			}
-
-			res <- docResult{node.First(), nil}
-		}()
-
-		go func() {
-			time.Sleep(params.Timeout * time.Millisecond)
-
-			if selection.doc != nil {
-				return
-			}
-
-			logger.Debugf(e, "retrieval attempt %d timed out", attempts)
-			res <- docResult{nil, RequestTimedOutError}
-		}()
-
-		selection = <-res
-
-		if errors.Is(selection.err, RequestTimedOutError) {
+			logger.Debugf(e, "retrieval error: %s", err)
 			continue
 		}
 
-		break
+		node := doc.Root.Find(selector)
+		if node.Nodes == nil {
+			logger.Debugf(e, "no nodes found for selector %s", selector)
+			continue
+		}
+
+		return node.First(), nil
 	}
 
-	return selection.doc, selection.err
+	logger.Debugf(e, "stopping after %d attempts", params.Retries)
+	return nil, errors.New("reached max attempts")
 }
 
 func (r *docRetriever) Parse(e *irc.Event, doc *goquery.Document, selectors ...string) []*goquery.Selection {
