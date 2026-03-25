@@ -18,7 +18,7 @@ import (
 )
 
 const defaultSessionTimeout = 10 * time.Minute
-const streamTimeout = 10 * time.Second
+const streamTimeout = 20 * time.Second
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
@@ -103,10 +103,12 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		return fmt.Errorf("error marshaling ollama request: %w", err)
 	}
 
+	start := time.Now()
 	httpResp, err := http.Post(p.cfg.Proxy.Ollama.Endpoint+"/api/chat", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("error calling ollama: %w", err)
 	}
+	logger.Debugf(nil, "[timing] http.Post returned in %s", time.Since(start))
 
 	if httpResp.StatusCode != http.StatusOK {
 		httpResp.Body.Close()
@@ -123,11 +125,16 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	go func() {
 		defer httpResp.Body.Close()
 		defer close(streamDone)
+		firstChunk := true
 		scanner := bufio.NewScanner(httpResp.Body)
 		for scanner.Scan() {
 			line := scanner.Bytes()
 			if len(line) == 0 {
 				continue
+			}
+			if firstChunk {
+				logger.Debugf(nil, "[timing] first chunk received at %s", time.Since(start))
+				firstChunk = false
 			}
 			var chunk ollamaStreamChunk
 			if json.Unmarshal(line, &chunk) != nil {
@@ -149,12 +156,15 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	case <-streamDone:
 		timer.Stop()
 		complete = true
+		logger.Debugf(nil, "[timing] stream completed in %s", time.Since(start))
 	case <-timer.C:
+		logger.Debugf(nil, "[timing] stream timed out after %s", time.Since(start))
 	}
 
 	contentMu.Lock()
 	snapshot := strings.TrimSpace(thinkPattern.ReplaceAllString(content.String(), ""))
 	contentMu.Unlock()
+	logger.Debugf(nil, "[timing] snapshot length: %d, complete: %v", len(snapshot), complete)
 
 	if len(snapshot) == 0 {
 		return fmt.Errorf("empty response from ollama")
