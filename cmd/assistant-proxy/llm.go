@@ -18,7 +18,8 @@ import (
 )
 
 const defaultSessionTimeout = 10 * time.Minute
-const streamTimeout = 20 * time.Second
+const streamTimeout = 30 * time.Second
+const streamContentThreshold = 128
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
@@ -124,11 +125,13 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		return fmt.Errorf("ollama returned status %d", httpResp.StatusCode)
 	}
 
-	// Stream tokens into content buffer until done or timeout
+	// Stream tokens into content buffer until done, threshold reached, or timeout
 	var (
-		content    strings.Builder
-		contentMu  sync.Mutex
-		streamDone = make(chan struct{})
+		content        strings.Builder
+		contentMu      sync.Mutex
+		streamDone     = make(chan struct{})
+		thresholdReady = make(chan struct{})
+		thresholdOnce  sync.Once
 	)
 
 	go func() {
@@ -151,14 +154,21 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 			}
 			contentMu.Lock()
 			content.WriteString(chunk.Message.Content)
+			strippedLen := len(strings.TrimSpace(thinkPattern.ReplaceAllString(content.String(), "")))
 			contentMu.Unlock()
+			if strippedLen >= streamContentThreshold {
+				thresholdOnce.Do(func() {
+					logger.Debugf(nil, "[timing] content threshold (%d chars) reached at %s", streamContentThreshold, time.Since(start))
+					close(thresholdReady)
+				})
+			}
 			if chunk.Done {
 				return
 			}
 		}
 	}()
 
-	// Wait for completion or timeout
+	// Wait for stream completion, content threshold, or timeout
 	complete := false
 	timer := time.NewTimer(streamTimeout)
 	select {
@@ -166,6 +176,9 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		timer.Stop()
 		complete = true
 		logger.Debugf(nil, "[timing] stream completed in %s", time.Since(start))
+	case <-thresholdReady:
+		timer.Stop()
+		logger.Debugf(nil, "[timing] content threshold reached, responding early at %s", time.Since(start))
 	case <-timer.C:
 		logger.Debugf(nil, "[timing] stream timed out after %s", time.Since(start))
 	}
