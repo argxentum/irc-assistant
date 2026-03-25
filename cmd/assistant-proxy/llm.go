@@ -21,6 +21,7 @@ const defaultSessionTimeout = 10 * time.Minute
 const streamTimeout = 30 * time.Second
 const streamContentThreshold = 200
 const maxHistoryAssistantLength = 200
+const maxHistoryMessages = 40
 
 var thinkPattern = regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
 
@@ -85,6 +86,9 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 			"{server}", p.cfg.IRC.ServerName,
 		).Replace(p.cfg.Proxy.Ollama.Prompt)
 		messages = append(messages, ollamaMessage{Role: "system", Content: prompt})
+	}
+	if len(history) > maxHistoryMessages {
+		history = history[len(history)-maxHistoryMessages:]
 	}
 	for _, msg := range history {
 		if msg.Role == "assistant" && len(msg.Content) > maxHistoryAssistantLength {
