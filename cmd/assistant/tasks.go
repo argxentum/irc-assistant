@@ -515,9 +515,9 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 		sessionURL := cfg.Web.ExternalRootURL + "/chat/" + data.SessionID + "#" + data.ResponseID
 		shortcut, err := repository.GetShortcut(sessionURL, sessionURL)
 		if err != nil || shortcut == nil {
-			messages = append(messages, "⏳ "+sessionURL)
+			messages = append(messages, "\U0001F9E0 "+sessionURL)
 		} else {
-			messages = append(messages, "⏳ "+cfg.Web.ExternalRootURL+"/s/"+shortcut.ID)
+			messages = append(messages, "\U0001F9E0 "+cfg.Web.ExternalRootURL+"/s/"+shortcut.ID)
 		}
 	}
 
