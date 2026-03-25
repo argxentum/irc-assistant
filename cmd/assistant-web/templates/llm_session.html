@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.name}} — {{.nick}} in {{.channel}}</title>
+    <title>{{.name}} — {{.channel}}</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -50,7 +50,7 @@
         <div class="mb-6 flex items-start justify-between">
             <div>
                 <h1 class="text-2xl font-bold">{{.name}}</h1>
-                <p class="tx-meta text-sm mt-1">{{.channel}} · {{.nick}}</p>
+                <p class="tx-meta text-sm mt-1">{{if .webchatURL}}<a href="{{.webchatURL}}" style="text-decoration:underline">{{.channel}}</a>{{else}}{{.channel}}{{end}}</p>
             </div>
             <button onclick="toggleTheme()" id="theme-toggle" class="mt-1 px-3 py-1 text-xs rounded-full border tx-meta hover:opacity-70 transition-opacity duration-200 card">
                 Dark
@@ -70,18 +70,19 @@
             return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        function renderEntry(prompt, content, created, complete) {
+        function renderEntry(nick, prompt, content, created, complete) {
             const normalized = content.replace(/([.!?:])\s*(\d+\. )/g, '$1\n\n$2');
             const responseBody = complete
                 ? `<div class="response tx-body">${marked.parse(normalized)}</div>`
                 : `<div style="display:flex;align-items:center;gap:10px" class="tx-meta text-sm">
                        <div class="spinner"></div>
                        Processing…${content.length > 0 ? ' <span class="tx-body" style="margin-left:4px">' + escapeHtml(content.replace(/\n/g, ' ').slice(0, 200)) + '…</span>' : ''}
-                   </div>`;
+                   </div>
+                   <p class="tx-meta text-xs mt-2" style="opacity:0.5">This page will automatically update when the full response is ready.</p>`;
             return `
                 <div class="card border rounded-lg mb-4 overflow-hidden">
                     <div class="px-4 pt-4 pb-3 border-b" style="border-color: var(--bd-card)">
-                        <p class="tx-label text-xs font-semibold uppercase tracking-wide mb-1">Prompt</p>
+                        <p class="tx-label text-xs font-semibold uppercase tracking-wide mb-1">${escapeHtml(nick)}</p>
                         <p class="tx-body text-sm">${escapeHtml(prompt)}</p>
                         <p class="tx-meta text-xs mt-2">${new Date(created).toLocaleString()}</p>
                     </div>
@@ -93,13 +94,13 @@
         }
 
         const entries = [
-            {{range .entries}}[{{.Prompt}}, {{.Content}}, {{.Created}}, "{{.ID}}", {{.Complete}}],
+            {{range .entries}}["{{.Nick}}", {{.Prompt}}, {{.Content}}, {{.Created}}, "{{.ID}}", {{.Complete}}],
             {{end}}
         ];
 
         const container = document.getElementById('entries');
-        entries.forEach(([prompt, content, created, id, complete]) => {
-            container.insertAdjacentHTML('beforeend', `<div id="${id}">${renderEntry(prompt, content, created, complete)}</div>`);
+        entries.forEach(([nick, prompt, content, created, id, complete]) => {
+            container.insertAdjacentHTML('beforeend', `<div id="${id}">${renderEntry(nick, prompt, content, created, complete)}</div>`);
         });
 
         {{if .anyProcessing}}

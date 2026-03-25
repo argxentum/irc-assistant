@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type sessionEntry struct {
 	ID       string
+	Nick     string
 	Prompt   template.JS
 	Content  template.JS
 	Created  template.JS
@@ -20,6 +22,7 @@ type sessionEntry struct {
 
 type sessionPollEntry struct {
 	ID       string `json:"id"`
+	Nick     string `json:"nick"`
 	Prompt   string `json:"prompt"`
 	Content  string `json:"content"`
 	Created  string `json:"created"`
@@ -47,6 +50,7 @@ func (s *server) llmSessionPollHandler(w http.ResponseWriter, r *http.Request) {
 	for _, resp := range responses {
 		poll.Entries = append(poll.Entries, sessionPollEntry{
 			ID:       resp.ID,
+			Nick:     resp.Nick,
 			Prompt:   resp.Prompt,
 			Content:  resp.Content,
 			Created:  resp.CreatedAt.UTC().Format(time.RFC3339),
@@ -92,6 +96,7 @@ func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
 		createdJSON, _ := json.Marshal(resp.CreatedAt.UTC().Format(time.RFC3339))
 		entries = append(entries, sessionEntry{
 			ID:       resp.ID,
+			Nick:     resp.Nick,
 			Prompt:   template.JS(promptJSON),
 			Content:  template.JS(contentJSON),
 			Created:  template.JS(createdJSON),
@@ -110,6 +115,12 @@ func (s *server) llmSessionHandler(w http.ResponseWriter, r *http.Request) {
 		"entries":       entries,
 		"anyProcessing": anyProcessing,
 		"model":         first.Model,
+		"webchatURL": func() string {
+			if strings.HasPrefix(first.Channel, "#") {
+				return s.cfg.Web.DefaultRedirect
+			}
+			return ""
+		}(),
 	}
 
 	if err = t.Execute(w, args); err != nil {

@@ -30,10 +30,6 @@ type session struct {
 	lastActive time.Time
 }
 
-func sessionKey(channel, nick string) string {
-	return channel + ":" + nick
-}
-
 func (p *proxy) sessionTimeout() time.Duration {
 	if p.cfg.Proxy.Ollama.SessionTimeout != "" {
 		if d, err := time.ParseDuration(p.cfg.Proxy.Ollama.SessionTimeout); err == nil {
@@ -43,17 +39,16 @@ func (p *proxy) sessionTimeout() time.Duration {
 	return defaultSessionTimeout
 }
 
-func (p *proxy) getOrCreateSession(channel, nick string) (*session, string, []ollamaMessage) {
-	key := sessionKey(channel, nick)
+func (p *proxy) getOrCreateSession(channel string) (*session, string, []ollamaMessage) {
 	timeout := p.sessionTimeout()
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	s, ok := p.sessions[key]
+	s, ok := p.sessions[channel]
 	if !ok || time.Since(s.lastActive) > timeout {
-		s = &session{id: uuid.NewString()}
-		p.sessions[key] = s
+		s = &session{id: uuid.NewString(), lastActive: time.Now()}
+		p.sessions[channel] = s
 	}
 	return s, s.id, append([]ollamaMessage{}, s.messages...)
 }
@@ -79,7 +74,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	logger := log.Logger()
 	logger.Debugf(nil, "LLM request from %s in %s: %s", data.Nick, data.Channel, data.Prompt)
 
-	s, sessionID, history := p.getOrCreateSession(data.Channel, data.Nick)
+	s, sessionID, history := p.getOrCreateSession(data.Channel)
 
 	messages := []ollamaMessage{}
 	if p.cfg.Proxy.Ollama.Prompt != "" {
@@ -96,7 +91,8 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		}
 		messages = append(messages, msg)
 	}
-	messages = append(messages, ollamaMessage{Role: "user", Content: data.Prompt})
+	userContent := data.Nick + ": " + data.Prompt
+	messages = append(messages, ollamaMessage{Role: "user", Content: userContent})
 
 	logger.Debugf(nil, "ollama request: %d messages", len(messages))
 	for i, msg := range messages {
@@ -201,7 +197,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	// Update session history immediately for complete responses
 	if complete {
 		p.mu.Lock()
-		s.messages = append(s.messages, ollamaMessage{Role: "user", Content: data.Prompt})
+		s.messages = append(s.messages, ollamaMessage{Role: "user", Content: userContent})
 		s.messages = append(s.messages, ollamaMessage{Role: "assistant", Content: snapshot})
 		s.lastActive = time.Now()
 		p.mu.Unlock()
@@ -228,7 +224,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 			contentMu.Unlock()
 
 			p.mu.Lock()
-			s.messages = append(s.messages, ollamaMessage{Role: "user", Content: data.Prompt})
+			s.messages = append(s.messages, ollamaMessage{Role: "user", Content: userContent})
 			s.messages = append(s.messages, ollamaMessage{Role: "assistant", Content: final})
 			s.lastActive = time.Now()
 			p.mu.Unlock()
