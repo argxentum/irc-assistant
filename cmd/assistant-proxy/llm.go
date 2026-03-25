@@ -92,7 +92,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	}
 	for _, msg := range history {
 		if msg.Role == "assistant" && len(msg.Content) > maxHistoryAssistantLength {
-			msg.Content = msg.Content[:maxHistoryAssistantLength] + " [truncated]"
+			msg.Content = msg.Content[:maxHistoryAssistantLength] + "..."
 		}
 		messages = append(messages, msg)
 	}
