@@ -47,9 +47,10 @@ func (p *proxy) getOrCreateSession(channel string) (*session, string, []ollamaMe
 
 	s, ok := p.sessions[channel]
 	if !ok || time.Since(s.lastActive) > timeout {
-		s = &session{id: uuid.NewString(), lastActive: time.Now()}
+		s = &session{id: uuid.NewString()}
 		p.sessions[channel] = s
 	}
+	s.lastActive = time.Now()
 	return s, s.id, append([]ollamaMessage{}, s.messages...)
 }
 
