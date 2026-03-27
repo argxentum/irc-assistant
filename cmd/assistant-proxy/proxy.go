@@ -30,6 +30,8 @@ func (p *proxy) start() {
 			err = p.handleSummaryProxyRequest(task)
 		case models.TaskTypeProxyInactivityRequest:
 			err = p.handleInactivityProxyRequest(task)
+		case models.TaskTypeProxyRedditSearchRequest:
+			err = p.handleRedditSearchProxyRequest(task)
 		default:
 			logger.Warningf(nil, "unknown task type: %s", task.Type)
 		}

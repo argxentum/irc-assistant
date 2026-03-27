@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -60,6 +61,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypeProxyInactivityResponse:
 				isScheduledTask = false
 				err = processProxyInactivityResponse(cfg, irc, task)
+			case models.TaskTypeProxyRedditSearchResponse:
+				isScheduledTask = false
+				err = processProxyRedditSearchResponse(cfg, irc, task)
 			}
 
 			task.Runs++
@@ -573,5 +577,64 @@ func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
 	}
 
 	ircs.SendMessages(data.Channel, data.Messages)
+	return nil
+}
+
+const redditPublicURL = "https://reddit.com%s"
+
+func processProxyRedditSearchResponse(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
+	data := task.Data.(models.ProxyRedditSearchResponseTaskData)
+	logger := log.Logger()
+	logger.Debugf(nil, "processing proxy reddit search response for r/%s in %s", data.Subreddit, data.Channel)
+
+	if len(data.Posts) == 0 {
+		ircs.SendMessage(data.Channel, fmt.Sprintf("%s: No r/%s posts found for %s", data.Nick, data.Subreddit, style.Bold(data.Query)))
+		return nil
+	}
+
+	posts := make([]reddit.PostWithTopComment, 0)
+	for _, p := range data.Posts {
+		raw, err := json.Marshal(p)
+		if err != nil {
+			logger.Errorf(nil, "error marshaling post: %s", err)
+			continue
+		}
+		var post reddit.PostWithTopComment
+		if err := json.Unmarshal(raw, &post); err != nil {
+			logger.Errorf(nil, "error unmarshaling post: %s", err)
+			continue
+		}
+		posts = append(posts, post)
+	}
+
+	content := make([]string, 0)
+	for i, post := range posts {
+		title := text.SanitizeSummaryContent(post.Post.Title)
+		if len(title) == 0 {
+			continue
+		}
+
+		content = append(content, post.Post.FormattedTitle())
+		content = append(content, fmt.Sprintf(redditPublicURL, post.Post.Permalink))
+
+		if post.Comment != nil {
+			content = append(content, post.Comment.FormattedBody())
+		}
+
+		source, err := repository.FindSource(post.Post.URL)
+		if err != nil {
+			logger.Errorf(nil, "error finding source, %s", err)
+		}
+
+		if source != nil {
+			content = append(content, repository.ShortSourceSummary(source))
+		}
+
+		if i < len(posts)-1 {
+			content = append(content, " ")
+		}
+	}
+
+	ircs.SendMessages(data.Channel, content)
 	return nil
 }

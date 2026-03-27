@@ -25,6 +25,8 @@ const (
 	TaskTypeProxySummaryResponse             = "proxy_summary_response"
 	TaskTypeProxyInactivityRequest           = "proxy_inactivity_request"
 	TaskTypeProxyInactivityResponse          = "proxy_inactivity_response"
+	TaskTypeProxyRedditSearchRequest         = "proxy_reddit_search_request"
+	TaskTypeProxyRedditSearchResponse        = "proxy_reddit_search_response"
 )
 
 const (
@@ -119,6 +121,14 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypeProxyInactivityResponse:
 		if task.Data, err = deserializeTaskData[ProxyInactivityResponseTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxyRedditSearchRequest:
+		if task.Data, err = deserializeTaskData[ProxyRedditSearchRequestTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeProxyRedditSearchResponse:
+		if task.Data, err = deserializeTaskData[ProxyRedditSearchResponseTaskData](d); err != nil {
 			return nil, err
 		}
 	}

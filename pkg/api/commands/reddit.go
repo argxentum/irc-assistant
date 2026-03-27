@@ -3,18 +3,14 @@ package commands
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
-	"assistant/pkg/api/reddit"
-	"assistant/pkg/api/repository"
-	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
-	"fmt"
+	"assistant/pkg/models"
+	"assistant/pkg/queue"
 	"strings"
 )
 
 const RedditCommandName = "reddit"
-const redditPublicURL = "https://reddit.com%s"
 
 type RedditCommand struct {
 	*commandStub
@@ -61,50 +57,8 @@ func (c *RedditCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] r/%s %s", c.Name(), e.From, e.ReplyTarget(), subreddit, query)
 
-	posts, err := reddit.SearchRelevantSubredditPosts(c.ctx, c.cfg, subreddit, query)
-	if err != nil {
-		logger.Warningf(e, "unable to retrieve %s posts in r/%s: %s", query, subreddit, err)
-		c.Replyf(e, "Unable to retrieve r/%s posts", subreddit)
-		return
+	task := models.NewProxyRedditSearchRequestTask(e.ReplyTarget(), e.From, subreddit, query, models.RedditSearchSortRelevance)
+	if err := queue.GetProxy().Publish(task); err != nil {
+		logger.Errorf(e, "error publishing reddit search request, %s", err)
 	}
-
-	if len(posts) == 0 {
-		logger.Warningf(e, "no %s posts in r/%s", query, subreddit)
-		c.Replyf(e, "No r/%s posts found for %s", subreddit, style.Bold(query))
-		return
-	}
-
-	c.sendPostMessages(e, posts)
-}
-
-func (c *RedditCommand) sendPostMessages(e *irc.Event, posts []reddit.PostWithTopComment) {
-	content := make([]string, 0)
-	for i, post := range posts {
-		title := text.SanitizeSummaryContent(post.Post.Title)
-		if len(title) == 0 {
-			continue
-		}
-
-		content = append(content, post.Post.FormattedTitle())
-		content = append(content, fmt.Sprintf(redditPublicURL, post.Post.Permalink))
-
-		if post.Comment != nil {
-			content = append(content, post.Comment.FormattedBody())
-		}
-
-		source, err := repository.FindSource(post.Post.URL)
-		if err != nil {
-			log.Logger().Errorf(nil, "error finding source, %s", err)
-		}
-
-		if source != nil {
-			content = append(content, repository.ShortSourceSummary(source))
-		}
-
-		if i < len(posts)-1 {
-			content = append(content, " ")
-		}
-	}
-
-	c.SendMessages(e, e.ReplyTarget(), content)
 }
