@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -205,13 +206,8 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	logger.Infof(e, "⚡ %s [%s/%s] %s", c.Name(), e.From, e.ReplyTarget(), ub.url)
 
-	if c.isRootDomainIn(ub.url, c.cfg.Ignore.Domains) {
-		logger.Debugf(e, "root domain denied %s", ub.url)
-		return
-	}
-
-	if c.isDomainIn(ub.url, domainDenylist) {
-		logger.Debugf(e, "domain denied %s", ub.url)
+	if summary.IsDomainIgnored(ub.url, c.cfg.Ignore.Domains) {
+		logger.Debugf(e, "domain ignored %s", ub.url)
 		return
 	}
 
@@ -485,27 +481,14 @@ func parseURLFromMessage(message string) string {
 	return ""
 }
 
-var domainDenylist = []string{
-	"i.redd.it",
-}
-
 func (c *SummaryCommand) isRootDomainIn(url string, domains []string) bool {
 	root := domainutil.Domain(url)
 	return slices.Contains(domains, root)
 }
 
-func (c *SummaryCommand) isDomainIn(url string, domains []string) bool {
-	domain := retriever.Domain(url)
-	return slices.Contains(domains, domain)
-}
 
 func (c *SummaryCommand) isRejectedTitle(title string) bool {
-	for _, prefix := range c.cfg.Ignore.TitlePrefixes {
-		if strings.HasPrefix(strings.ToLower(title), prefix) {
-			return true
-		}
-	}
-	return false
+	return summary.IsRejectedTitle(title, c.cfg.Ignore.TitlePrefixes)
 }
 
 func (c *SummaryCommand) translatedURL(url string) (string, bool) {

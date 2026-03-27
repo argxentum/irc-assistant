@@ -19,6 +19,11 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 	logger := log.Logger()
 	logger.Debugf(nil, "handling proxy summary request %s for %s in %s", task.ID, data.URL, data.Channel)
 
+	if summary.IsDomainIgnored(data.URL, p.cfg.Ignore.Domains) {
+		logger.Debugf(nil, "domain ignored %s", data.URL)
+		return nil
+	}
+
 	domain := domainutil.Domain(data.URL)
 	ctx := context.NewContext()
 
@@ -78,6 +83,11 @@ func (p *proxy) summarizeURL(u string) ([]string, error) {
 	meta := summary.ExtractMetadata(doc.Root)
 
 	if len(meta.Title) == 0 && len(meta.Description) == 0 {
+		return nil, nil
+	}
+
+	if summary.IsRejectedTitle(meta.Title, p.cfg.Ignore.TitlePrefixes) {
+		logger.Debugf(nil, "rejected proxy summary title: %s", meta.Title)
 		return nil, nil
 	}
 

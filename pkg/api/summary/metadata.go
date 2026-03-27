@@ -1,10 +1,13 @@
 package summary
 
 import (
+	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/text"
+	"slices"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/bobesa/go-domain-util/domainutil"
 )
 
 const defaultMaxLength = 256
@@ -44,6 +47,32 @@ func ExtractMetadata(doc *goquery.Document) PageMetadata {
 		Title:       Sanitize(title),
 		Description: Sanitize(description),
 	}
+}
+
+var domainDenylist = []string{
+	"i.redd.it",
+}
+
+// IsDomainIgnored returns true if the URL's domain is in the ignored domains
+// list or the hardcoded denylist.
+func IsDomainIgnored(url string, ignoredDomains []string) bool {
+	root := domainutil.Domain(url)
+	if slices.Contains(ignoredDomains, root) {
+		return true
+	}
+	domain := retriever.Domain(url)
+	return slices.Contains(domainDenylist, domain)
+}
+
+// IsRejectedTitle returns true if the title starts with any of the given prefixes.
+func IsRejectedTitle(title string, prefixes []string) bool {
+	lower := strings.ToLower(title)
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func cleanHTMLText(doc *goquery.Document, selector string) string {
