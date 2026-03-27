@@ -28,6 +28,7 @@ func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url
 			"polymarket.com": c.parsePolymarket,
 			"kalshi.com":     c.parseKalshi,
 			"tiktok.com":     c.parseTikTok,
+			"instagram.com":  c.parseInstagram,
 			//"truthsocial.com": c.parseTruthSocial,
 		}
 	})
