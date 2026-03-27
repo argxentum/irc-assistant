@@ -331,25 +331,69 @@ func (eh *handler) resetChannelInactivityTimeout(e *irc.Event) {
 	}
 }
 
+// normalizeToken strips all non-alphanumeric characters and lowercases the result.
+func normalizeToken(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 func (eh *handler) bannedWordsInMessage(e *irc.Event, tokens []string) []string {
 	logger := log.Logger()
 
-	wordMap := make(map[string]bool)
+	bannedWords := eh.ctx.Session().BannedWords(e.ReplyTarget())
+	if len(bannedWords) == 0 {
+		return nil
+	}
 
+	// normalize all tokens once
+	normalized := make([]string, 0, len(tokens))
 	for _, token := range tokens {
-		stripped := strings.TrimFunc(strings.ToLower(token), func(r rune) bool {
-			return !unicode.IsLetter(r) && !unicode.IsNumber(r)
-		})
-		if eh.ctx.Session().IsBannedWord(e.ReplyTarget(), stripped) {
-			logger.Warningf(e, "banned word detected: %s", stripped)
-			wordMap[stripped] = true
+		if n := normalizeToken(token); len(n) > 0 {
+			normalized = append(normalized, n)
 		}
 	}
 
-	words := make([]string, 0)
-	for word := range wordMap {
-		words = append(words, word)
+	matches := make(map[string]bool)
+
+	for phrase := range bannedWords {
+		phraseWords := strings.Fields(phrase)
+
+		if len(phraseWords) == 1 {
+			// single word: check each normalized token
+			for _, n := range normalized {
+				if n == phraseWords[0] {
+					logger.Warningf(e, "banned word detected: %s", phrase)
+					matches[phrase] = true
+					break
+				}
+			}
+		} else {
+			// multi-word phrase: check consecutive normalized tokens
+			for i := 0; i <= len(normalized)-len(phraseWords); i++ {
+				match := true
+				for j, pw := range phraseWords {
+					if normalized[i+j] != pw {
+						match = false
+						break
+					}
+				}
+				if match {
+					logger.Warningf(e, "banned phrase detected: %s", phrase)
+					matches[phrase] = true
+					break
+				}
+			}
+		}
 	}
 
-	return words
+	result := make([]string, 0, len(matches))
+	for word := range matches {
+		result = append(result, word)
+	}
+	return result
 }

@@ -8,7 +8,7 @@ type Session struct {
 	StartedAt   time.Time
 	IsAwake     bool
 	Reddit      RedditSession
-	bannedWords []ChannelBannedWords
+	bannedWords map[string]map[string]bool // channel -> word/phrase -> true
 }
 
 type RedditSession struct {
@@ -30,7 +30,7 @@ func NewSession() *Session {
 		StartedAt:   time.Now(),
 		IsAwake:     true,
 		Reddit:      RedditSession{},
-		bannedWords: make([]ChannelBannedWords, 0),
+		bannedWords: make(map[string]map[string]bool),
 	}
 }
 
@@ -46,52 +46,30 @@ func (c *Cache) Set(k string, v any) {
 	c.properties[k] = v
 }
 
-type ChannelBannedWords struct {
-	channel string
-	words   map[string]bool
+func (s *Session) IsBannedWord(channel, word string) bool {
+	words, ok := s.bannedWords[channel]
+	if !ok {
+		return false
+	}
+	return words[word]
 }
 
-func (s *Session) IsBannedWord(channel, word string) bool {
-	for _, bw := range s.bannedWords {
-		if bw.channel == channel {
-			_, ok := bw.words[word]
-			return ok
-		}
-	}
-
-	return false
+func (s *Session) BannedWords(channel string) map[string]bool {
+	return s.bannedWords[channel]
 }
 
 func (s *Session) AddBannedWord(channel, word string) {
-	found := false
-	for i, bw := range s.bannedWords {
-		if bw.channel == channel {
-			found = true
-			s.bannedWords[i].words[word] = true
-		}
+	if s.bannedWords[channel] == nil {
+		s.bannedWords[channel] = make(map[string]bool)
 	}
-
-	if !found {
-		s.bannedWords = append(s.bannedWords, ChannelBannedWords{
-			channel: channel,
-			words:   map[string]bool{word: true},
-		})
-	}
+	s.bannedWords[channel][word] = true
 }
 
 func (s *Session) RemoveBannedWord(channel, word string) {
-	for i, bw := range s.bannedWords {
-		empty := false
-
-		if bw.channel == channel {
-			delete(s.bannedWords[i].words, word)
-			if len(s.bannedWords[i].words) == 0 {
-				empty = true
-			}
-		}
-
-		if empty {
-			s.bannedWords = append(s.bannedWords[:i], s.bannedWords[i+1:]...)
+	if words, ok := s.bannedWords[channel]; ok {
+		delete(words, word)
+		if len(words) == 0 {
+			delete(s.bannedWords, channel)
 		}
 	}
 }
