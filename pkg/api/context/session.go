@@ -46,14 +46,6 @@ func (c *Cache) Set(k string, v any) {
 	c.properties[k] = v
 }
 
-func (s *Session) IsBannedWord(channel, word string) bool {
-	words, ok := s.bannedWords[channel]
-	if !ok {
-		return false
-	}
-	return words[word]
-}
-
 func (s *Session) BannedWords(channel string) map[string]bool {
 	return s.bannedWords[channel]
 }
