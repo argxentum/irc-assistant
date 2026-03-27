@@ -259,7 +259,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 
 			// Append the assistant's search request and the result, then re-prompt
 			messages = append(messages, ollamaMessage{Role: "assistant", Content: snapshot})
-			messages = append(messages, ollamaMessage{Role: "user", Content: fmt.Sprintf("Here are the search results:\n\n%s\n\nNow answer the original question using this information. Do not include [SEARCH: ...] in your response.", searchResult)})
+			messages = append(messages, ollamaMessage{Role: "system", Content: fmt.Sprintf("Search results for %q:\n\n%s", query, searchResult)})
 
 			sr, err = p.streamOllamaChat(messages, options, start)
 			if err != nil {
