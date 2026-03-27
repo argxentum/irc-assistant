@@ -183,24 +183,20 @@ const defaultRedditPosts = 3
 const maxRedditPosts = 5
 
 func SearchNewSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]PostWithTopComment, error) {
-	logger := log.Logger()
 	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 	t := url.QueryEscape(topic)
 	u := fmt.Sprintf(searchNewSubredditPosts, redditBaseURL, subreddit, t)
-	logger.Debugf(nil, "reddit new search URL: %s", u)
 	return searchSubredditPosts(ctx, cfg, u)
 }
 
 func SearchRelevantSubredditPosts(ctx context.Context, cfg *config.Config, subreddit, topic string) ([]PostWithTopComment, error) {
-	logger := log.Logger()
 	if err := Login(ctx, cfg); err != nil {
 		return nil, err
 	}
 	t := url.QueryEscape(topic)
 	u := fmt.Sprintf(searchRelevantSubredditPosts, redditBaseURL, subreddit, t)
-	logger.Debugf(nil, "reddit relevant search URL: %s", u)
 	return searchSubredditPosts(ctx, cfg, u)
 }
 
