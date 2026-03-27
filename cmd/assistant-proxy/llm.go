@@ -272,7 +272,19 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 	// Strip any leftover [SEARCH: ...] tags from the final response
 	snapshot = searchPattern.ReplaceAllString(snapshot, "")
 	snapshot = strings.TrimSpace(snapshot)
-	logger.Debugf(nil, "[timing] snapshot length: %d, complete: %v", len(snapshot), sr.complete)
+
+	// Log raw content for debugging empty responses
+	sr.contentMu.Lock()
+	rawContent := sr.content.String()
+	sr.contentMu.Unlock()
+	logger.Debugf(nil, "[timing] snapshot length: %d, complete: %v, raw length: %d", len(snapshot), sr.complete, len(rawContent))
+	if len(snapshot) == 0 && len(rawContent) > 0 {
+		preview := rawContent
+		if len(preview) > 200 {
+			preview = preview[:200]
+		}
+		logger.Debugf(nil, "raw content stripped to empty: %q", preview)
+	}
 
 	if len(snapshot) == 0 {
 		return fmt.Errorf("empty response from ollama")
