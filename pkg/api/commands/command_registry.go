@@ -85,6 +85,7 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[CurrencyCommandName] = NewCurrencyCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[KarmaSetCommandName] = NewKarmaSetCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[KarmaGetCommandName] = NewKarmaGetCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[CredibilityCommandName] = NewCredibilityCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[ReminderCommandName] = NewReminderCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[RemindersCommandName] = NewRemindersCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[AnimatedTextCommandName] = NewAnimatedTextCommand(cr.ctx, cr.cfg, cr.irc)

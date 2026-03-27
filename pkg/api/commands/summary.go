@@ -402,7 +402,58 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		unescapedMessages = append(unescapedMessages, cn...)
 	}
 
+	if !e.IsPrivateMessage() {
+		c.updateUserCredibility(e, target, source, dis)
+	}
+
 	c.SendMessages(e, target, unescapedMessages)
+}
+
+func (c *SummaryCommand) updateUserCredibility(e *irc.Event, channel string, source *models.Source, dis bool) {
+	logger := log.Logger()
+
+	tier := ""
+	if dis {
+		tier = "low"
+	} else if source != nil {
+		credibility := strings.ToLower(source.Credibility)
+		if strings.Contains(credibility, "high") {
+			tier = "high"
+		} else if strings.Contains(credibility, "low") {
+			tier = "low"
+		}
+	}
+
+	if len(tier) == 0 {
+		return
+	}
+
+	u, err := repository.GetUserByNick(e, channel, e.From, true)
+	if err != nil {
+		logger.Errorf(e, "error getting user for credibility update: %v", err)
+		return
+	}
+
+	fields := map[string]any{"updated_at": time.Now()}
+	switch tier {
+	case "high":
+		u.HighCredibilityCount++
+		fields["high_credibility_count"] = u.HighCredibilityCount
+	case "low":
+		u.LowCredibilityCount++
+		fields["low_credibility_count"] = u.LowCredibilityCount
+	}
+
+	if source != nil {
+		logger.Debugf(e, "updating %s credibility for %s in %s (%s)", tier, e.From, channel, source.Title)
+	} else {
+		logger.Debugf(e, "updating %s credibility for %s in %s", tier, e.From, channel)
+	}
+
+	fs := firestore.Get()
+	if err := fs.UpdateUser(channel, u, fields); err != nil {
+		logger.Errorf(e, "error updating user credibility: %v", err)
+	}
 }
 
 func (c *SummaryCommand) combinedSourceSummary(e *irc.Event, ub urlBundle, source *models.Source, dis bool) string {
@@ -487,7 +538,6 @@ func (c *SummaryCommand) isRootDomainIn(url string, domains []string) bool {
 	root := domainutil.Domain(url)
 	return slices.Contains(domains, root)
 }
-
 
 func (c *SummaryCommand) isRejectedTitle(title string) bool {
 	return summary.IsRejectedTitle(title, c.cfg.Ignore.TitlePrefixes)

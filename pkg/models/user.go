@@ -8,17 +8,19 @@ import (
 const MaximumRecentUserMessages = 25
 
 type User struct {
-	Nick            string          `firestore:"nick"`
-	UserID          string          `firestore:"user_id"`
-	Host            string          `firestore:"host"`
-	Karma           int             `firestore:"karma"`
-	Penalty         int             `firestore:"penalty"`
-	ExtendedPenalty int             `firestore:"extended_penalty"`
-	Location        string          `firestore:"location"`
-	IsAutoVoiced    bool            `firestore:"is_auto_voiced"`
-	RecentMessages  []RecentMessage `firestore:"recent_messages"`
-	CreatedAt       time.Time       `firestore:"created_at"`
-	UpdatedAt       time.Time       `firestore:"updated_at"`
+	Nick                 string          `firestore:"nick"`
+	UserID               string          `firestore:"user_id"`
+	Host                 string          `firestore:"host"`
+	Karma                int             `firestore:"karma"`
+	Penalty              int             `firestore:"penalty"`
+	ExtendedPenalty      int             `firestore:"extended_penalty"`
+	Location             string          `firestore:"location"`
+	IsAutoVoiced         bool            `firestore:"is_auto_voiced"`
+	HighCredibilityCount int             `firestore:"high_credibility_count"`
+	LowCredibilityCount  int             `firestore:"low_credibility_count"`
+	RecentMessages       []RecentMessage `firestore:"recent_messages"`
+	CreatedAt            time.Time       `firestore:"created_at"`
+	UpdatedAt            time.Time       `firestore:"updated_at"`
 }
 
 type RecentMessage struct {
