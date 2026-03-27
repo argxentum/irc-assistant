@@ -19,14 +19,10 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 	logger := log.Logger()
 	logger.Debugf(nil, "handling proxy summary request %s for %s in %s", task.ID, data.URL, data.Channel)
 
-	if summary.IsDomainIgnored(data.URL, p.cfg.Ignore.Domains) {
-		logger.Debugf(nil, "domain ignored %s", data.URL)
-		return nil
-	}
-
 	domain := domainutil.Domain(data.URL)
 	ctx := context.NewContext()
 
+	var title string
 	var messages []string
 	var err error
 
@@ -34,14 +30,14 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 	case "reddit.com":
 		messages, err = reddit.Summarize(ctx, p.cfg, data.URL)
 	default:
-		messages, err = p.summarizeURL(data.URL)
+		title, messages, err = p.summarizeURL(data.URL)
 	}
 
 	if err != nil {
 		logger.Errorf(nil, "error summarizing %s: %s", data.URL, err)
 		// Still publish an empty response so the waiter can unblock
 		if data.RequestID != "" {
-			responseTask := models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, nil)
+			responseTask := models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, "", nil)
 			_ = queue.GetDefault().Publish(responseTask)
 		}
 		return err
@@ -50,7 +46,7 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 	if len(messages) == 0 {
 		logger.Debugf(nil, "no summary content for %s", data.URL)
 		if data.RequestID != "" {
-			responseTask := models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, nil)
+			responseTask := models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, "", nil)
 			return queue.GetDefault().Publish(responseTask)
 		}
 		return nil
@@ -58,9 +54,9 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 
 	var responseTask *models.Task
 	if data.RequestID != "" {
-		responseTask = models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, messages)
+		responseTask = models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, title, messages)
 	} else {
-		responseTask = models.NewProxySummaryResponseTask(data.Channel, data.Nick, data.URL, messages)
+		responseTask = models.NewProxySummaryResponseTask(data.Channel, data.Nick, data.URL, title, messages)
 	}
 	return queue.GetDefault().Publish(responseTask)
 }
@@ -68,7 +64,7 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 const maxProxySummaryTitleLength = 256
 const maxProxySummaryDescriptionLength = 300
 
-func (p *proxy) summarizeURL(u string) ([]string, error) {
+func (p *proxy) summarizeURL(u string) (string, []string, error) {
 	logger := log.Logger()
 	logger.Debugf(nil, "proxy direct summarization for %s", u)
 
@@ -77,18 +73,13 @@ func (p *proxy) summarizeURL(u string) ([]string, error) {
 
 	doc, err := dr.RetrieveDocument(nil, retriever.DefaultParams(u))
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving document: %w", err)
+		return "", nil, fmt.Errorf("error retrieving document: %w", err)
 	}
 
 	meta := summary.ExtractMetadata(doc.Root)
 
 	if len(meta.Title) == 0 && len(meta.Description) == 0 {
-		return nil, nil
-	}
-
-	if summary.IsRejectedTitle(meta.Title, p.cfg.Ignore.TitlePrefixes) {
-		logger.Debugf(nil, "rejected proxy summary title: %s", meta.Title)
-		return nil, nil
+		return "", nil, nil
 	}
 
 	title := meta.Title
@@ -110,5 +101,5 @@ func (p *proxy) summarizeURL(u string) ([]string, error) {
 		message = description
 	}
 
-	return []string{message}, nil
+	return meta.Title, []string{message}, nil
 }

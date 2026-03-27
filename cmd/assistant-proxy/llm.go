@@ -246,7 +246,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 
 			// Notify the user
 			desc := funSearchDescriptions[rand.Intn(len(funSearchDescriptions))]
-			notifyTask := models.NewProxySummaryResponseTask(data.Channel, data.Nick, "", []string{
+			notifyTask := models.NewProxySummaryResponseTask(data.Channel, data.Nick, "", "", []string{
 				fmt.Sprintf("%s: one moment, %s...", data.Nick, desc),
 			})
 			if err := queue.GetDefault().Publish(notifyTask); err != nil {

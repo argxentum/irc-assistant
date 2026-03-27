@@ -35,28 +35,31 @@ type ProxySummaryResponseTaskData struct {
 	Channel   string   `json:"channel"`
 	Nick      string   `json:"nick"`
 	URL       string   `json:"url,omitempty"`
+	Title     string   `json:"title,omitempty"`
 	Messages  []string `json:"messages"`
 }
 
 // NewProxySummaryResponseTask creates a response for a fire-and-forget request.
 // The response is sent directly to IRC by the task processor.
-func NewProxySummaryResponseTask(channel, nick, url string, messages []string) *Task {
+func NewProxySummaryResponseTask(channel, nick, url, title string, messages []string) *Task {
 	return newTask(TaskTypeProxySummaryResponse, time.Now(), ProxySummaryResponseTaskData{
 		Channel:  channel,
 		Nick:     nick,
 		URL:      url,
+		Title:    title,
 		Messages: messages,
 	})
 }
 
 // NewProxySummaryResponseTaskWithWaiter creates a response for a waiting request.
 // The response is routed to the waiting goroutine via the requestID.
-func NewProxySummaryResponseTaskWithWaiter(requestID, channel, nick, url string, messages []string) *Task {
+func NewProxySummaryResponseTaskWithWaiter(requestID, channel, nick, url, title string, messages []string) *Task {
 	return newTask(TaskTypeProxySummaryResponse, time.Now(), ProxySummaryResponseTaskData{
 		RequestID: requestID,
 		Channel:   channel,
 		Nick:      nick,
 		URL:       url,
+		Title:     title,
 		Messages:  messages,
 	})
 }

@@ -53,8 +53,8 @@ var domainDenylist = []string{
 	"i.redd.it",
 }
 
-// IsDomainIgnored returns true if the URL's domain is in the ignored domains
-// list or the hardcoded denylist.
+// IsDomainIgnored returns true if the URL's root domain is in the ignored
+// domains list or its full subdomain is in the hardcoded denylist.
 func IsDomainIgnored(url string, ignoredDomains []string) bool {
 	root := domainutil.Domain(url)
 	if slices.Contains(ignoredDomains, root) {

@@ -58,7 +58,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				err = processProxyLLMResponse(cfg, irc, task)
 			case models.TaskTypeProxySummaryResponse:
 				isScheduledTask = false
-				err = processProxySummaryResponse(irc, task)
+				err = processProxySummaryResponse(cfg, irc, task)
 			case models.TaskTypeProxyInactivityResponse:
 				isScheduledTask = false
 				err = processProxyInactivityResponse(cfg, irc, task)
@@ -567,7 +567,7 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 	return nil
 }
 
-func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
+func processProxySummaryResponse(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.ProxySummaryResponseTaskData)
 
 	logger := log.Logger()
@@ -575,7 +575,7 @@ func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
 
 	// If this response has a request ID, try to deliver it to a waiting summarization goroutine
 	if data.RequestID != "" {
-		if commands.ResolveProxySummaryWaiter(data.RequestID, data.Messages) {
+		if commands.ResolveProxySummaryWaiter(data.RequestID, data.Title, data.Messages) {
 			logger.Debugf(nil, "proxy summary response delivered to waiter for request %s", data.RequestID)
 			return nil
 		}
@@ -584,6 +584,16 @@ func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
 	}
 
 	if len(data.Messages) == 0 {
+		return nil
+	}
+
+	if summary.IsRejectedTitle(data.Title, cfg.Ignore.TitlePrefixes) {
+		logger.Debugf(nil, "rejected proxy summary title: %s", data.Title)
+		return nil
+	}
+
+	if summary.IsDomainIgnored(data.URL, cfg.Ignore.Domains) {
+		logger.Debugf(nil, "ignored proxy summary domain: %s", data.URL)
 		return nil
 	}
 
