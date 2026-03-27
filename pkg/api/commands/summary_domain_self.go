@@ -14,7 +14,7 @@ const shortcutURLPattern = "%s/s/"
 
 var urlRegex = regexp.MustCompile(`(https?://\S+)`)
 
-func (c *SummaryCommand) parseShortcut(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseShortcut(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
 	logger.Infof(e, "performing shortcut URL lookup: %s", url)
 

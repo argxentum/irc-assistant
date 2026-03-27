@@ -4,12 +4,12 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 )
 
-func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
 
 	messages, err := reddit.Summarize(c.ctx, c.cfg, url)
@@ -21,13 +21,13 @@ func (c *SummaryCommand) parseReddit(e *irc.Event, url string) (*summary, *model
 		return nil, nil, nil
 	}
 
-	title := text.SanitizeSummaryContent(messages[0])
+	title := summary.Sanitize(messages[0])
 	if c.isRejectedTitle(title) {
 		logger.Infof(e, "rejected reddit domain title: %s", title)
 		return nil, nil, rejectedTitleError
 	}
 
-	s := createSummary(messages...)
+	s := createSummaryResult(messages...)
 
 	source, err := repository.FindSource(url)
 	if err != nil {

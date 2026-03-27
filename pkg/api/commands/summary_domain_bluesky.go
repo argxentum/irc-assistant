@@ -17,7 +17,7 @@ import (
 
 var blueskyAuthorRegex = regexp.MustCompile(`^(?:(.*?)\s*\(@(.*?)\)|@(.*?))$`)
 
-func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 
@@ -110,5 +110,5 @@ func (c *SummaryCommand) parseBlueSky(e *irc.Event, url string) (*summary, *mode
 		}
 	}
 
-	return createSummary(messages...), source, nil
+	return createSummaryResult(messages...), source, nil
 }

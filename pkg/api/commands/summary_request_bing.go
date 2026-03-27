@@ -9,13 +9,12 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 
-func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 
@@ -37,37 +36,26 @@ func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*su
 		return nil, errors.New("bing search results doc nil")
 	}
 
-	var ch = make(chan pageSearchResult, 1)
 	urlDomain := domainutil.Domain(url)
-
-	go func() {
-		doc.Root.Find("ol#b_results li.b_algo").EachWithBreak(func(i int, s *goquery.Selection) bool {
-			anchorURL := getBingRedirectURL(strings.TrimSpace(s.Find("h2 a").First().AttrOr("href", "")))
-			anchorURLDomain := domainutil.Domain(anchorURL)
-			if anchorURLDomain != urlDomain {
-				logger.Debugf(e, "bing result anchor domain (%s) does not match url domain (%s), skipping...", anchorURLDomain, urlDomain)
-				return true
-			}
-
-			title := strings.TrimSpace(s.Find("h2").First().Text())
-			description := strings.TrimSpace(s.Find("div.b_caption").First().Text())
-
-			ch <- pageSearchResult{
-				title:       title,
-				description: description,
-			}
-
-			return false
-		})
-	}()
-
 	var title, description string
-	select {
-	case res := <-ch:
-		title = res.title
-		description = res.description
-	case <-time.After(3 * time.Second):
-		logger.Debugf(e, "no valid bing search results for %s (timeout)", url)
+	var found bool
+
+	doc.Root.Find("ol#b_results li.b_algo").EachWithBreak(func(i int, s *goquery.Selection) bool {
+		anchorURL := getBingRedirectURL(strings.TrimSpace(s.Find("h2 a").First().AttrOr("href", "")))
+		anchorURLDomain := domainutil.Domain(anchorURL)
+		if anchorURLDomain != urlDomain {
+			logger.Debugf(e, "bing result anchor domain (%s) does not match url domain (%s), skipping...", anchorURLDomain, urlDomain)
+			return true
+		}
+
+		title = strings.TrimSpace(s.Find("h2").First().Text())
+		description = strings.TrimSpace(s.Find("div.b_caption").First().Text())
+		found = true
+		return false
+	})
+
+	if !found {
+		logger.Debugf(e, "no valid bing search results for %s", url)
 		return nil, noContentError
 	}
 

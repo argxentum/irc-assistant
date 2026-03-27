@@ -11,7 +11,7 @@ import (
 
 const PolymarketGammaAPIEventsURL = "https://gamma-api.polymarket.com/events?slug=%s&limit=1"
 
-func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	uc := strings.Split(url, "/")
 	if i := strings.Index(uc[len(uc)-1], "?"); i != -1 {
 		uc[len(uc)-1] = uc[len(uc)-1][:i]
@@ -33,7 +33,7 @@ func (c *SummaryCommand) parsePolymarket(e *irc.Event, url string) (*summary, *m
 
 	messages := generatePolymarketMessages(result, total)
 
-	return &summary{
+	return &summaryResult{
 		messages: messages,
 	}, nil, nil
 }

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (c *SummaryCommand) parseMastodon(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) parseMastodon(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	titleAttr, _ := doc.Root.Find("meta[property='og:title']").First().Attr("content")
 	title := strings.TrimSpace(titleAttr)
 	descriptionAttr, _ := doc.Root.Find("html meta[property='og:description']").First().Attr("content")
@@ -39,10 +39,10 @@ func (c *SummaryCommand) parseMastodon(e *irc.Event, doc *retriever.Document) (*
 	}
 
 	if len(description) > 0 && !publishedTime.IsZero() {
-		return createSummary(fmt.Sprintf("%s • %s • %s", style.Bold(description), title, elapse.TimeDescription(publishedTime))), nil
+		return createSummaryResult(fmt.Sprintf("%s • %s • %s", style.Bold(description), title, elapse.TimeDescription(publishedTime))), nil
 	} else if len(description) > 0 {
-		return createSummary(fmt.Sprintf("%s • %s", style.Bold(description), title)), nil
+		return createSummaryResult(fmt.Sprintf("%s • %s", style.Bold(description), title)), nil
 	} else {
-		return createSummary(title), nil
+		return createSummaryResult(title), nil
 	}
 }

@@ -20,7 +20,7 @@ import (
 var twitterAuthorRegex = regexp.MustCompile(`^(.*?)\s*\(@(.*?)\)$`)
 var twitterSnowflakeRegex = regexp.MustCompile(`^https?://.*?/[^/]+/status/(\d+)(?:$|\?)`)
 
-func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	params := retriever.DefaultParams(url)
 	params.Impersonate = false
 
@@ -105,5 +105,5 @@ func (c *SummaryCommand) parseTwitter(e *irc.Event, url string) (*summary, *mode
 		}
 	}
 
-	return createSummary(messages...), source, nil
+	return createSummaryResult(messages...), source, nil
 }

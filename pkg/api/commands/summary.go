@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -32,7 +33,6 @@ const SummaryCommandName = "summary"
 
 const minimumTitleLength = 16
 const maximumTitleLength = 256
-const minimumPreferredTitleLength = 64
 const standardMaximumDescriptionLength = 300
 const extendedMaximumDescriptionLength = 350
 const startPauseTimeoutSeconds = 5
@@ -41,7 +41,7 @@ const pauseSummaryMultiplier = 1.025
 const disinfoWarningMessage = "⚠️ Disinformation source, use caution"
 const disinfoWarningMessageShort = "⚠️ Disinformation source"
 
-type summary struct {
+type summaryResult struct {
 	messages []string
 }
 
@@ -53,7 +53,7 @@ type UserPause struct {
 	ignoreCount  int
 }
 
-func createSummary(messages ...string) *summary {
+func createSummaryResult(messages ...string) *summaryResult {
 	m := make([]string, 0)
 	for i := 0; i < len(messages); i++ {
 		messages[i] = html.UnescapeString(messages[i])
@@ -62,14 +62,14 @@ func createSummary(messages ...string) *summary {
 		}
 	}
 
-	return &summary{messages: m}
+	return &summaryResult{messages: m}
 }
 
-func (s *summary) addMessage(message string) {
+func (s *summaryResult) addMessage(message string) {
 	s.messages = append(s.messages, html.UnescapeString(message))
 }
 
-func (s *summary) addMessages(messages ...string) {
+func (s *summaryResult) addMessages(messages ...string) {
 	m := make([]string, 0)
 	for i := 0; i < len(messages); i++ {
 		messages[i] = html.UnescapeString(messages[i])
@@ -86,6 +86,7 @@ type SummaryCommand struct {
 	*commandStub
 	bodyRetriever retriever.BodyRetriever
 	docRetriever  retriever.DocumentRetriever
+	userPausesMu  sync.RWMutex
 	userPauses    map[string]*UserPause
 }
 
@@ -96,6 +97,18 @@ func NewSummaryCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Com
 		docRetriever:  retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
 		userPauses:    make(map[string]*UserPause),
 	}
+}
+
+func (c *SummaryCommand) getUserPause(key string) *UserPause {
+	c.userPausesMu.RLock()
+	defer c.userPausesMu.RUnlock()
+	return c.userPauses[key]
+}
+
+func (c *SummaryCommand) setUserPause(key string, p *UserPause) {
+	c.userPausesMu.Lock()
+	defer c.userPausesMu.Unlock()
+	c.userPauses[key] = p
 }
 
 func (c *SummaryCommand) Name() string {
@@ -136,7 +149,7 @@ type urlBundle struct {
 func (c *SummaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	fs := firestore.Get()
-	p := c.userPauses[e.From+"@"+e.ReplyTarget()]
+	p := c.getUserPause(e.From + "@" + e.ReplyTarget())
 
 	channel, err := fs.Channel(e.ReplyTarget())
 	if err != nil {
@@ -166,7 +179,8 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		ub.url = translatedURL
 
 		// ugly hack to parse out canonical url in translated urls
-		if resp, _ := http.Get(ub.url); resp != nil {
+		client := &http.Client{Timeout: 5 * time.Second}
+		if resp, _ := client.Get(ub.url); resp != nil {
 			data, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if len(data) > 0 {
@@ -219,7 +233,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 		logger.Debugf(e, "performing domain summarization for %s", ub.url)
 
-		var ds *summary
+		var ds *summaryResult
 		ds, source, err = c.domainSummary(e, ub.url)
 		if err != nil {
 			logger.Debugf(e, "domain specific summarization failed for %s: %s", ub.url, err)
@@ -270,7 +284,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			p.ignoreCount++
 			p.summaryCount++
 			updatePause(e, p)
-			c.userPauses[e.From+"@"+e.ReplyTarget()] = p
+			c.setUserPause(e.From+"@"+e.ReplyTarget(), p)
 			return
 		} else {
 			logger.Debugf(e, "pause expired for %s in %s", e.From, e.ReplyTarget())
@@ -326,7 +340,7 @@ func isValidCanonicalLink(original, canonical string) bool {
 func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time.Duration) *UserPause {
 	logger := log.Logger()
 
-	p := c.userPauses[nick+"@"+channel]
+	p := c.getUserPause(nick + "@" + channel)
 	if p == nil || p.timeoutAt.Before(time.Now()) {
 		p = &UserPause{
 			channel:     channel,
@@ -334,7 +348,7 @@ func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time
 			timeoutAt:   time.Now().Add(duration),
 			ignoreCount: 0,
 		}
-		c.userPauses[nick+"@"+channel] = p
+		c.setUserPause(nick+"@"+channel, p)
 		logger.Debugf(nil, "join, pausing %s in %s until %s", nick, channel, elapse.TimeDescription(p.timeoutAt))
 	} else {
 		logger.Debugf(nil, "join, pause already in effect for %s in %s until %s", nick, channel, elapse.TimeDescription(p.timeoutAt))
@@ -357,7 +371,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 		}
 		p.summaryCount++
 		updatePause(e, p)
-		c.userPauses[e.From+"@"+target] = p
+		c.setUserPause(e.From+"@"+target, p)
 	}
 
 	unescapedMessages := make([]string, 0)
@@ -589,7 +603,7 @@ func (c *SummaryCommand) findCommunityNotes(e *irc.Event, url string) []string {
 	return createCommunityNoteOutputMessages(e, note, includeCounterSourceURL)
 }
 
-func (c *SummaryCommand) createSummaryFromTitleAndDescription(title, description string) (*summary, error) {
+func (c *SummaryCommand) createSummaryFromTitleAndDescription(title, description string) (*summaryResult, error) {
 	if len(title) > maximumTitleLength {
 		title = title[:maximumTitleLength] + "..."
 	}
@@ -607,15 +621,15 @@ func (c *SummaryCommand) createSummaryFromTitleAndDescription(title, description
 	}
 
 	if len(title) > 0 && len(description) > 0 {
-		return createSummary(fmt.Sprintf("%s%s %s", style.Bold(title), getSummaryFieldSeparator(title), description)), nil
+		return createSummaryResult(fmt.Sprintf("%s%s %s", style.Bold(title), getSummaryFieldSeparator(title), description)), nil
 	}
 
 	if len(title) > 0 {
-		return createSummary(style.Bold(title)), nil
+		return createSummaryResult(style.Bold(title)), nil
 	}
 
 	if len(description) > 0 {
-		return createSummary(style.Bold(description)), nil
+		return createSummaryResult(style.Bold(description)), nil
 	}
 
 	return nil, noContentError

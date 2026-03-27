@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/bobesa/go-domain-util/domainutil"
 )
@@ -101,21 +102,22 @@ func (c *SearchCommand) Execute(e *irc.Event) {
 	}
 }
 
-var ssf []func(e *irc.Event, input string) (*summary, error)
+var ssfOnce sync.Once
+var ssf []func(e *irc.Event, input string) (*summaryResult, error)
 
-func (c *SearchCommand) searchChain() []func(e *irc.Event, input string) (*summary, error) {
-	if ssf == nil {
-		ssf = []func(e *irc.Event, input string) (*summary, error){
+func (c *SearchCommand) searchChain() []func(e *irc.Event, input string) (*summaryResult, error) {
+	ssfOnce.Do(func() {
+		ssf = []func(e *irc.Event, input string) (*summaryResult, error){
 			c.searchBing,
 			c.searchDuckDuckGo,
 			c.searchStartPage,
 		}
-	}
+	})
 
 	return ssf
 }
 
-func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summaryResult, error) {
 	logger := log.Logger()
 	logger.Debugf(e, "searching bing for %s", input)
 	query := url.QueryEscape(input)
@@ -167,7 +169,7 @@ func (c *SearchCommand) searchBing(e *irc.Event, input string) (*summary, error)
 	return createSearchResultSummary(e, title, link), nil
 }
 
-func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summaryResult, error) {
 	logger := log.Logger()
 
 	logger.Infof(e, "searching duckduckgo for %s", input)
@@ -207,7 +209,7 @@ func (c *SearchCommand) searchDuckDuckGo(e *irc.Event, input string) (*summary, 
 	return createSearchResultSummary(e, style.Bold(title), link), nil
 }
 
-func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, error) {
+func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summaryResult, error) {
 	logger := log.Logger()
 	logger.Infof(e, "searching startpage for %s", input)
 	query := url.QueryEscape(input)
@@ -234,8 +236,8 @@ func (c *SearchCommand) searchStartPage(e *irc.Event, input string) (*summary, e
 	return createSearchResultSummary(e, style.Bold(title), link), nil
 }
 
-func createSearchResultSummary(e *irc.Event, title, url string) *summary {
-	s := createSummary()
+func createSearchResultSummary(e *irc.Event, title, url string) *summaryResult {
+	s := createSummaryResult()
 
 	if sc := registry.Command(SummaryCommandName); sc != nil {
 		dsc := sc.(*SummaryCommand)

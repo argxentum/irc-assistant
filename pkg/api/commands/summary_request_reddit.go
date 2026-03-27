@@ -4,12 +4,12 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/log"
 	"errors"
 )
 
-func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 	logger.Infof(e, "reddit request for %s", url)
@@ -23,7 +23,7 @@ func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*
 		return nil, errors.New("no posts found")
 	}
 
-	title := text.SanitizeSummaryContent(posts[0].Post.Title)
+	title := summary.Sanitize(posts[0].Post.Title)
 	if len(title) == 0 {
 		return nil, nil
 	}
@@ -42,5 +42,5 @@ func (c *SummaryCommand) redditRequest(e *irc.Event, doc *retriever.Document) (*
 		messages = append(messages, posts[0].Comment.FormattedBody())
 	}
 
-	return createSummary(messages...), nil
+	return createSummaryResult(messages...), nil
 }

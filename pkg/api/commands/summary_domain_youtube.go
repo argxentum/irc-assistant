@@ -22,7 +22,7 @@ const youTubeRetryDelay = 2 * time.Second
 var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
 var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
 
-func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	var data ytData
 
 	for attempt := 1; attempt <= youTubeMaxRetries; attempt++ {
@@ -62,7 +62,7 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summary, *mode
 	return c.parseYouTubeVideo(e, data)
 }
 
-func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summaryResult, *models.Source, error) {
 	title := ""
 	channel := ""
 	views := ""
@@ -144,7 +144,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 	if len(title) > 0 {
 		message = style.Bold(title)
 	} else {
-		return createSummary(), source, nil
+		return createSummaryResult(), source, nil
 	}
 
 	if len(channel) > 0 {
@@ -159,7 +159,7 @@ func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summary,
 
 	messages = append(messages, message)
 
-	return createSummary(messages...), source, nil
+	return createSummaryResult(messages...), source, nil
 }
 
 func shortenViewCount(input string) string {
@@ -178,7 +178,7 @@ func shortenViewCount(input string) string {
 	return fmt.Sprintf("%.1fB", float64(views)/1000000000)
 }
 
-func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summaryResult, *models.Source, error) {
 	tabs := data.Contents.TwoColumnBrowseResultsRenderer.Tabs
 	if len(tabs) == 0 {
 		return nil, nil, nil
@@ -253,7 +253,7 @@ func (c *SummaryCommand) parseYouTubePost(e *irc.Event, data ytData) (*summary, 
 	}
 
 	messages = append(messages, message)
-	return createSummary(messages...), source, nil
+	return createSummaryResult(messages...), source, nil
 }
 
 type ytData struct {

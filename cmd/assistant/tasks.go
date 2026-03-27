@@ -1,6 +1,7 @@
 package main
 
 import (
+	"assistant/pkg/api/commands"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/drudge"
 	"assistant/pkg/api/elapse"
@@ -8,7 +9,7 @@ import (
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -570,7 +571,17 @@ func processProxySummaryResponse(ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.ProxySummaryResponseTaskData)
 
 	logger := log.Logger()
-	logger.Debugf(nil, "processing proxy summary response for %s in %s", data.URL, data.Channel)
+	logger.Debugf(nil, "processing proxy summary response for %s in %s (request_id: %s)", data.URL, data.Channel, data.RequestID)
+
+	// If this response has a request ID, try to deliver it to a waiting summarization goroutine
+	if data.RequestID != "" {
+		if commands.ResolveProxySummaryWaiter(data.RequestID, data.Messages) {
+			logger.Debugf(nil, "proxy summary response delivered to waiter for request %s", data.RequestID)
+			return nil
+		}
+		// No waiter found — it timed out already. Fall through to send directly.
+		logger.Debugf(nil, "no waiter found for proxy summary request %s, sending directly", data.RequestID)
+	}
 
 	if len(data.Messages) == 0 {
 		return nil
@@ -609,7 +620,7 @@ func processProxyRedditSearchResponse(cfg *config.Config, ircs irc.IRC, task *mo
 
 	content := make([]string, 0)
 	for i, post := range posts {
-		title := text.SanitizeSummaryContent(post.Post.Title)
+		title := summary.Sanitize(post.Post.Title)
 		if len(title) == 0 {
 			continue
 		}

@@ -7,7 +7,7 @@ import (
 	"assistant/pkg/models"
 )
 
-func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseWikipedia(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	page, err := wikipedia.GetPageForURL(url, c.cfg.IRC.Nick+" (IRC bot)")
 	if err != nil {
 		return nil, nil, err

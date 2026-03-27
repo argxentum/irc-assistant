@@ -4,15 +4,17 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/models"
 	"slices"
+	"sync"
 
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 
-var dsf map[string]func(e *irc.Event, url string) (*summary, *models.Source, error)
+var dsfOnce sync.Once
+var dsf map[string]func(e *irc.Event, url string) (*summaryResult, *models.Source, error)
 
-func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url string) (*summary, *models.Source, error) {
-	if dsf == nil {
-		dsf = map[string]func(e *irc.Event, url string) (*summary, *models.Source, error){
+func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
+	dsfOnce.Do(func() {
+		dsf = map[string]func(e *irc.Event, url string) (*summaryResult, *models.Source, error){
 			c.cfg.Web.Domain: c.parseShortcut,
 			"youtube.com":    c.parseYouTube,
 			"youtu.be":       c.parseYouTube,
@@ -28,7 +30,7 @@ func (c *SummaryCommand) domainSummarization() map[string]func(e *irc.Event, url
 			"tiktok.com":     c.parseTikTok,
 			//"truthsocial.com": c.parseTruthSocial,
 		}
-	}
+	})
 
 	return dsf
 }
@@ -38,7 +40,7 @@ func (c *SummaryCommand) requiresDomainSummary(url string) bool {
 	return c.domainSummarization()[domain] != nil
 }
 
-func (c *SummaryCommand) domainSummary(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) domainSummary(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	domain := domainutil.Domain(url)
 	if c.domainSummarization()[domain] == nil {
 		return nil, nil, nil

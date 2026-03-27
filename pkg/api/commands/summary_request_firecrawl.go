@@ -3,6 +3,7 @@ package commands
 import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
+	"assistant/pkg/api/text"
 	"assistant/pkg/log"
 	"bytes"
 	"encoding/json"
@@ -38,7 +39,7 @@ type firecrawlResponseBody struct {
 	} `json:"data"`
 }
 
-func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 	logger.Infof(e, "trying firecrawl for %s", url)
@@ -89,7 +90,7 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 		return nil, fmt.Errorf("response is nil")
 	}
 
-	title := coalesce(
+	title := text.Coalesce(
 		respBody.Data.Metadata.Title1,
 		respBody.Data.Metadata.Title2,
 		respBody.Data.Metadata.Title3,
@@ -99,7 +100,7 @@ func (c *SummaryCommand) firecrawlRequest(e *irc.Event, doc *retriever.Document)
 		respBody.Data.Metadata.Title7,
 	)
 
-	description := coalesce(
+	description := text.Coalesce(
 		respBody.Data.Metadata.Description1,
 		respBody.Data.Metadata.Description2,
 		respBody.Data.Metadata.Description3,

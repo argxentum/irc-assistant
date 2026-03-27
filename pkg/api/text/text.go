@@ -89,10 +89,14 @@ func mustBeCapitalized(s string) bool {
 	return false
 }
 
-const defaultMaxLength = 256
-
-func SanitizeSummaryContent(s string) string {
-	return SanitizeToMaxLength(s, defaultMaxLength)
+func Coalesce(values ...string) string {
+	for _, s := range values {
+		s = strings.TrimSpace(s)
+		if len(s) > 0 {
+			return s
+		}
+	}
+	return ""
 }
 
 func SanitizeToMaxLength(s string, maxLength int) string {

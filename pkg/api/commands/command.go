@@ -207,12 +207,3 @@ func Tokens(input string) []string {
 	return strings.Split(text.SanitizeToMaxLength(input, 512), " ")
 }
 
-func coalesce(values ...string) string {
-	for _, s := range values {
-		s = strings.TrimSpace(s)
-		if len(s) > 0 {
-			return s
-		}
-	}
-	return ""
-}

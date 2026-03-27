@@ -6,7 +6,7 @@ import (
 	"assistant/pkg/api/marshaling"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"encoding/base64"
@@ -43,7 +43,7 @@ type Post struct {
 }
 
 func (p Post) FormattedTitle() string {
-	title := html.UnescapeString(text.SanitizeSummaryContent(p.Title))
+	title := html.UnescapeString(summary.Sanitize(p.Title))
 	return fmt.Sprintf("%s (r/%s, %s)", style.Bold(title), p.Subreddit, elapse.TimeDescription(time.Unix(int64(p.Created), 0)))
 }
 
@@ -88,12 +88,12 @@ func (c *Comment) IsFromModerator() bool {
 }
 
 func (c *Comment) FormattedBody() string {
-	comment := html.UnescapeString(text.SanitizeSummaryContent(c.Body))
+	comment := html.UnescapeString(summary.Sanitize(c.Body))
 
 	if c.Author == "[deleted]" {
-		return fmt.Sprintf("Top comment: %s", style.Italics(text.SanitizeSummaryContent(comment)))
+		return fmt.Sprintf("Top comment: %s", style.Italics(summary.Sanitize(comment)))
 	} else {
-		return fmt.Sprintf("Top comment, by u/%s: %s", c.Author, style.Italics(text.SanitizeSummaryContent(comment)))
+		return fmt.Sprintf("Top comment, by u/%s: %s", c.Author, style.Italics(summary.Sanitize(comment)))
 	}
 }
 

@@ -18,7 +18,7 @@ const truthSocialAPIURL = "https://truthsocial.com/api/v1/statuses/%s"
 
 var truthSocialURLRegex = regexp.MustCompile(`^https?://(?:.*?\.)?truthsocial\.com/(.*?)/(\d+)$`)
 
-func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	urlComponents := truthSocialURLRegex.FindStringSubmatch(url)
 	if len(urlComponents) < 3 {
 		return nil, nil, fmt.Errorf("invalid Truth Social URL: %s", url)
@@ -74,7 +74,7 @@ func (c *SummaryCommand) parseTruthSocial(e *irc.Event, url string) (*summary, *
 		}
 	}
 
-	return createSummary(content), nil, nil
+	return createSummaryResult(content), nil, nil
 }
 
 type truthSocialPost struct {

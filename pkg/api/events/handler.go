@@ -28,7 +28,7 @@ type Handler interface {
 }
 
 type handler struct {
-	sync.Mutex
+	sync.RWMutex
 	ctx      context.Context
 	cfg      *config.Config
 	irc      irc.IRC
@@ -230,7 +230,10 @@ func (eh *handler) updateUserCommandHistory(e *irc.Event) {
 func (eh *handler) isUserCommandRateLimited(e *irc.Event) bool {
 	if isUserMask(e.Source) {
 		mask := irc.ParseMask(e.Source)
-		if c, ok := messageHistory[mask.Host]; ok {
+		eh.RLock()
+		c, ok := messageHistory[mask.Host]
+		eh.RUnlock()
+		if ok {
 			if time.Since(c) < userCommandRateLimitDuration {
 				eh.Lock()
 				messageHistory[mask.Host] = time.Now()
@@ -277,7 +280,10 @@ func (eh *handler) isTemporarilyIgnoredUser(e *irc.Event) bool {
 
 	mask := irc.ParseMask(e.Source)
 
-	if t, ok := temporarilyIgnoredUserMasks[mask.Host]; ok {
+	eh.RLock()
+	t, ok := temporarilyIgnoredUserMasks[mask.Host]
+	eh.RUnlock()
+	if ok {
 		if time.Now().Unix() < t {
 			logger.Debugf(e, "user %s remains temporarily ignored until %d", mask.Host, t)
 			return true

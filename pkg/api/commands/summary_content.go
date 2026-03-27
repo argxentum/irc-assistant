@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-var csf map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error)
+var csf map[string]func(e *irc.Event, doc *retriever.Document) (*summaryResult, error)
 
-func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	if csf == nil {
-		csf = map[string]func(e *irc.Event, doc *retriever.Document) (*summary, error){
+		csf = map[string]func(e *irc.Event, doc *retriever.Document) (*summaryResult, error){
 			"https://joinmastodon.org/apps": c.parseMastodon,
 		}
 	}
@@ -18,7 +18,7 @@ func (c *SummaryCommand) contentSummarization() map[string]func(e *irc.Event, do
 	return csf
 }
 
-func (c *SummaryCommand) contentSummary(e *irc.Event, doc *retriever.Document) (func(e *irc.Event, doc *retriever.Document) (*summary, error), error) {
+func (c *SummaryCommand) contentSummary(e *irc.Event, doc *retriever.Document) (func(e *irc.Event, doc *retriever.Document) (*summaryResult, error), error) {
 	if doc == nil || doc.Body == nil {
 		return nil, nil
 	}

@@ -23,7 +23,7 @@ const tikTokItemDetailURL = "https://www.tiktok.com/api/customtdk/item/?itemId=%
 var tikTokVideoURLRegex = regexp.MustCompile(`^https://(?:www\.)?tiktok.com/(.*?)/video/(\d+)`)
 var jsonDataRegex = regexp.MustCompile(`<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">(.*?)</script>`)
 
-func (c *SummaryCommand) parseTikTok(e *irc.Event, url string) (*summary, *models.Source, error) {
+func (c *SummaryCommand) parseTikTok(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
 
 	if !tikTokVideoURLRegex.MatchString(url) {
@@ -165,7 +165,7 @@ func (c *SummaryCommand) parseTikTok(e *irc.Event, url string) (*summary, *model
 		}
 	}
 
-	return &summary{messages: []string{message}}, src, nil
+	return &summaryResult{messages: []string{message}}, src, nil
 }
 
 type tikTokVideoData struct {

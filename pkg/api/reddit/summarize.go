@@ -3,7 +3,7 @@ package reddit
 import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/retriever"
-	"assistant/pkg/api/text"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"bytes"
@@ -58,7 +58,7 @@ func summarizePost(ctx context.Context, cfg *config.Config, url string) ([]strin
 		return nil, errors.New("post not found")
 	}
 
-	title := text.SanitizeSummaryContent(post.Post.Title)
+	title := summary.Sanitize(post.Post.Title)
 	if len(title) == 0 {
 		return nil, nil
 	}

@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/text"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
 	"fmt"
@@ -95,8 +96,8 @@ func (c *BingSimpleAnswerCommand) Execute(e *irc.Event) {
 	secondary2 := node.Find("li.b_secondaryFocus").First().Text()
 
 	label = strings.TrimSpace(label)
-	answer := strings.TrimSpace(coalesce(answer1, answer2))
-	secondary := strings.TrimSpace(coalesce(secondary1, secondary2))
+	answer := strings.TrimSpace(text.Coalesce(answer1, answer2))
+	secondary := strings.TrimSpace(text.Coalesce(secondary1, secondary2))
 
 	if len(label) == 0 || len(answer) == 0 {
 		logger.Warningf(e, "error parsing bing search results for %s", input)

@@ -44,10 +44,7 @@ func (gl *gcpLogger) Close() error {
 }
 
 func (gl *gcpLogger) Log(l Labeler, message string, severity Severity) {
-	var labels map[string]string
-	if l != nil {
-		labels = l.Labels()
-	}
+	labels := safeLabels(l)
 	gl.logger.Log(logging.Entry{Payload: message, Severity: logging.Severity(severity), Labels: labels})
 }
 
@@ -145,6 +142,18 @@ func (gl *gcpLogger) Emergencyf(l Labeler, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	gl.Log(l, message, Emergency)
 	fmt.Printf("%s [Z] %s\n", timestamp(), message)
+}
+
+func safeLabels(l Labeler) (labels map[string]string) {
+	if l == nil {
+		return nil
+	}
+	defer func() {
+		if recover() != nil {
+			labels = nil
+		}
+	}()
+	return l.Labels()
 }
 
 func timestamp() string {

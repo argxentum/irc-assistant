@@ -11,7 +11,7 @@ import (
 	"github.com/bobesa/go-domain-util/domainutil"
 )
 
-func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Document) (*summary, error) {
+func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 
