@@ -257,10 +257,12 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if isValidCanonicalLink(ub.url, canonicalLink) {
 		ub.actual = ub.url
 		ub.url = canonicalLink
-		doc, err = c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(ub.url))
+		canonicalDoc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(ub.url))
 		if err != nil {
-			logger.Debugf(e, "error retrieving canonical document for %s: %v", ub.url, err)
-			return
+			logger.Debugf(e, "error retrieving canonical document for %s, continuing with original: %v", ub.url, err)
+			ub.url = ub.actual
+		} else {
+			doc = canonicalDoc
 		}
 	}
 

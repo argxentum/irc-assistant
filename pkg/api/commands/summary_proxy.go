@@ -63,7 +63,7 @@ func removeProxySummaryWaiter(requestID string) {
 
 func (c *SummaryCommand) proxySummaryRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
 	logger := log.Logger()
-	logger.Debugf(e, "attempting proxy summary for %s", doc.URL)
+	logger.Infof(e, "proxy request for %s", doc.URL)
 
 	requestID := uuid.NewString()
 	ch := RegisterProxySummaryWaiter(requestID)
