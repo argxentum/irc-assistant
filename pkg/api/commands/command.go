@@ -31,6 +31,7 @@ type Command interface {
 	Usages() []string
 	AllowedInPrivateMessages() bool
 	Authorizer() CommandAuthorizer
+	IsAuthorized(e *irc.Event, channel string, callback func(bool))
 	CanExecute(e *irc.Event) bool
 	Execute(e *irc.Event)
 	Replyf(e *irc.Event, message string, args ...any)
@@ -58,6 +59,10 @@ func defaultCommandStub(ctx context.Context, cfg *config.Config, ircs irc.IRC) *
 
 func (cs *commandStub) Authorizer() CommandAuthorizer {
 	return cs.authorizer
+}
+
+func (cs *commandStub) IsAuthorized(e *irc.Event, channel string, callback func(bool)) {
+	cs.authorizer.IsAuthorized(e, channel, callback)
 }
 
 func (cs *commandStub) isTriggerValid(c Command, e *irc.Event, trigger string) bool {

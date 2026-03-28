@@ -196,4 +196,5 @@ func (cr *commandRegistry) RegisterCommands() {
 	cr.commands[ShortcutDeleteCommandName] = NewShortcutDeleteCommand(cr.ctx, cr.cfg, cr.irc)
 	cr.commands[UserPenaltiesName] = NewUserPenaltiesCommand(cr.ctx, cr.cfg, cr.irc)
 	//cr.commands[ReconnectCommandName] = NewReconnectCommand(cr.ctx, cr.cfg, cr.irc)
+	cr.commands[AuthCommandName] = NewAuthCommand(cr.ctx, cr.cfg, cr.irc)
 }

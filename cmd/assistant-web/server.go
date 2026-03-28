@@ -36,5 +36,9 @@ func (s *server) start() {
 	http.HandleFunc("/chat/{id}", s.llmSessionHandler)
 	http.HandleFunc("/chat/{id}/poll", s.llmSessionPollHandler)
 
+	// dashboard routes
+	http.HandleFunc("/dashboard/{token}", s.dashboardAuthHandler)
+	http.HandleFunc("/dashboard", s.dashboardHandler)
+
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }

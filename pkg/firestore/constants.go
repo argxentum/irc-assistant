@@ -13,4 +13,5 @@ const (
 	pathDisinformationSources = "disinformation-sources"
 	pathShortcuts             = "shortcuts"
 	pathLLMResponses          = "llm-responses"
+	pathAuthTokens            = "auth-tokens"
 )

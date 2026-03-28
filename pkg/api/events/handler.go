@@ -187,7 +187,7 @@ func (eh *handler) Handle(e *irc.Event) {
 		}
 
 		if f := eh.FindMatchingCommand(e); f != nil {
-			f.Authorizer().IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
+			f.IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
 				if !authorized {
 					logger.Warningf(e, "unauthorized attempt by %s to use %s", e.From, tokens[0])
 

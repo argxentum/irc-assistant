@@ -66,6 +66,7 @@ type WebConfig struct {
 	Port            int
 	ExternalRootURL string `yaml:"external_root_url"`
 	DefaultRedirect string `yaml:"default_redirect"`
+	SessionSecret   string `yaml:"session_secret"`
 }
 
 type NickServConfig struct {
