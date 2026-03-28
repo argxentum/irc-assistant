@@ -2,6 +2,7 @@ package commands
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -86,5 +87,5 @@ func (c *AuthCommand) Execute(e *irc.Event) {
 	}
 
 	url := fmt.Sprintf("%s/dashboard/%s", c.cfg.Web.ExternalRootURL, token.Token)
-	c.Replyf(e, "Dashboard access: %s (expires in %s, single use)", url, models.AuthTokenExpiry)
+	c.Replyf(e, "Dashboard access: %s (expires in %s, single use)", url, elapse.FutureTimeDescriptionConcise(token.ExpiresAt))
 }

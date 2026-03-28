@@ -93,7 +93,7 @@ func (s *server) dashboardAuthHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  expiry,
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
