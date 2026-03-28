@@ -99,7 +99,7 @@
             </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
-            <table id="users-table" class="w-full hidden">
+            <table id="users-table" class="w-full hidden md:table">
                 <thead>
                     <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
                         <th class="pb-2">Status</th>
@@ -110,6 +110,7 @@
                 </thead>
                 <tbody id="users-body"></tbody>
             </table>
+            <div id="users-cards" class="space-y-2 hidden md:!hidden"></div>
         </div>
     </div>
 
@@ -155,15 +156,36 @@
             return `<button onclick="${onclick}" class="text-xs px-2 py-1 rounded cursor-pointer ${cls}">${label}</button>`;
         }
 
+        function userActions(user) {
+            if (user.status === 'offline') {
+                const nick = escapeAttr(user.nick);
+                return actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`);
+            }
+            if (protectedStatuses.has(user.status)) return '';
+            const nick = escapeAttr(user.nick);
+            return [
+                actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
+                actionButton('Ban', 'bg-red-800 hover:bg-red-700', `doAction('ban','${nick}')`),
+                user.status === '+'
+                    ? actionButton('Mute', 'bg-gray-700 hover:bg-gray-600', `doAction('mute','${nick}')`)
+                    : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
+                user.status === ''
+                    ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`)
+                    : ''
+            ].filter(Boolean).join(' ');
+        }
+
         async function loadUsers() {
             const loading = document.getElementById('users-loading');
             const error = document.getElementById('users-error');
             const table = document.getElementById('users-table');
             const body = document.getElementById('users-body');
+            const cards = document.getElementById('users-cards');
 
             loading.classList.remove('hidden');
             error.classList.add('hidden');
             table.classList.add('hidden');
+            cards.classList.add('hidden');
 
             try {
                 const resp = await fetch('/dashboard/api/users');
@@ -191,35 +213,37 @@
                 });
 
                 body.innerHTML = '';
+                cards.innerHTML = '';
                 for (const user of users) {
+                    const actions = userActions(user);
+                    const nickAttr = escapeAttr(user.nick);
+                    const hostAttr = escapeAttr(user.host);
+                    const statusLabel = statusLabels[user.status] || '';
+                    const statusColor = statusColors[user.status] || 'text-gray-500';
+
+                    // table row (desktop)
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-gray-700/50 text-sm';
-
-                    let actions = '';
-                    if (user.status === 'offline') {
-                        const nick = escapeAttr(user.nick);
-                        actions = actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`);
-                    } else if (!protectedStatuses.has(user.status)) {
-                        const nick = escapeAttr(user.nick);
-                        actions = [
-                            actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
-                            actionButton('Ban', 'bg-red-800 hover:bg-red-700', `doAction('ban','${nick}')`),
-                            user.status === '+'
-                                ? actionButton('Mute', 'bg-gray-700 hover:bg-gray-600', `doAction('mute','${nick}')`)
-                                : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
-                            user.status === ''
-                                ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`)
-                                : ''
-                        ].filter(Boolean).join(' ');
-                    }
-
                     tr.innerHTML = `
-                        <td class="py-2 ${statusColors[user.status] || 'text-gray-500'}">${statusLabels[user.status] || ''}</td>
-                        <td class="py-2"><a href="#" onclick="loadUser('${escapeAttr(user.nick)}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
-                        <td class="py-2"><a href="#" onclick="loadHostUsers('${escapeAttr(user.host)}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></td>
+                        <td class="py-2 ${statusColor}">${statusLabel}</td>
+                        <td class="py-2"><a href="#" onclick="loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
+                        <td class="py-2"><a href="#" onclick="loadHostUsers('${hostAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></td>
                         <td class="py-2 text-right space-x-1">${actions}</td>
                     `;
                     body.appendChild(tr);
+
+                    // card (mobile)
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-700/50 rounded-lg p-3 text-sm';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between mb-1">
+                            <a href="#" onclick="loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline font-medium">${escapeHtml(user.nick)}</a>
+                            ${statusLabel ? `<span class="${statusColor} text-xs">${statusLabel}</span>` : ''}
+                        </div>
+                        <div class="text-gray-400 text-xs mb-2"><a href="#" onclick="loadHostUsers('${hostAttr}'); return false;" class="hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></div>
+                        ${actions ? `<div class="flex flex-wrap gap-1">${actions}</div>` : ''}
+                    `;
+                    cards.appendChild(card);
                 }
 
                 const online = users.filter(u => u.status !== 'offline');
@@ -232,6 +256,7 @@
 
                 loading.classList.add('hidden');
                 table.classList.remove('hidden');
+                cards.classList.remove('hidden');
             } catch (e) {
                 loading.classList.add('hidden');
                 error.textContent = e.message;
@@ -436,10 +461,9 @@
 
         function filterUsers() {
             const q = document.getElementById('users-search').value.toLowerCase();
-            const rows = document.querySelectorAll('#users-body tr');
-            for (const row of rows) {
-                const text = row.textContent.toLowerCase();
-                row.classList.toggle('hidden', q && !text.includes(q));
+            for (const el of [...document.querySelectorAll('#users-body tr'), ...document.querySelectorAll('#users-cards > div')]) {
+                const text = el.textContent.toLowerCase();
+                el.classList.toggle('hidden', q && !text.includes(q));
             }
         }
 
