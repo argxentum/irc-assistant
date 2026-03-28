@@ -60,6 +60,11 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if action == "autovoice" {
+		s.handleAutoVoiceAction(w, session.Channel, req.Nick)
+		return
+	}
+
 	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
 		Action:   action,
 		Channel:  session.Channel,
@@ -77,43 +82,28 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (s *server) dashboardAutoVoiceHandler(w http.ResponseWriter, r *http.Request) {
-	session := s.validateDashboardSession(r)
-	if session == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var req dashboardActionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if req.Nick == "" {
-		http.Error(w, "Nick is required", http.StatusBadRequest)
-		return
-	}
-
+func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick string) {
 	fs := firestore.Get()
-	user, err := fs.GetUserByNick(session.Channel, req.Nick)
+	user, err := fs.GetUserByNick(channel, nick)
 	if err != nil || user == nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "user not found"})
 		return
 	}
 
-	err = fs.UpdateUser(session.Channel, user, map[string]any{"is_auto_voiced": true})
+	err = fs.UpdateUser(channel, user, map[string]any{"is_auto_voiced": true})
 	if err != nil {
 		log.Logger().Errorf(nil, "dashboard auto-voice failed: %s", err)
-		http.Error(w, "Update failed", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
 		return
 	}
 
-	// also unmute (voice) the user via IRC
+	// also voice the user via IRC
 	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
 		Action:  models.DashboardActionUnmute,
-		Channel: session.Channel,
-		Nick:    req.Nick,
+		Channel: channel,
+		Nick:    nick,
 	})
 	if err != nil {
 		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
@@ -121,10 +111,65 @@ func (s *server) dashboardAutoVoiceHandler(w http.ResponseWriter, r *http.Reques
 		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
 	}
 
-	log.Logger().Infof(nil, "dashboard: auto-voiced %s in %s", req.Nick, session.Channel)
+	log.Logger().Infof(nil, "dashboard: auto-voiced %s in %s", nick, channel)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardUserHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	nick := r.PathValue("nick")
+	if nick == "" {
+		http.Error(w, "Nick is required", http.StatusBadRequest)
+		return
+	}
+
+	user, err := firestore.Get().GetUserByNick(session.Channel, nick)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard user query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	if user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	type recentMessage struct {
+		Message string `json:"message"`
+		At      int64  `json:"at"`
+	}
+
+	messages := make([]recentMessage, 0, len(user.RecentMessages))
+	for _, m := range user.RecentMessages {
+		messages = append(messages, recentMessage{
+			Message: m.Message,
+			At:      m.At.Unix(),
+		})
+	}
+
+	result := map[string]any{
+		"nick":            user.Nick,
+		"user_id":         user.UserID,
+		"host":            user.Host,
+		"karma":           user.Karma,
+		"penalty":         user.Penalty,
+		"location":        user.Location,
+		"is_auto_voiced":  user.IsAutoVoiced,
+		"recent_messages": messages,
+		"created_at":      user.CreatedAt.Unix(),
+		"updated_at":      user.UpdatedAt.Unix(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Request) {
