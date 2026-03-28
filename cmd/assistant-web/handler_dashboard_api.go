@@ -163,6 +163,7 @@ func (s *server) dashboardUserHandler(w http.ResponseWriter, r *http.Request) {
 		"penalty":         user.Penalty,
 		"location":        user.Location,
 		"is_auto_voiced":  user.IsAutoVoiced,
+		"credibility":     credibilityScore(user),
 		"recent_messages": messages,
 		"created_at":      user.CreatedAt.Unix(),
 		"updated_at":      user.UpdatedAt.Unix(),
@@ -170,6 +171,15 @@ func (s *server) dashboardUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func credibilityScore(user *models.User) *float64 {
+	total := user.HighCredibilityCount + user.LowCredibilityCount
+	if total == 0 {
+		return nil
+	}
+	score := float64(user.HighCredibilityCount) / float64(total) * 100
+	return &score
 }
 
 func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Request) {

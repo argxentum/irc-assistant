@@ -36,6 +36,7 @@
                     <div class="text-gray-400">Karma</div><div id="user-karma"></div>
                     <div class="text-gray-400">Penalty</div><div id="user-penalty"></div>
                     <div class="text-gray-400">Location</div><div id="user-location"></div>
+                    <div class="text-gray-400">Credibility</div><div id="user-credibility"></div>
                     <div class="text-gray-400">Auto-voiced</div><div id="user-autovoiced"></div>
                     <div class="text-gray-400">First seen</div><div id="user-created"></div>
                     <div class="text-gray-400">Last seen</div><div id="user-updated"></div>
@@ -262,6 +263,15 @@
                 document.getElementById('user-karma').textContent = user.karma;
                 document.getElementById('user-penalty').textContent = user.penalty || '0';
                 document.getElementById('user-location').textContent = user.location || '-';
+                if (user.credibility != null) {
+                    const el = document.getElementById('user-credibility');
+                    const score = Math.round(user.credibility);
+                    el.textContent = score + '%';
+                    el.className = score >= 75 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
+                } else {
+                    document.getElementById('user-credibility').textContent = '-';
+                    document.getElementById('user-credibility').className = '';
+                }
                 document.getElementById('user-autovoiced').textContent = user.is_auto_voiced ? 'Yes' : 'No';
                 document.getElementById('user-created').textContent = formatDate(user.created_at);
                 document.getElementById('user-updated').textContent = formatDate(user.updated_at);
