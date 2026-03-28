@@ -631,7 +631,9 @@
                 renderHostUsers();
 
                 loading.classList.add('hidden');
-                if (hostUsersData.length === 0) {
+                if (!hostUsersData || hostUsersData.length === 0) {
+                    table.classList.add('hidden');
+                    document.getElementById('host-cards').classList.add('hidden');
                     error.textContent = 'No matching users found';
                     error.classList.remove('hidden');
                 } else {
@@ -669,7 +671,9 @@
                 renderHostUsers();
 
                 loading.classList.add('hidden');
-                if (hostUsersData.length === 0) {
+                if (!hostUsersData || hostUsersData.length === 0) {
+                    table.classList.add('hidden');
+                    document.getElementById('host-cards').classList.add('hidden');
                     error.textContent = 'No matching users found';
                     error.classList.remove('hidden');
                 } else {
