@@ -3,12 +3,14 @@ package models
 import "time"
 
 const (
-	DashboardActionListUsers = "list_users"
-	DashboardActionKick      = "kick"
-	DashboardActionBan       = "ban"
-	DashboardActionMute      = "mute"
-	DashboardActionUnban     = "unban"
-	DashboardActionUnmute    = "unmute"
+	DashboardActionListUsers  = "list_users"
+	DashboardActionKick       = "kick"
+	DashboardActionBan        = "ban"
+	DashboardActionMute       = "mute"
+	DashboardActionUnban      = "unban"
+	DashboardActionUnmute     = "unmute"
+	DashboardActionExpireBan  = "expire_ban"
+	DashboardActionExpireMute = "expire_mute"
 )
 
 type DashboardRequestTaskData struct {
@@ -16,6 +18,7 @@ type DashboardRequestTaskData struct {
 	Action    string `json:"action"`
 	Channel   string `json:"channel"`
 	Nick      string `json:"nick,omitempty"`
+	Mask      string `json:"mask,omitempty"`
 	Duration  string `json:"duration,omitempty"`
 	Reason    string `json:"reason,omitempty"`
 }

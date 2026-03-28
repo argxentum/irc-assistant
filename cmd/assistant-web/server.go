@@ -54,6 +54,8 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/api/users/host/{host}", s.dashboardUsersByHostHandler)
 	http.HandleFunc("/dashboard/api/user/{nick}", s.dashboardUserHandler)
 	http.HandleFunc("POST /dashboard/api/action/{action}", s.dashboardActionHandler)
+	http.HandleFunc("/dashboard/api/penalties", s.dashboardPenaltiesHandler)
+	http.HandleFunc("POST /dashboard/api/penalties/expire", s.dashboardExpirePenaltyHandler)
 
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }

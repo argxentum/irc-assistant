@@ -139,7 +139,7 @@
                         </span>
                         Show offline
                     </label>
-                    <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                    <button onclick="loadUsers(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                 </div>
             </div>
             <div class="relative mb-4">
@@ -160,6 +160,19 @@
                 <tbody id="users-body"></tbody>
             </table>
             <div id="users-cards" class="space-y-2 hidden"></div>
+        </div>
+
+        <div id="penalties-section" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+            <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                <h2 class="text-lg font-semibold mb-1">Temporary Bans</h2>
+                <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
+                <div id="bans-list" class="space-y-2 mt-3"></div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                <h2 class="text-lg font-semibold mb-1">Temporary Mutes</h2>
+                <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
+                <div id="mutes-list" class="space-y-2 mt-3"></div>
+            </div>
         </div>
     </div>
 
@@ -204,7 +217,7 @@
         }
 
         function doAction(action, nick, {extra = {}, label, description, toast} = {}) {
-            const colors = {'kick': 'bg-yellow-700 hover:bg-yellow-600', 'unmute': 'bg-green-700 hover:bg-green-600', 'autovoice': 'bg-blue-700 hover:bg-blue-600'};
+            const colors = {'kick': 'bg-orange-700 hover:bg-orange-600', 'unmute': 'bg-green-700 hover:bg-green-600', 'autovoice': 'bg-blue-700 hover:bg-blue-600'};
             label = label || action.charAt(0).toUpperCase() + action.slice(1);
             toast = toast || `${action}: ${nick}`;
             showConfirm(`${label} ${nick}?`, label, colors[action] || 'bg-blue-700 hover:bg-blue-600', async () => {
@@ -239,14 +252,14 @@
             if (protectedStatuses.has(user.status)) return '';
             const nick = escapeAttr(user.nick);
             return [
-                actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
-                actionButton('Ban', 'bg-red-800 hover:bg-red-700', `showActionPanel('ban','${nick}')`),
-                user.status === '+'
-                    ? actionButton('Mute', 'bg-gray-600 hover:bg-gray-500', `showActionPanel('mute','${nick}')`)
-                    : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}',{label:'Voice',description:'The user will be granted voice temporarily. It will not persist if they rejoin the channel.'})`),
                 user.status === ''
                     ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAction('autovoice','${nick}',{label:'Auto-voice',toast:'Auto-voiced: ${nick}',description:'The user will automatically be voiced each time they join the channel.'})`)
-                    : ''
+                    : '',
+                user.status === '+'
+                    ? actionButton('Mute', 'bg-yellow-800 hover:bg-yellow-700', `showActionPanel('mute','${nick}')`)
+                    : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}',{label:'Voice',description:'The user will be granted voice temporarily. It will not persist if they rejoin the channel.'})`),
+                actionButton('Kick', 'bg-orange-800 hover:bg-orange-700', `doAction('kick','${nick}')`),
+                actionButton('Ban', 'bg-red-800 hover:bg-red-700', `showActionPanel('ban','${nick}')`),
             ].filter(Boolean).join(' ');
         }
 
@@ -264,7 +277,7 @@
             document.getElementById('action-reason').value = '';
             const btn = document.getElementById('action-submit');
             btn.textContent = label;
-            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${action === 'ban' ? 'bg-red-700 hover:bg-red-600' : 'bg-gray-600 hover:bg-gray-500'}`;
+            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${action === 'ban' ? 'bg-red-700 hover:bg-red-600' : 'bg-yellow-700 hover:bg-yellow-600'}`;
             btn.onclick = submitAction;
             document.getElementById('action-overlay').classList.remove('hidden');
             document.getElementById('action-panel').classList.remove('hidden');
@@ -605,7 +618,110 @@
             if (e.key === 'Escape') { closeModal(); closeActionPanel(); closeConfirmPanel(); }
         });
 
+        async function loadPenalties() {
+            try {
+                const resp = await fetch('/dashboard/api/penalties');
+                const penalties = await resp.json();
+
+                const bans = penalties.filter(p => p.type === 'ban');
+                const mutes = penalties.filter(p => p.type === 'mute');
+
+                const section = document.getElementById('penalties-section');
+                const bansList = document.getElementById('bans-list');
+                const mutesList = document.getElementById('mutes-list');
+                const bansEmpty = document.getElementById('bans-empty');
+                const mutesEmpty = document.getElementById('mutes-empty');
+
+                bansList.innerHTML = '';
+                mutesList.innerHTML = '';
+
+                if (bans.length === 0 && mutes.length === 0) {
+                    section.classList.add('hidden');
+                    return;
+                }
+
+                section.classList.remove('hidden');
+
+                if (bans.length === 0) {
+                    bansEmpty.classList.remove('hidden');
+                } else {
+                    bansEmpty.classList.add('hidden');
+                    for (const b of bans) {
+                        bansList.appendChild(penaltyCard(b));
+                    }
+                }
+
+                if (mutes.length === 0) {
+                    mutesEmpty.classList.remove('hidden');
+                } else {
+                    mutesEmpty.classList.add('hidden');
+                    for (const m of mutes) {
+                        mutesList.appendChild(penaltyCard(m));
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load penalties:', e);
+            }
+        }
+
+        function penaltyCard(p) {
+            const card = document.createElement('div');
+            card.className = 'flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+
+            const label = p.type === 'ban' ? p.mask : p.nick;
+            const expires = new Date(p.due_at * 1000);
+            const now = Date.now();
+            const diff = expires - now;
+            let timeLeft;
+            if (diff <= 0) {
+                timeLeft = 'expiring...';
+            } else if (diff < 60000) {
+                timeLeft = `${Math.ceil(diff / 1000)}s`;
+            } else if (diff < 3600000) {
+                timeLeft = `${Math.ceil(diff / 60000)}m`;
+            } else if (diff < 86400000) {
+                const h = Math.floor(diff / 3600000);
+                const m = Math.ceil((diff % 3600000) / 60000);
+                timeLeft = m > 0 ? `${h}h ${m}m` : `${h}h`;
+            } else {
+                const d = Math.floor(diff / 86400000);
+                const h = Math.ceil((diff % 86400000) / 3600000);
+                timeLeft = h > 0 ? `${d}d ${h}h` : `${d}d`;
+            }
+
+            card.innerHTML = `
+                <div>
+                    <span class="font-mono text-gray-200">${label}</span>
+                    <span class="text-gray-400 ml-2">expires in ${timeLeft}</span>
+                </div>
+                <button onclick="expirePenalty('${p.id}', '${p.type}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-yellow-800 hover:bg-yellow-700">Expire Now</button>
+            `;
+            return card;
+        }
+
+        async function expirePenalty(id, type_) {
+            showConfirm('Expire this penalty now?', 'Expire', 'bg-yellow-700 hover:bg-yellow-600', async () => {
+                try {
+                    const resp = await fetch('/dashboard/api/penalties/expire', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id, type: type_})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showToast('Penalty expired', true);
+                        loadPenalties();
+                    } else {
+                        showToast(data.error || 'Failed to expire', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
+                }
+            });
+        }
+
         loadUsers();
+        loadPenalties();
         lucide.createIcons();
     </script>
 </body>

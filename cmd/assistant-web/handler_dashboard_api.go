@@ -226,6 +226,154 @@ func credibilityScore(user *models.User) *float64 {
 	return &score
 }
 
+func (s *server) dashboardPenaltiesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	fs := firestore.Get()
+
+	type penalty struct {
+		ID     string `json:"id"`
+		Type   string `json:"type"`
+		Nick   string `json:"nick,omitempty"`
+		Mask   string `json:"mask,omitempty"`
+		Host   string `json:"host,omitempty"`
+		DueAt  int64  `json:"due_at"`
+	}
+
+	var penalties []penalty
+
+	bans, err := fs.GetPendingTasks("", session.Channel, models.TaskTypeBanRemoval)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard penalties: error getting bans: %s", err)
+	} else {
+		for _, t := range bans {
+			data := t.Data.(models.BanRemovalTaskData)
+			penalties = append(penalties, penalty{
+				ID:   t.ID,
+				Type: "ban",
+				Mask: data.Mask,
+				DueAt: t.DueAt.Unix(),
+			})
+		}
+	}
+
+	mutes, err := fs.GetPendingTasks("", session.Channel, models.TaskTypeMuteRemoval)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard penalties: error getting mutes: %s", err)
+	} else {
+		for _, t := range mutes {
+			data := t.Data.(models.MuteRemovalTaskData)
+			penalties = append(penalties, penalty{
+				ID:   t.ID,
+				Type: "mute",
+				Nick: data.Nick,
+				Host: data.Host,
+				DueAt: t.DueAt.Unix(),
+			})
+		}
+	}
+
+	if penalties == nil {
+		penalties = []penalty{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(penalties)
+}
+
+func (s *server) dashboardExpirePenaltyHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		ID   string `json:"id"`
+		Type string `json:"type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	fs := firestore.Get()
+	var taskType string
+
+	switch req.Type {
+	case "ban":
+		taskType = models.TaskTypeBanRemoval
+	case "mute":
+		taskType = models.TaskTypeMuteRemoval
+	default:
+		http.Error(w, "Invalid penalty type", http.StatusBadRequest)
+		return
+	}
+
+	tasks, err := fs.GetPendingTasks("", session.Channel, taskType)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard expire penalty: error getting tasks: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "failed to find task"})
+		return
+	}
+
+	var task *models.Task
+	for _, t := range tasks {
+		if t.ID == req.ID {
+			task = t
+			break
+		}
+	}
+
+	if task == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "task not found"})
+		return
+	}
+
+	// execute the removal action via IRC
+	reqData := models.DashboardRequestTaskData{
+		Channel: session.Channel,
+	}
+	if req.Type == "ban" {
+		data := task.Data.(models.BanRemovalTaskData)
+		reqData.Action = models.DashboardActionExpireBan
+		reqData.Mask = data.Mask
+	} else {
+		data := task.Data.(models.MuteRemovalTaskData)
+		reqData.Action = models.DashboardActionExpireMute
+		reqData.Nick = data.Nick
+	}
+
+	resp, err := s.dashboardRequest(reqData)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard expire penalty action failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "action failed"})
+		return
+	}
+
+	if !resp.Success {
+		log.Logger().Warningf(nil, "dashboard expire penalty: IRC action failed for %s: %s", req.ID, resp.Error)
+	}
+
+	// cancel the scheduled task
+	task.Status = models.TaskStatusCancelled
+	if err := fs.CompleteTask(task); err != nil {
+		log.Logger().Errorf(nil, "dashboard expire penalty: error cancelling task %s: %s", req.ID, err)
+	}
+
+	log.Logger().Infof(nil, "dashboard: expired %s penalty %s", req.Type, req.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {

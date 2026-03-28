@@ -40,6 +40,10 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardUserAction(ircs, data)
 			case models.DashboardActionUnmute:
 				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionExpireBan:
+				resp = handleDashboardExpireBan(ircs, data)
+			case models.DashboardActionExpireMute:
+				resp = handleDashboardExpireMute(ircs, data)
 			default:
 				resp = models.NewDashboardResponseTask(data.RequestID, data.Action, false, "unknown action", nil)
 			}
@@ -143,6 +147,32 @@ func handleDashboardUserAction(ircs irc.IRC, data models.DashboardRequestTaskDat
 		ircs.Voice(data.Channel, data.Nick)
 		logger.Infof(nil, "dashboard: unmuted %s in %s", data.Nick, data.Channel)
 	}
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardExpireBan(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	if data.Mask == "" {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "mask is required", nil)
+	}
+
+	ircs.Unban(data.Channel, data.Mask)
+	logger.Infof(nil, "dashboard: expired ban %s from %s", data.Mask, data.Channel)
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardExpireMute(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	if data.Nick == "" {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "nick is required", nil)
+	}
+
+	ircs.Voice(data.Channel, data.Nick)
+	logger.Infof(nil, "dashboard: expired mute for %s in %s", data.Nick, data.Channel)
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
 }
