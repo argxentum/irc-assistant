@@ -55,6 +55,20 @@
             </div>
         </div>
 
+        <div id="confirm-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeConfirmPanel()"></div>
+        <div id="confirm-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="confirm-title" class="text-lg font-semibold"></h2>
+                <button onclick="closeConfirmPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeConfirmPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                <button id="confirm-submit" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer"></button>
+            </div>
+        </div>
+
         <div id="action-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeActionPanel()"></div>
         <div id="action-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -162,25 +176,43 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        async function doAction(action, nick, extra = {}) {
-            if (!confirm(`${action} ${nick}?`)) return;
+        function showConfirm(title, btnLabel, btnClass, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            const btn = document.getElementById('confirm-submit');
+            btn.textContent = btnLabel;
+            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${btnClass}`;
+            btn.onclick = () => { closeConfirmPanel(); onConfirm(); };
+            document.getElementById('confirm-overlay').classList.remove('hidden');
+            document.getElementById('confirm-panel').classList.remove('hidden');
+            lucide.createIcons();
+        }
 
-            try {
-                const resp = await fetch(`/dashboard/api/action/${action}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nick, ...extra})
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    showToast(`${action}: ${nick}`, true);
-                    setTimeout(loadUsers, 1000);
-                } else {
-                    showToast(data.error || 'Action failed', false);
+        function closeConfirmPanel() {
+            document.getElementById('confirm-panel').classList.add('hidden');
+            document.getElementById('confirm-overlay').classList.add('hidden');
+        }
+
+        function doAction(action, nick, extra = {}) {
+            const colors = {'kick': 'bg-yellow-700 hover:bg-yellow-600', 'unmute': 'bg-green-700 hover:bg-green-600'};
+            const label = action.charAt(0).toUpperCase() + action.slice(1);
+            showConfirm(`${label} ${nick}?`, label, colors[action] || 'bg-blue-700 hover:bg-blue-600', async () => {
+                try {
+                    const resp = await fetch(`/dashboard/api/action/${action}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({nick, ...extra})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showToast(`${action}: ${nick}`, true);
+                        setTimeout(loadUsers, 1000);
+                    } else {
+                        showToast(data.error || 'Action failed', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
                 }
-            } catch (e) {
-                showToast(e.message, false);
-            }
+            });
         }
 
         function actionButton(label, cls, onclick) {
@@ -362,24 +394,25 @@
             return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
-        async function doAutoVoice(nick) {
-            if (!confirm(`Auto-voice ${nick}?`)) return;
-            try {
-                const resp = await fetch('/dashboard/api/action/autovoice', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nick})
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    showToast(`Auto-voiced: ${nick}`, true);
-                    setTimeout(loadUsers, 1000);
-                } else {
-                    showToast(data.error || 'Action failed', false);
+        function doAutoVoice(nick) {
+            showConfirm(`Auto-voice ${nick}?`, 'Auto-voice', 'bg-blue-700 hover:bg-blue-600', async () => {
+                try {
+                    const resp = await fetch('/dashboard/api/action/autovoice', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({nick})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showToast(`Auto-voiced: ${nick}`, true);
+                        setTimeout(loadUsers, 1000);
+                    } else {
+                        showToast(data.error || 'Action failed', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
                 }
-            } catch (e) {
-                showToast(e.message, false);
-            }
+            });
         }
 
         async function toggleAutoVoice() {
@@ -578,7 +611,7 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeActionPanel(); }
+            if (e.key === 'Escape') { closeModal(); closeActionPanel(); closeConfirmPanel(); }
         });
 
         loadUsers();
