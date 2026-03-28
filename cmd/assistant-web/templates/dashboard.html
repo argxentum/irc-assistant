@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard - {{.channel}}</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://unpkg.com/lucide-static@latest/font/lucide.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <div class="max-w-5xl mx-auto p-6">
@@ -23,7 +23,7 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Users with host: <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
                 <button onclick="closeHostPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
-                    <i class="lucide lucide-x text-lg"></i>
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <div id="host-loading" class="text-gray-400">Loading...</div>
@@ -244,6 +244,7 @@
         }
 
         loadUsers();
+        lucide.createIcons();
     </script>
 </body>
 </html>
