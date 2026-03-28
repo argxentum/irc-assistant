@@ -189,7 +189,7 @@
                         <input id="temp-bans-search" type="text" placeholder="Filter..." oninput="filterTempBans()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                     </div>
                     <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
-                    <div id="bans-list" class="space-y-2"></div>
+                    <div id="bans-list" class="space-y-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
                     <div class="flex items-center justify-between mb-1">
@@ -201,7 +201,7 @@
                         <input id="temp-mutes-search" type="text" placeholder="Filter..." oninput="filterTempMutes()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                     </div>
                     <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
-                    <div id="mutes-list" class="space-y-2"></div>
+                    <div id="mutes-list" class="space-y-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
             </div>
         </div>
@@ -799,7 +799,7 @@
                     }
                     if (b.set_at) {
                         const d = new Date(b.set_at * 1000);
-                        meta += ` on ${d.toLocaleDateString()}`;
+                        meta += ` on ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
                     }
 
                     const escapedMask = b.mask.replace(/\\/g, '\\\\').replace(/'/g, "\\'");

@@ -412,7 +412,7 @@ func (s *service) ListBans(channel string, callback func(bans []*BanEntry)) {
 		}
 
 		if len(tokens) >= 7 {
-			ts, err := strconv.ParseInt(tokens[6], 10, 64)
+			ts, err := strconv.ParseInt(strings.TrimSpace(tokens[6]), 10, 64)
 			if err == nil {
 				t := time.Unix(ts, 0)
 				entry.SetAt = &t
