@@ -183,7 +183,10 @@
                     tr.className = 'border-b border-gray-700/50 text-sm';
 
                     let actions = '';
-                    if (!protectedStatuses.has(user.status) && user.status !== 'offline') {
+                    if (user.status === 'offline') {
+                        const nick = escapeAttr(user.nick);
+                        actions = actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`);
+                    } else if (!protectedStatuses.has(user.status)) {
                         const nick = escapeAttr(user.nick);
                         actions = [
                             actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
