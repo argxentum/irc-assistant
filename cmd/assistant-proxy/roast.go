@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const roastSystemPrompt = `You are a roast comedian on IRC. You will be given a user's recent messages and must deliver
@@ -42,11 +44,13 @@ func (p *proxy) handleRoast(requestID string, data models.ProxyLLMRequestTaskDat
 		return fmt.Errorf("empty roast response from ollama")
 	}
 
+	sessionID := uuid.NewString()
+
 	fs := firestore.Get()
-	r := models.NewLLMResponse(requestID, "", data.Channel, data.Nick, p.cfg.Proxy.Ollama.Model, data.Prompt, snapshot, true)
+	r := models.NewLLMResponse(requestID, sessionID, data.Channel, data.Nick, p.cfg.Proxy.Ollama.Model, data.Prompt, snapshot, true)
 	if err = fs.CreateLLMResponse(r); err != nil {
 		return fmt.Errorf("error saving roast response to firestore: %w", err)
 	}
 
-	return p.publishResponse(requestID, data.Channel, data.Nick, r.ID, "", false)
+	return p.publishResponse(requestID, data.Channel, data.Nick, r.ID, sessionID, false)
 }
