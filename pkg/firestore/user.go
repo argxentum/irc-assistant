@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/models"
 	"cloud.google.com/go/firestore"
 	"fmt"
+	"strings"
 )
 
 func (fs *Firestore) GetUser(channel string, mask *irc.Mask) (*models.User, error) {
@@ -77,14 +78,16 @@ func (fs *Firestore) GetUsersByUserID(channel, userID string) ([]*models.User, e
 func (fs *Firestore) GetUsersByMask(channel, nick, userID, host string) ([]*models.User, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers)
 
+	isWild := func(s string) bool { return s == "" || s == "*" || strings.Contains(s, "*") }
+
 	var filters []firestore.EntityFilter
-	if nick != "" && nick != "*" {
+	if !isWild(nick) {
 		filters = append(filters, firestore.PropertyFilter{Path: "nick", Operator: Equal, Value: nick})
 	}
-	if userID != "" && userID != "*" {
+	if !isWild(userID) {
 		filters = append(filters, firestore.PropertyFilter{Path: "user_id", Operator: Equal, Value: userID})
 	}
-	if host != "" && host != "*" {
+	if !isWild(host) {
 		filters = append(filters, firestore.PropertyFilter{Path: "host", Operator: Equal, Value: host})
 	}
 
