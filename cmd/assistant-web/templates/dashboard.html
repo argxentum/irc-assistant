@@ -233,7 +233,7 @@
                 actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
                 actionButton('Ban', 'bg-red-800 hover:bg-red-700', `showActionPanel('ban','${nick}')`),
                 user.status === '+'
-                    ? actionButton('Mute', 'bg-gray-900 hover:bg-gray-800', `showActionPanel('mute','${nick}')`)
+                    ? actionButton('Mute', 'bg-gray-600 hover:bg-gray-500', `showActionPanel('mute','${nick}')`)
                     : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
                 user.status === ''
                     ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`)
