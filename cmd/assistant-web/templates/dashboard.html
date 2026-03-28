@@ -70,8 +70,8 @@
                     <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
                         <th class="pb-2">Nick</th>
                         <th class="pb-2">User ID</th>
-                        <th class="pb-2">First Seen</th>
-                        <th class="pb-2">Last Seen</th>
+                        <th class="pb-2 cursor-pointer hover:text-gray-200" onclick="sortHostUsers('created_at')">First Seen <span id="host-sort-created"></span></th>
+                        <th class="pb-2 cursor-pointer hover:text-gray-200" onclick="sortHostUsers('updated_at')">Last Seen <span id="host-sort-updated"></span></th>
                     </tr>
                 </thead>
                 <tbody id="host-body"></tbody>
@@ -118,6 +118,9 @@
         const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500', 'offline': 'text-gray-600'};
         const protectedStatuses = new Set(['@', '%']);
         let currentUserNick = '';
+        let hostUsersData = [];
+        let hostSortField = 'updated_at';
+        let hostSortAsc = false;
 
         function showToast(message, success) {
             const toast = document.getElementById('toast');
@@ -366,6 +369,40 @@
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
         }
 
+        function renderHostUsers() {
+            const body = document.getElementById('host-body');
+            const sorted = [...hostUsersData].sort((a, b) => {
+                const diff = a[hostSortField] - b[hostSortField];
+                return hostSortAsc ? diff : -diff;
+            });
+
+            body.innerHTML = '';
+            for (const user of sorted) {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-700/50 text-sm';
+                tr.innerHTML = `
+                    <td class="py-2">${escapeHtml(user.nick)}</td>
+                    <td class="py-2 text-gray-400">${escapeHtml(user.user_id)}</td>
+                    <td class="py-2 text-gray-400">${formatDate(user.created_at)}</td>
+                    <td class="py-2 text-gray-400">${formatDate(user.updated_at)}</td>
+                `;
+                body.appendChild(tr);
+            }
+
+            document.getElementById('host-sort-created').textContent = hostSortField === 'created_at' ? (hostSortAsc ? '▲' : '▼') : '';
+            document.getElementById('host-sort-updated').textContent = hostSortField === 'updated_at' ? (hostSortAsc ? '▲' : '▼') : '';
+        }
+
+        function sortHostUsers(field) {
+            if (hostSortField === field) {
+                hostSortAsc = !hostSortAsc;
+            } else {
+                hostSortField = field;
+                hostSortAsc = false;
+            }
+            renderHostUsers();
+        }
+
         async function loadHostUsers(host) {
             const panel = document.getElementById('host-panel');
             const loading = document.getElementById('host-loading');
@@ -383,22 +420,10 @@
             try {
                 const resp = await fetch(`/dashboard/api/users/host/${encodeURIComponent(host)}`);
                 if (!resp.ok) throw new Error(await resp.text());
-                const users = await resp.json();
-
-                users.sort((a, b) => b.updated_at - a.updated_at);
-
-                body.innerHTML = '';
-                for (const user of users) {
-                    const tr = document.createElement('tr');
-                    tr.className = 'border-b border-gray-700/50 text-sm';
-                    tr.innerHTML = `
-                        <td class="py-2">${escapeHtml(user.nick)}</td>
-                        <td class="py-2 text-gray-400">${escapeHtml(user.user_id)}</td>
-                        <td class="py-2 text-gray-400">${formatDate(user.created_at)}</td>
-                        <td class="py-2 text-gray-400">${formatDate(user.updated_at)}</td>
-                    `;
-                    body.appendChild(tr);
-                }
+                hostUsersData = await resp.json();
+                hostSortField = 'updated_at';
+                hostSortAsc = false;
+                renderHostUsers();
 
                 loading.classList.add('hidden');
                 table.classList.remove('hidden');
