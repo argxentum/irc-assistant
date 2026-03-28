@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="max-w-5xl mx-auto p-4 md:p-6">
+    <div class="max-w-7xl mx-auto p-4 md:p-6">
         <div class="flex items-center justify-between mb-6 md:mb-8">
             <h1 class="text-xl md:text-2xl font-bold">Dashboard</h1>
             <div class="text-sm text-gray-400">
@@ -124,31 +124,31 @@
             <div id="host-cards" class="space-y-2 hidden"></div>
         </div>
 
-        <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                <div>
-                    <h2 class="text-lg font-semibold">Channel Users</h2>
-                    <div id="users-counts" class="text-sm text-gray-400"></div>
+        <div class="md:flex md:gap-6">
+            <div class="md:w-3/4 bg-gray-800 rounded-lg p-4 md:p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">Channel Users</h2>
+                        <div id="users-counts" class="text-sm text-gray-400"></div>
+                    </div>
+                    <div class="flex items-center justify-between md:justify-end gap-3">
+                        <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+                            <span class="relative inline-block w-9 h-5">
+                                <input id="include-offline" type="checkbox" onchange="loadUsers()" class="peer sr-only" />
+                                <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
+                                <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                            </span>
+                            Show offline
+                        </label>
+                        <button onclick="loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                    </div>
                 </div>
-                <div class="flex items-center justify-between md:justify-end gap-3">
-                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
-                        <span class="relative inline-block w-9 h-5">
-                            <input id="include-offline" type="checkbox" onchange="loadUsers()" class="peer sr-only" />
-                            <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
-                            <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
-                        </span>
-                        Show offline
-                    </label>
-                    <button onclick="loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                <div class="relative mb-4">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="users-search" type="text" placeholder="Filter users..." oninput="filterUsers()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                 </div>
-            </div>
-            <div class="relative mb-4">
-                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input id="users-search" type="text" placeholder="Filter users..." oninput="filterUsers()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
-            </div>
-            <div id="users-loading" class="text-gray-400">Loading...</div>
-            <div id="users-error" class="text-red-400 hidden"></div>
-            <div class="max-h-[52vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
+                <div id="users-loading" class="text-gray-400">Loading...</div>
+                <div id="users-error" class="text-red-400 hidden"></div>
                 <table id="users-table" class="w-full hidden">
                     <thead class="sticky top-0 bg-gray-800">
                         <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
@@ -162,23 +162,21 @@
                 </table>
                 <div id="users-cards" class="space-y-2 hidden"></div>
             </div>
-        </div>
 
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem]">
-                <div class="flex items-center justify-between mb-1">
-                    <h2 class="text-lg font-semibold">Channel Bans</h2>
-                    <span id="channel-bans-count" class="text-sm text-gray-400"></span>
+            <div class="md:w-1/4 space-y-6 mt-6 md:mt-0">
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Temporary Mutes</h2>
+                        <span id="temp-mutes-count" class="text-sm text-gray-400"></span>
+                    </div>
+                    <div class="relative mb-3 mt-2">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="temp-mutes-search" type="text" placeholder="Filter..." oninput="filterTempMutes()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
+                    <div id="mutes-list" class="space-y-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
-                <div class="relative mb-3 mt-2">
-                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input id="bans-search" type="text" placeholder="Filter bans..." oninput="filterBans()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
-                </div>
-                <div id="channel-bans-loading" class="text-sm text-gray-400">Loading...</div>
-                <div id="channel-bans-empty" class="text-sm text-gray-500 hidden">No bans</div>
-                <div id="channel-bans-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
-            </div>
-            <div id="penalties-section" class="space-y-6">
+
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
                     <div class="flex items-center justify-between mb-1">
                         <h2 class="text-lg font-semibold">Temporary Bans</h2>
@@ -191,17 +189,19 @@
                     <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
                     <div id="bans-list" class="space-y-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
-                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem]">
                     <div class="flex items-center justify-between mb-1">
-                        <h2 class="text-lg font-semibold">Temporary Mutes</h2>
-                        <span id="temp-mutes-count" class="text-sm text-gray-400"></span>
+                        <h2 class="text-lg font-semibold">Channel Bans</h2>
+                        <span id="channel-bans-count" class="text-sm text-gray-400"></span>
                     </div>
                     <div class="relative mb-3 mt-2">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input id="temp-mutes-search" type="text" placeholder="Filter..." oninput="filterTempMutes()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <input id="bans-search" type="text" placeholder="Filter bans..." oninput="filterBans()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                     </div>
-                    <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
-                    <div id="mutes-list" class="space-y-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                    <div id="channel-bans-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="channel-bans-empty" class="text-sm text-gray-500 hidden">No bans</div>
+                    <div id="channel-bans-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
             </div>
         </div>
