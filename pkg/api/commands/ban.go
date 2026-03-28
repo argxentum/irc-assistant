@@ -97,6 +97,24 @@ func (c *BanCommand) Execute(e *irc.Event) {
 func (c *BanCommand) ban(e *irc.Event, channel, mask, duration, reason string) {
 	logger := log.Logger()
 
+	// if mask is a plain nick (no ! or @), resolve to *!*@host
+	if !strings.Contains(mask, "!") && !strings.Contains(mask, "@") {
+		done := make(chan *irc.User, 1)
+		c.authorizer.GetUser(channel, mask, func(user *irc.User) {
+			done <- user
+		})
+		user := <-done
+
+		if user == nil {
+			c.Replyf(e, "%s not found in channel", mask)
+			return
+		}
+
+		nick := mask
+		mask = fmt.Sprintf("*!*@%s", user.Mask.Host)
+		logger.Debugf(e, "resolved %s to %s", nick, mask)
+	}
+
 	if len(duration) > 0 {
 		if len(reason) == 0 {
 			reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationDescription(duration))

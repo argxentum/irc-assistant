@@ -50,6 +50,7 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/{token}", s.dashboardAuthHandler)
 	http.HandleFunc("/dashboard", s.dashboardHandler)
 	http.HandleFunc("/dashboard/api/users", s.dashboardUsersHandler)
+	http.HandleFunc("POST /dashboard/api/action/{action}", s.dashboardActionHandler)
 
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
 }
@@ -82,7 +83,7 @@ func (s *server) receiveDashboardResponses() {
 	}
 }
 
-func (s *server) dashboardRequest(action, channel string) (*models.DashboardResponseTaskData, error) {
+func (s *server) dashboardRequest(data models.DashboardRequestTaskData) (*models.DashboardResponseTaskData, error) {
 	requestID := uuid.NewString()
 	ch := make(chan *models.DashboardResponseTaskData, 1)
 
@@ -90,7 +91,7 @@ func (s *server) dashboardRequest(action, channel string) (*models.DashboardResp
 	s.pending[requestID] = ch
 	s.mu.Unlock()
 
-	task := models.NewDashboardRequestTask(requestID, action, channel)
+	task := models.NewDashboardRequestTask(requestID, data)
 	if err := queue.GetDashboardRequest().Publish(task); err != nil {
 		s.mu.Lock()
 		delete(s.pending, requestID)

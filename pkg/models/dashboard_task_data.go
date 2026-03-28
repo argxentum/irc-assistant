@@ -35,18 +35,15 @@ type DashboardUser struct {
 	Status string `json:"status"`
 }
 
-func NewDashboardRequestTask(requestID, action, channel string) *Task {
+func NewDashboardRequestTask(requestID string, data DashboardRequestTaskData) *Task {
+	data.RequestID = requestID
 	return &Task{
 		ID:        requestID,
 		Type:      TaskTypeDashboardRequest,
 		CreatedAt: time.Now(),
 		DueAt:     time.Now(),
 		Status:    TaskStatusPending,
-		Data: DashboardRequestTaskData{
-			RequestID: requestID,
-			Action:    action,
-			Channel:   channel,
-		},
+		Data:      data,
 	}
 }
 

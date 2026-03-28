@@ -7,13 +7,15 @@
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="max-w-4xl mx-auto p-6">
+    <div class="max-w-5xl mx-auto p-6">
         <div class="flex items-center justify-between mb-8">
             <h1 class="text-2xl font-bold">Dashboard</h1>
             <div class="text-sm text-gray-400">
                 {{.nick}} &middot; {{.channel}}
             </div>
         </div>
+
+        <div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded text-sm hidden z-50"></div>
 
         <div class="bg-gray-800 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
@@ -28,6 +30,7 @@
                         <th class="pb-2">Status</th>
                         <th class="pb-2">Nick</th>
                         <th class="pb-2">Host</th>
+                        <th class="pb-2 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="users-body"></tbody>
@@ -36,19 +39,42 @@
     </div>
 
     <script>
-        const statusLabels = {
-            '@': 'op',
-            '%': 'hop',
-            '+': 'voice',
-            '': ''
-        };
+        const statusLabels = {'@': 'op', '%': 'hop', '+': 'voice', '': ''};
+        const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500'};
+        const protectedStatuses = new Set(['@', '%']);
 
-        const statusColors = {
-            '@': 'text-red-400',
-            '%': 'text-yellow-400',
-            '+': 'text-green-400',
-            '': 'text-gray-500'
-        };
+        function showToast(message, success) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'fixed top-4 right-4 px-4 py-2 rounded text-sm z-50 ' +
+                (success ? 'bg-green-800 text-green-200' : 'bg-red-800 text-red-200');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        async function doAction(action, nick, extra = {}) {
+            if (!confirm(`${action} ${nick}?`)) return;
+
+            try {
+                const resp = await fetch(`/dashboard/api/action/${action}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nick, ...extra})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`${action}: ${nick}`, true);
+                    setTimeout(loadUsers, 1000);
+                } else {
+                    showToast(data.error || 'Action failed', false);
+                }
+            } catch (e) {
+                showToast(e.message, false);
+            }
+        }
+
+        function actionButton(label, cls, onclick) {
+            return `<button onclick="${onclick}" class="text-xs px-2 py-1 rounded ${cls}">${label}</button>`;
+        }
 
         async function loadUsers() {
             const loading = document.getElementById('users-loading');
@@ -76,10 +102,24 @@
                 for (const user of users) {
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-gray-700/50 text-sm';
+
+                    let actions = '';
+                    if (!protectedStatuses.has(user.status)) {
+                        const nick = escapeAttr(user.nick);
+                        actions = [
+                            actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
+                            actionButton('Ban', 'bg-red-800 hover:bg-red-700', `doAction('ban','${nick}')`),
+                            user.status === '+'
+                                ? actionButton('Mute', 'bg-orange-800 hover:bg-orange-700', `doAction('mute','${nick}')`)
+                                : actionButton('Unmute', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`)
+                        ].join(' ');
+                    }
+
                     tr.innerHTML = `
                         <td class="py-2 ${statusColors[user.status] || 'text-gray-500'}">${statusLabels[user.status] || ''}</td>
                         <td class="py-2">${escapeHtml(user.nick)}</td>
                         <td class="py-2 text-gray-400">${escapeHtml(user.host)}</td>
+                        <td class="py-2 text-right space-x-1">${actions}</td>
                     `;
                     body.appendChild(tr);
                 }
@@ -97,6 +137,10 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function escapeAttr(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
         loadUsers();

@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
+	"fmt"
 )
 
 func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.IRC) {
@@ -26,6 +27,16 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 			switch data.Action {
 			case models.DashboardActionListUsers:
 				resp = handleDashboardListUsers(ircs, data)
+			case models.DashboardActionKick:
+				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionBan:
+				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionMute:
+				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionUnban:
+				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionUnmute:
+				resp = handleDashboardUserAction(ircs, data)
 			default:
 				resp = models.NewDashboardResponseTask(data.RequestID, data.Action, false, "unknown action", nil)
 			}
@@ -43,7 +54,7 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 
 func handleDashboardListUsers(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
 	done := make(chan []*irc.User, 1)
-	ircs.ListUsers(data.Channel, func(users []*irc.User) {
+	ircs.ListUsersByMask(data.Channel, "*!*@*", func(users []*irc.User) {
 		done <- users
 	})
 	users := <-done
@@ -59,4 +70,57 @@ func handleDashboardListUsers(ircs irc.IRC, data models.DashboardRequestTaskData
 	}
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", dashUsers)
+}
+
+func handleDashboardUserAction(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	// look up the target user to verify they exist and check their status
+	done := make(chan *irc.User, 1)
+	ircs.GetUser(data.Channel, data.Nick, func(user *irc.User) {
+		done <- user
+	})
+	user := <-done
+
+	if user == nil {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "user not found", nil)
+	}
+
+	// only allow actions on voiced and normal users
+	if user.Status == irc.ChannelStatusOperator || user.Status == irc.ChannelStatusHalfOperator {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false,
+			fmt.Sprintf("%s is %s and cannot be targeted", data.Nick, irc.StatusName(user.Status)), nil)
+	}
+
+	reason := data.Reason
+	if reason == "" {
+		reason = "dashboard action"
+	}
+
+	switch data.Action {
+	case models.DashboardActionKick:
+		ircs.Kick(data.Channel, data.Nick, reason)
+		logger.Infof(nil, "dashboard: kicked %s from %s", data.Nick, data.Channel)
+
+	case models.DashboardActionBan:
+		mask := fmt.Sprintf("*!*@%s", user.Mask.Host)
+		ircs.Kick(data.Channel, data.Nick, reason)
+		ircs.Ban(data.Channel, mask)
+		logger.Infof(nil, "dashboard: banned %s (%s) from %s", data.Nick, mask, data.Channel)
+
+	case models.DashboardActionMute:
+		ircs.Mute(data.Channel, data.Nick)
+		logger.Infof(nil, "dashboard: muted %s in %s", data.Nick, data.Channel)
+
+	case models.DashboardActionUnban:
+		mask := fmt.Sprintf("*!*@%s", user.Mask.Host)
+		ircs.Unban(data.Channel, mask)
+		logger.Infof(nil, "dashboard: unbanned %s (%s) from %s", data.Nick, mask, data.Channel)
+
+	case models.DashboardActionUnmute:
+		ircs.Voice(data.Channel, data.Nick)
+		logger.Infof(nil, "dashboard: unmuted %s in %s", data.Nick, data.Channel)
+	}
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
 }
