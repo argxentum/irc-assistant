@@ -776,6 +776,7 @@
             try {
                 const resp = await fetch('/dashboard/api/bans');
                 const bans = await resp.json();
+                if (bans) bans.sort((a, b) => (b.set_at || 0) - (a.set_at || 0));
 
                 loading.classList.add('hidden');
 
