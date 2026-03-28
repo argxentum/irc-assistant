@@ -43,7 +43,7 @@
 
         <div class="bg-gray-800 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Channel Users</h2>
+                <h2 class="text-lg font-semibold">Channel Users <span id="users-counts" class="text-sm font-normal text-gray-400"></span></h2>
                 <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
             </div>
             <div class="relative mb-4">
@@ -154,6 +154,10 @@
                     `;
                     body.appendChild(tr);
                 }
+
+                const voiced = users.filter(u => u.status === '@' || u.status === '%' || u.status === '+').length;
+                const unvoiced = users.length - voiced;
+                document.getElementById('users-counts').textContent = `(${voiced} voiced, ${unvoiced} unvoiced)`;
 
                 loading.classList.add('hidden');
                 table.classList.remove('hidden');
