@@ -27,6 +27,7 @@ type Config struct {
 	MarketData     APIKeyConfig `yaml:"market_data"`
 	Summary        SummaryConfig
 	Proxy          ProxyConfig
+	CloudTasks     CloudTasksConfig `yaml:"cloud_tasks"`
 }
 
 type IRCConfig struct {
@@ -167,6 +168,12 @@ type OllamaConfig struct {
 	Model          string
 	Prompt         string
 	SessionTimeout string `yaml:"session_timeout"`
+}
+
+type CloudTasksConfig struct {
+	Location  string `yaml:"location"`
+	Queue     string `yaml:"queue"`
+	AuthToken string `yaml:"auth_token"`
 }
 
 type SummaryConfig struct {

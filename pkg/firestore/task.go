@@ -2,11 +2,11 @@ package firestore
 
 import (
 	"assistant/pkg/api/irc"
+	"assistant/pkg/cloudtasks"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"cloud.google.com/go/firestore"
 )
@@ -16,57 +16,10 @@ func (fs *Firestore) Task(path string) (*models.Task, error) {
 }
 
 func (fs *Firestore) SetTask(task *models.Task) error {
-	return set(fs.ctx, fs.client, fs.taskPath(task), task)
+	return set(fs.ctx, fs.client, fs.TaskPath(task), task)
 }
 
-func (fs *Firestore) DueTasks() ([]*models.Task, error) {
-	logger := log.Logger()
-
-	scheduledTasksPath := fmt.Sprintf("%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks)
-	criteria := QueryCriteria{
-		Path: scheduledTasksPath,
-		Filter: firestore.PropertyFilter{
-			Path:     "due_at",
-			Operator: LessThanOrEqual,
-			Value:    time.Now(),
-		},
-		OrderBy: []OrderBy{
-			{
-				Field:     "due_at",
-				Direction: firestore.Asc,
-			},
-		},
-	}
-
-	scheduledTasks, err := query[models.ScheduledTask](fs.ctx, fs.client, criteria)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(scheduledTasks) == 0 {
-		return nil, nil
-	}
-
-	logger.Debugf(nil, "tasks due: %d", len(scheduledTasks))
-
-	tasks := make([]*models.Task, 0)
-
-	for _, scheduledTask := range scheduledTasks {
-		logger.Debugf(nil, "task due: %s", scheduledTask.Path)
-
-		task, err := get[models.Task](fs.ctx, fs.client, scheduledTask.Path)
-		if err != nil {
-			logger.Warningf(nil, "error getting task, %s", err)
-			continue
-		}
-
-		tasks = append(tasks, task)
-	}
-
-	return tasks, nil
-}
-
-func (fs *Firestore) taskPath(task *models.Task) string {
+func (fs *Firestore) TaskPath(task *models.Task) string {
 	switch task.Type {
 	case models.TaskTypeReconnect:
 		return fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, task.ID)
@@ -114,50 +67,41 @@ func (fs *Firestore) tasksPath(user, destination, taskType string) string {
 func (fs *Firestore) AddTask(task *models.Task) error {
 	logger := log.Logger()
 
-	path := fs.taskPath(task)
-	scheduled := models.NewScheduledTask(task.ID, task.Type, path, task.DueAt)
-	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, scheduled.ID)
-	logger.Debugf(nil, "creating scheduled task %s: %s", task.Type, scheduledPath)
+	path := fs.TaskPath(task)
+	logger.Debugf(nil, "creating task %s: %s", task.Type, path)
 
-	if err := create[models.ScheduledTask](fs.ctx, fs.client, scheduledPath, scheduled); err != nil {
+	if err := create(fs.ctx, fs.client, path, task); err != nil {
 		logger.Warningf(nil, "error creating task, %s", err)
 		return err
 	}
 
-	if path == scheduledPath {
-		logger.Debugf(nil, "scheduled task only: %s", path)
-		return nil
+	cloudTaskName, err := cloudtasks.Get().CreateTask(task)
+	if err != nil {
+		logger.Errorf(nil, "error creating cloud task %s: %s", task.ID, err)
+		return err
 	}
 
-	logger.Debugf(nil, "creating task %s: %s", task.Type, path)
-	return create(fs.ctx, fs.client, path, task)
+	task.CloudTaskName = cloudTaskName
+	if err := update(fs.ctx, fs.client, path, map[string]any{"cloud_task_name": cloudTaskName}); err != nil {
+		logger.Warningf(nil, "error storing cloud task name for %s: %s", task.ID, err)
+	}
+
+	return nil
 }
 
-func (fs *Firestore) RemoveScheduledTaskAndUpdateTask(task *models.Task) error {
+func (fs *Firestore) CompleteTask(task *models.Task) error {
 	logger := log.Logger()
 
-	scheduledPath := fmt.Sprintf("%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathTasks, task.ID)
-	scheduled, err := get[models.ScheduledTask](fs.ctx, fs.client, scheduledPath)
-	if err != nil {
-		logger.Warningf(nil, "error getting scheduled task, %s", err)
-		return err
+	path := fs.TaskPath(task)
+	logger.Debugf(nil, "completing task %s: %s", task.ID, path)
+
+	if task.Status == models.TaskStatusCancelled && len(task.CloudTaskName) > 0 {
+		if err := cloudtasks.Get().DeleteTask(task.CloudTaskName); err != nil {
+			logger.Warningf(nil, "error deleting cloud task %s: %s", task.CloudTaskName, err)
+		}
 	}
 
-	if scheduled == nil {
-		return nil
-	}
-
-	if err = remove(fs.ctx, fs.client, scheduledPath); err != nil {
-		logger.Warningf(nil, "error removing scheduled task, %s", err)
-		return err
-	}
-
-	if scheduled.Path == scheduledPath {
-		logger.Debugf(nil, "scheduled task only: %s", scheduledPath)
-		return nil
-	}
-
-	return update(fs.ctx, fs.client, scheduled.Path, map[string]interface{}{"status": task.Status, "runs": task.Runs})
+	return update(fs.ctx, fs.client, path, map[string]interface{}{"status": task.Status, "runs": task.Runs})
 }
 
 func (fs *Firestore) GetPendingTasks(user, destination, taskType string) ([]*models.Task, error) {

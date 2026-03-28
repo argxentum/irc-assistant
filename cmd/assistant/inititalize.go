@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
+	"assistant/pkg/cloudtasks"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -27,6 +28,13 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 	_, err := firestore.Initialize(ctx, cfg)
 	if err != nil {
 		panic(fmt.Errorf("error initializing firestore, %s", err))
+	}
+}
+
+func initializeCloudTasks(ctx context.Context, cfg *config.Config) {
+	_, err := cloudtasks.Initialize(ctx, cfg)
+	if err != nil {
+		panic(fmt.Errorf("error initializing cloud tasks, %s", err))
 	}
 }
 
@@ -129,6 +137,15 @@ func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, cha
 			panic(fmt.Errorf("error creating persistent task, %s", err))
 		}
 		logger.Debugf(nil, "channel %s inactivity persistent task created", channel)
+
+		// reload task to schedule it with Cloud Tasks
+		task, _ = fs.Task(path)
+	}
+
+	if task != nil {
+		if _, err := cloudtasks.Get().CreateTask(task); err != nil {
+			logger.Errorf(nil, "error scheduling cloud task for channel %s inactivity: %s", channel, err)
+		}
 	}
 }
 

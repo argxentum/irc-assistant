@@ -10,6 +10,7 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/summary"
+	"assistant/pkg/cloudtasks"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -34,6 +35,15 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 
 			isScheduledTask := true
 			var err error
+
+			// check if this task has been cancelled in Firestore since it was enqueued
+			if task.Status == models.TaskStatusPending {
+				path := fs.TaskPath(task)
+				if current, err := fs.Task(path); err == nil && current != nil && current.Status == models.TaskStatusCancelled {
+					logger.Debugf(nil, "skipping cancelled task %s: %s", task.ID, task.Type)
+					return
+				}
+			}
 
 			switch task.Type {
 			case models.TaskTypeReconnect:
@@ -80,7 +90,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 					task.Status = models.TaskStatusComplete
 				}
 
-				err = fs.RemoveScheduledTaskAndUpdateTask(task)
+				err = fs.CompleteTask(task)
 				if err != nil {
 					logger.Errorf(nil, "error completing %s, %s", task.ID, err)
 				}
@@ -106,6 +116,10 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				err = fs.SetTask(task)
 				if err != nil {
 					logger.Errorf(nil, "error updating %s, %s", task.ID, err)
+				}
+
+				if _, err := cloudtasks.Get().CreateTask(task); err != nil {
+					logger.Errorf(nil, "error rescheduling cloud task %s: %s", task.ID, err)
 				}
 			}
 		})
@@ -236,6 +250,23 @@ var previousInactivityPostURLs = make([]string, 0)
 
 func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
 	logger := log.Logger()
+
+	// stale guard: reload from Firestore to check if activity has pushed due_at forward
+	fs := firestore.Get()
+	channelName := task.Data.(models.PersistentTaskData).Channel
+	path := fs.PersistentChannelTaskPath(channelName, task.ID)
+	current, err := fs.Task(path)
+	if err != nil {
+		logger.Errorf(nil, "error reloading persistent task %s: %s", task.ID, err)
+	}
+	if current != nil && !current.IsDue() {
+		logger.Debugf(nil, "stale cloud task for %s, actual due at %s — rescheduling", task.ID, current.DueAt)
+		if _, err := cloudtasks.Get().CreateTask(current); err != nil {
+			logger.Errorf(nil, "error rescheduling stale cloud task %s: %s", task.ID, err)
+		}
+		return nil
+	}
+
 	logger.Debugf(nil, "processing persistent channel task for %s using model %s", task.ID, cfg.IRC.Inactivity.Model)
 
 	switch task.ID {

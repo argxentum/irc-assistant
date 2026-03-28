@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/events"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/cloudtasks"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
@@ -35,6 +36,9 @@ func main() {
 	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
 	defer queue.GetProxy().Close()
+
+	initializeCloudTasks(ctx, cfg)
+	defer cloudtasks.Get().Close()
 
 	svc := irc.NewIRC(ctx)
 	err = connect(ctx, svc, cfg)

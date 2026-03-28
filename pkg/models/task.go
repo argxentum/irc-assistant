@@ -38,13 +38,14 @@ const (
 const ScheduledTaskMaxRuns = 3
 
 type Task struct {
-	ID        string    `firestore:"id,omitempty" json:"id,omitempty"`
-	Type      string    `firestore:"type" json:"type"`
-	Runs      int       `firestore:"runs,omitempty" json:"runs,omitempty"`
-	CreatedAt time.Time `firestore:"created_at,omitempty" json:"created_at,omitempty"`
-	DueAt     time.Time `firestore:"due_at" json:"due_at"`
-	Status    string    `firestore:"status,omitempty" json:"status,omitempty"`
-	Data      any       `firestore:"data,omitempty" json:"data,omitempty"`
+	ID             string    `firestore:"id,omitempty" json:"id,omitempty"`
+	Type           string    `firestore:"type" json:"type"`
+	Runs           int       `firestore:"runs,omitempty" json:"runs,omitempty"`
+	CreatedAt      time.Time `firestore:"created_at,omitempty" json:"created_at,omitempty"`
+	DueAt          time.Time `firestore:"due_at" json:"due_at"`
+	Status         string    `firestore:"status,omitempty" json:"status,omitempty"`
+	CloudTaskName  string    `firestore:"cloud_task_name,omitempty" json:"cloud_task_name,omitempty"`
+	Data           any       `firestore:"data,omitempty" json:"data,omitempty"`
 }
 
 func newTask(taskType string, due time.Time, payload any) *Task {

@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/queue"
 	"context"
 	"os"
 )
@@ -28,6 +29,9 @@ func main() {
 
 	initializeFirestore(ctx, cfg)
 	defer firestore.Get().Close()
+
+	initializeQueue(ctx, cfg)
+	defer queue.GetDefault().Close()
 
 	s := &server{
 		ctx: ctx,

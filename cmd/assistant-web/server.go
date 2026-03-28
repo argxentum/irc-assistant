@@ -28,6 +28,9 @@ func (s *server) start() {
 	http.HandleFunc("/gif/{q}", s.giphySearchHandler)
 	http.HandleFunc("/s/{id}", s.shortcutHandler)
 
+	// task routes
+	http.HandleFunc("POST /tasks/execute", s.taskExecuteHandler)
+
 	// page routes
 	http.HandleFunc("/about", s.aboutPageHandler)
 	http.HandleFunc("/chat/{id}", s.llmSessionHandler)

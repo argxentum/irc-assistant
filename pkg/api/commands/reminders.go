@@ -128,7 +128,7 @@ func (c *RemindersCommand) cancelReminder(e *irc.Event, number int) {
 
 	reminder := reminders[number-1]
 	reminder.Status = models.TaskStatusCancelled
-	if err := fs.RemoveScheduledTaskAndUpdateTask(reminder); err != nil {
+	if err := fs.CompleteTask(reminder); err != nil {
 		log.Logger().Errorf(e, "error cancelling reminder, %s", err)
 		return
 	}
