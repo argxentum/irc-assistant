@@ -88,7 +88,7 @@ func (s *server) dashboardAuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     dashboardSessionCookie,
 		Value:    cookieValue,
-		Path:     "/dashboard",
+		Path:     "/",
 		Expires:  expiry,
 		HttpOnly: true,
 		Secure:   true,

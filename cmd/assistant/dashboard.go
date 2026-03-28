@@ -2,12 +2,15 @@ package main
 
 import (
 	"assistant/pkg/api/context"
+	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"fmt"
+	"time"
 )
 
 func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.IRC) {
@@ -104,12 +107,31 @@ func handleDashboardUserAction(ircs irc.IRC, data models.DashboardRequestTaskDat
 
 	case models.DashboardActionBan:
 		mask := fmt.Sprintf("*!*@%s", user.Mask.Host)
+		if data.Duration != "" {
+			dur, err := elapse.ParseDuration(data.Duration)
+			if err == nil {
+				reason = fmt.Sprintf("%s - temporarily banned for %s", reason, elapse.ParseDurationDescription(data.Duration))
+				task := models.NewBanRemovalTask(time.Now().Add(dur), mask, data.Channel)
+				if err := firestore.Get().AddTask(task); err != nil {
+					logger.Errorf(nil, "dashboard: error scheduling ban removal: %s", err)
+				}
+			}
+		}
 		ircs.Kick(data.Channel, data.Nick, reason)
 		ircs.Ban(data.Channel, mask)
 		logger.Infof(nil, "dashboard: banned %s (%s) from %s", data.Nick, mask, data.Channel)
 
 	case models.DashboardActionMute:
 		ircs.Mute(data.Channel, data.Nick)
+		if data.Duration != "" {
+			dur, err := elapse.ParseDuration(data.Duration)
+			if err == nil {
+				task := models.NewMuteRemovalTask(time.Now().Add(dur), data.Channel, data.Nick, user.Mask.Host, false)
+				if err := firestore.Get().AddTask(task); err != nil {
+					logger.Errorf(nil, "dashboard: error scheduling mute removal: %s", err)
+				}
+			}
+		}
 		logger.Infof(nil, "dashboard: muted %s in %s", data.Nick, data.Channel)
 
 	case models.DashboardActionUnban:

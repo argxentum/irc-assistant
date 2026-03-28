@@ -87,6 +87,6 @@ func (c *AuthCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	url := fmt.Sprintf("%s/dashboard/%s", c.cfg.Web.ExternalRootURL, token.Token)
+	url := fmt.Sprintf("%s/auth/%s", c.cfg.Web.ExternalRootURL, token.Token)
 	c.Replyf(e, "Dashboard access: %s (link expires in %s, session expires after %s)", url, elapse.FutureTimeDescriptionConcise(token.ExpiresAt), elapse.FutureTimeDescriptionConcise(time.Now().Add(c.cfg.Web.Dashboard.SessionExpiryDuration())))
 }

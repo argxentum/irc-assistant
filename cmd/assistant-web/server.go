@@ -47,7 +47,7 @@ func (s *server) start() {
 	http.HandleFunc("/chat/{id}/poll", s.llmSessionPollHandler)
 
 	// dashboard routes
-	http.HandleFunc("/dashboard/{token}", s.dashboardAuthHandler)
+	http.HandleFunc("/auth/{token}", s.dashboardAuthHandler)
 	http.HandleFunc("/dashboard", s.dashboardHandler)
 	http.HandleFunc("/dashboard/api/users", s.dashboardUsersHandler)
 	http.HandleFunc("/dashboard/api/users/all", s.dashboardAllUsersHandler)
