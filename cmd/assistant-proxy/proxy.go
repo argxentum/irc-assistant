@@ -9,6 +9,11 @@ import (
 	"sync"
 )
 
+const (
+	handlerLLM   = "llm"
+	handlerRoast = "roast"
+)
+
 type proxy struct {
 	cfg      *config.Config
 	sessions map[string]*session
@@ -52,8 +57,10 @@ func (p *proxy) handleLLMProxyRequest(task *models.Task) error {
 	logger.Debugf(nil, "handling proxy request %s [%s] in %s from %s", task.ID, data.Handler, data.Channel, data.Nick)
 
 	switch data.Handler {
-	case "llm":
+	case handlerLLM:
 		return p.handleLLM(task.ID, data)
+	case handlerRoast:
+		return p.handleRoast(task.ID, data)
 	default:
 		return fmt.Errorf("unknown handler: %s", data.Handler)
 	}
