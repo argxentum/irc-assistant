@@ -139,7 +139,7 @@
                             actionButton('Ban', 'bg-red-800 hover:bg-red-700', `doAction('ban','${nick}')`),
                             user.status === '+'
                                 ? actionButton('Mute', 'bg-gray-700 hover:bg-gray-600', `doAction('mute','${nick}')`)
-                                : actionButton('Unmute', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
+                                : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
                             user.status === ''
                                 ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`)
                                 : ''
