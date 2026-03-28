@@ -157,7 +157,7 @@
 
                 const voiced = users.filter(u => u.status === '@' || u.status === '%' || u.status === '+').length;
                 const unvoiced = users.length - voiced;
-                document.getElementById('users-counts').textContent = `(${voiced} voiced, ${unvoiced} unvoiced)`;
+                document.getElementById('users-counts').textContent = `(${users.length} users: ${voiced} voiced, ${unvoiced} unvoiced)`;
 
                 loading.classList.add('hidden');
                 table.classList.remove('hidden');
