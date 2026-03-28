@@ -51,7 +51,7 @@
                     <div class="text-gray-400">Last seen</div><div id="user-updated"></div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-400 mb-2">Recent Messages</h3>
-                <div id="user-messages" class="text-sm space-y-1 max-h-60 overflow-y-auto"></div>
+                <div id="user-messages" class="text-sm space-y-1 md:max-h-60 md:overflow-y-auto"></div>
             </div>
         </div>
 
@@ -375,9 +375,9 @@
                 const messagesDiv = document.getElementById('user-messages');
                 if (user.recent_messages && user.recent_messages.length > 0) {
                     messagesDiv.innerHTML = user.recent_messages.map(m =>
-                        `<div class="flex gap-3 border-b border-gray-700/50 py-1">
-                            <span class="text-gray-500 whitespace-nowrap text-xs">${formatDate(m.at)}</span>
-                            <span class="text-gray-300">${escapeHtml(m.message)}</span>
+                        `<div class="border-b border-gray-700/50 py-2">
+                            <div class="text-gray-300">${escapeHtml(m.message)}</div>
+                            <div class="text-gray-500 text-xs mt-1">${formatDate(m.at)}</div>
                         </div>`
                     ).join('');
                 } else {
