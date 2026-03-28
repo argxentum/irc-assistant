@@ -206,4 +206,3 @@ func (cs *commandStub) ExecuteSynthesizedEvent(orig *irc.Event, command, payload
 func Tokens(input string) []string {
 	return strings.Split(text.SanitizeToMaxLength(input, 512), " ")
 }
-
