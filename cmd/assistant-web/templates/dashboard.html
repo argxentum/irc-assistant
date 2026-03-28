@@ -381,7 +381,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-700/50 text-sm';
                 tr.innerHTML = `
-                    <td class="py-2">${escapeHtml(user.nick)}</td>
+                    <td class="py-2"><a href="#" onclick="closeHostPanel(); loadUser('${escapeAttr(user.nick)}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
                     <td class="py-2 text-gray-400">${escapeHtml(user.user_id)}</td>
                     <td class="py-2 text-gray-400">${formatDate(user.created_at)}</td>
                     <td class="py-2 text-gray-400">${formatDate(user.updated_at)}</td>
