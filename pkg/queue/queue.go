@@ -14,7 +14,8 @@ import (
 
 const defaultQueue = "default"
 const proxyQueue = "proxy"
-const dashboardQueue = "dashboard"
+const dashboardRequestQueue = "dashboard-request"
+const dashboardResponseQueue = "dashboard-response"
 
 var instances = map[string]Queue{}
 
@@ -33,8 +34,12 @@ func GetProxy() Queue {
 	return getNamed(proxyQueue)
 }
 
-func GetDashboard() Queue {
-	return getNamed(dashboardQueue)
+func GetDashboardRequest() Queue {
+	return getNamed(dashboardRequestQueue)
+}
+
+func GetDashboardResponse() Queue {
+	return getNamed(dashboardResponseQueue)
 }
 
 func getNamed(name string) Queue {
@@ -53,8 +58,12 @@ func InitializeProxy(ctx context.Context, cfg *config.Config, topic, subscriptio
 	return initializeNamed(ctx, cfg, proxyQueue, topic, subscription)
 }
 
-func InitializeDashboard(ctx context.Context, cfg *config.Config, topic, subscription string) (Queue, error) {
-	return initializeNamed(ctx, cfg, dashboardQueue, topic, subscription)
+func InitializeDashboardRequest(ctx context.Context, cfg *config.Config, topic, subscription string) (Queue, error) {
+	return initializeNamed(ctx, cfg, dashboardRequestQueue, topic, subscription)
+}
+
+func InitializeDashboardResponse(ctx context.Context, cfg *config.Config, topic, subscription string) (Queue, error) {
+	return initializeNamed(ctx, cfg, dashboardResponseQueue, topic, subscription)
 }
 
 func initializeNamed(ctx context.Context, cfg *config.Config, name, topic, subscription string) (Queue, error) {

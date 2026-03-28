@@ -59,14 +59,19 @@ func initializeQueues(ctx context.Context, cfg *config.Config) {
 		panic(fmt.Errorf("error clearing proxy queue, %s", err))
 	}
 
-	daq, err := queue.InitializeDashboard(ctx, cfg, cfg.Web.Dashboard.Queue.Topic, cfg.Web.Dashboard.Queue.Subscription)
+	daqReq, err := queue.InitializeDashboardRequest(ctx, cfg, cfg.Web.Dashboard.RequestQueue.Topic, cfg.Web.Dashboard.RequestQueue.Subscription)
 	if err != nil {
-		panic(fmt.Errorf("error initializing dashboard queue, %s", err))
+		panic(fmt.Errorf("error initializing dashboard request queue, %s", err))
 	}
 
-	err = daq.Clear()
+	err = daqReq.Clear()
 	if err != nil {
-		panic(fmt.Errorf("error clearing dashboard queue, %s", err))
+		panic(fmt.Errorf("error clearing dashboard request queue, %s", err))
+	}
+
+	_, err = queue.InitializeDashboardResponse(ctx, cfg, cfg.Web.Dashboard.ResponseQueue.Topic, "")
+	if err != nil {
+		panic(fmt.Errorf("error initializing dashboard response queue, %s", err))
 	}
 }
 

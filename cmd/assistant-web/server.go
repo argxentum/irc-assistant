@@ -58,7 +58,7 @@ func (s *server) receiveDashboardResponses() {
 	logger := log.Logger()
 	logger.Debug(nil, "listening for dashboard responses")
 
-	err := queue.GetDashboard().Receive(func(task *models.Task) {
+	err := queue.GetDashboardResponse().Receive(func(task *models.Task) {
 		if task.Type != models.TaskTypeDashboardResponse {
 			return
 		}
@@ -91,7 +91,7 @@ func (s *server) dashboardRequest(action, channel string) (*models.DashboardResp
 	s.mu.Unlock()
 
 	task := models.NewDashboardRequestTask(requestID, action, channel)
-	if err := queue.GetDashboard().Publish(task); err != nil {
+	if err := queue.GetDashboardRequest().Publish(task); err != nil {
 		s.mu.Lock()
 		delete(s.pending, requestID)
 		s.mu.Unlock()

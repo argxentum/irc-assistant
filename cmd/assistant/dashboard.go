@@ -13,7 +13,7 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 	logger := log.Logger()
 
 	go func() {
-		err := queue.GetDashboard().Receive(func(task *models.Task) {
+		err := queue.GetDashboardRequest().Receive(func(task *models.Task) {
 			if task.Type != models.TaskTypeDashboardRequest {
 				return
 			}
@@ -30,7 +30,7 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = models.NewDashboardResponseTask(data.RequestID, data.Action, false, "unknown action", nil)
 			}
 
-			if err := queue.GetDashboard().Publish(resp); err != nil {
+			if err := queue.GetDashboardResponse().Publish(resp); err != nil {
 				logger.Errorf(nil, "error publishing dashboard response: %s", err)
 			}
 		})

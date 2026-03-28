@@ -33,7 +33,8 @@ func main() {
 
 	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
-	defer queue.GetDashboard().Close()
+	defer queue.GetDashboardRequest().Close()
+	defer queue.GetDashboardResponse().Close()
 
 	s := &server{
 		ctx:     ctx,

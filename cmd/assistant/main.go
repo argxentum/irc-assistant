@@ -36,7 +36,8 @@ func main() {
 	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
 	defer queue.GetProxy().Close()
-	defer queue.GetDashboard().Close()
+	defer queue.GetDashboardRequest().Close()
+	defer queue.GetDashboardResponse().Close()
 
 	initializeCloudTasks(ctx, cfg)
 	defer cloudtasks.Get().Close()

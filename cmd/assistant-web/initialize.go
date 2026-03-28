@@ -28,8 +28,12 @@ func initializeQueues(ctx context.Context, cfg *config.Config) {
 	if err != nil {
 		panic(fmt.Errorf("error initializing queue, %s", err))
 	}
-	_, err = queue.InitializeDashboard(ctx, cfg, cfg.Web.Dashboard.Queue.Topic, cfg.Web.Dashboard.Queue.Subscription)
+	_, err = queue.InitializeDashboardRequest(ctx, cfg, cfg.Web.Dashboard.RequestQueue.Topic, "")
 	if err != nil {
-		panic(fmt.Errorf("error initializing dashboard queue, %s", err))
+		panic(fmt.Errorf("error initializing dashboard request queue, %s", err))
+	}
+	_, err = queue.InitializeDashboardResponse(ctx, cfg, cfg.Web.Dashboard.ResponseQueue.Topic, cfg.Web.Dashboard.ResponseQueue.Subscription)
+	if err != nil {
+		panic(fmt.Errorf("error initializing dashboard response queue, %s", err))
 	}
 }

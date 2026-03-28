@@ -71,7 +71,8 @@ type WebConfig struct {
 }
 
 type DashboardConfig struct {
-	Queue QueueConfig
+	RequestQueue  QueueConfig `yaml:"request_queue"`
+	ResponseQueue QueueConfig `yaml:"response_queue"`
 }
 
 type NickServConfig struct {
