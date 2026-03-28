@@ -148,18 +148,20 @@
             </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
-            <table id="users-table" class="w-full hidden">
-                <thead>
-                    <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
-                        <th class="pb-2">Status</th>
-                        <th class="pb-2">Nick</th>
-                        <th class="pb-2">Host</th>
-                        <th class="pb-2 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="users-body"></tbody>
-            </table>
-            <div id="users-cards" class="space-y-2 hidden"></div>
+            <div class="max-h-[70vh] overflow-y-auto">
+                <table id="users-table" class="w-full hidden">
+                    <thead class="sticky top-0 bg-gray-800">
+                        <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                            <th class="pb-2">Status</th>
+                            <th class="pb-2">Nick</th>
+                            <th class="pb-2">Host</th>
+                            <th class="pb-2 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-body"></tbody>
+                </table>
+                <div id="users-cards" class="space-y-2 hidden"></div>
+            </div>
         </div>
 
         <div id="penalties-section" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
