@@ -59,6 +59,49 @@ func (fs *Firestore) GetUsersByHost(channel, host string) ([]*models.User, error
 	return query[models.User](fs.ctx, fs.client, criteria)
 }
 
+func (fs *Firestore) GetUsersByUserID(channel, userID string) ([]*models.User, error) {
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers)
+
+	criteria := QueryCriteria{
+		Path: path,
+		Filter: firestore.PropertyFilter{
+			Path:     "user_id",
+			Operator: Equal,
+			Value:    userID,
+		},
+	}
+
+	return query[models.User](fs.ctx, fs.client, criteria)
+}
+
+func (fs *Firestore) GetUsersByMask(channel, nick, userID, host string) ([]*models.User, error) {
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers)
+
+	var filters []firestore.EntityFilter
+	if nick != "" && nick != "*" {
+		filters = append(filters, firestore.PropertyFilter{Path: "nick", Operator: Equal, Value: nick})
+	}
+	if userID != "" && userID != "*" {
+		filters = append(filters, firestore.PropertyFilter{Path: "user_id", Operator: Equal, Value: userID})
+	}
+	if host != "" && host != "*" {
+		filters = append(filters, firestore.PropertyFilter{Path: "host", Operator: Equal, Value: host})
+	}
+
+	if len(filters) == 0 {
+		return nil, nil
+	}
+
+	criteria := QueryCriteria{Path: path}
+	if len(filters) == 1 {
+		criteria.Filter = filters[0]
+	} else {
+		criteria.Filter = firestore.AndFilter{Filters: filters}
+	}
+
+	return query[models.User](fs.ctx, fs.client, criteria)
+}
+
 func (fs *Firestore) GetAllUsers(channel string) ([]*models.User, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers)
 	return list[models.User](fs.ctx, fs.client, path)

@@ -103,7 +103,7 @@
         <div id="host-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeHostPanel()"></div>
         <div id="host-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Users with host: <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
+                <h2 class="text-lg font-semibold"><span id="host-panel-label">Users with host:</span> <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
                 <button onclick="closeHostPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -614,6 +614,7 @@
             const table = document.getElementById('host-table');
             const body = document.getElementById('host-body');
 
+            document.getElementById('host-panel-label').textContent = 'Users with host:';
             document.getElementById('host-panel-host').textContent = host;
             document.getElementById('host-overlay').classList.remove('hidden');
             panel.classList.remove('hidden');
@@ -623,6 +624,36 @@
 
             try {
                 const resp = await fetch(`/dashboard/api/users/host/${encodeURIComponent(host)}`);
+                if (!resp.ok) throw new Error(await resp.text());
+                hostUsersData = await resp.json();
+                hostSortField = 'updated_at';
+                hostSortAsc = false;
+                renderHostUsers();
+
+                loading.classList.add('hidden');
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.textContent = e.message;
+                error.classList.remove('hidden');
+            }
+        }
+
+        async function loadMaskUsers(mask) {
+            const panel = document.getElementById('host-panel');
+            const loading = document.getElementById('host-loading');
+            const error = document.getElementById('host-error');
+            const table = document.getElementById('host-table');
+
+            document.getElementById('host-panel-label').textContent = 'Users matching:';
+            document.getElementById('host-panel-host').textContent = mask;
+            document.getElementById('host-overlay').classList.remove('hidden');
+            panel.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            table.classList.add('hidden');
+
+            try {
+                const resp = await fetch(`/dashboard/api/users/mask/${encodeURIComponent(mask)}`);
                 if (!resp.ok) throw new Error(await resp.text());
                 hostUsersData = await resp.json();
                 hostSortField = 'updated_at';
@@ -723,9 +754,13 @@
                 labelHtml = `<a href="#" onclick="loadUser('${escapedNick}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${label}</a>`;
             } else if (p.type === 'ban') {
                 const hostMatch = label.match(/@(.+)$/);
-                if (hostMatch) {
+                const hostIsExact = hostMatch && !hostMatch[1].includes('*');
+                const escapedLabel = label.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                if (hostIsExact) {
                     const escapedHost = hostMatch[1].replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     labelHtml = `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${label}</a>`;
+                } else if (label.match(/[^*!@]/)) {
+                    labelHtml = `<a href="#" onclick="loadMaskUsers('${escapedLabel}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${label}</a>`;
                 } else {
                     labelHtml = `<span class="font-mono text-gray-200">${label}</span>`;
                 }
@@ -808,9 +843,16 @@
                     const hostMatch = b.mask.match(/@(.+)$/);
                     const hostPart = hostMatch ? hostMatch[1] : '';
                     const escapedHost = hostPart.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const maskHtml = hostPart
-                        ? `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline break-all">${b.mask}</a>`
-                        : `<span class="font-mono text-gray-200 break-all">${b.mask}</span>`;
+                    const hostIsExact = hostPart && !hostPart.includes('*');
+                    const maskIsSearchable = b.mask.match(/[^*!@]/);
+                    let maskHtml;
+                    if (hostIsExact) {
+                        maskHtml = `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline break-all">${b.mask}</a>`;
+                    } else if (maskIsSearchable) {
+                        maskHtml = `<a href="#" onclick="loadMaskUsers('${escapedMask}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline break-all">${b.mask}</a>`;
+                    } else {
+                        maskHtml = `<span class="font-mono text-gray-200 break-all">${b.mask}</span>`;
+                    }
                     card.innerHTML = `
                         <div class="min-w-0">
                             ${maskHtml}

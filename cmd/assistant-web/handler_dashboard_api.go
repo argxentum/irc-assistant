@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/models"
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func (s *server) dashboardUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -429,6 +430,64 @@ func (s *server) dashboardExpirePenaltyHandler(w http.ResponseWriter, r *http.Re
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardUsersByMaskHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	mask := r.PathValue("mask")
+	if mask == "" {
+		http.Error(w, "Mask is required", http.StatusBadRequest)
+		return
+	}
+
+	// parse nick!userid@host
+	var nick, userID, host string
+	if atIdx := strings.LastIndex(mask, "@"); atIdx >= 0 {
+		host = mask[atIdx+1:]
+		left := mask[:atIdx]
+		if bangIdx := strings.Index(left, "!"); bangIdx >= 0 {
+			nick = left[:bangIdx]
+			userID = left[bangIdx+1:]
+		} else {
+			nick = left
+		}
+	} else {
+		nick = mask
+	}
+
+	users, err := firestore.Get().GetUsersByMask(session.Channel, nick, userID, host)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard users by mask query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type hostUser struct {
+		Nick      string `json:"nick"`
+		UserID    string `json:"user_id"`
+		Host      string `json:"host"`
+		CreatedAt int64  `json:"created_at"`
+		UpdatedAt int64  `json:"updated_at"`
+	}
+
+	result := make([]hostUser, 0, len(users))
+	for _, u := range users {
+		result = append(result, hostUser{
+			Nick:      u.Nick,
+			UserID:    u.UserID,
+			Host:      u.Host,
+			CreatedAt: u.CreatedAt.Unix(),
+			UpdatedAt: u.UpdatedAt.Unix(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Request) {
