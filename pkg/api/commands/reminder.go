@@ -35,7 +35,7 @@ func (c *ReminderCommand) Description() string {
 }
 
 func (c *ReminderCommand) Triggers() []string {
-	return []string{"reminder"}
+	return []string{"reminder", "remind"}
 }
 
 func (c *ReminderCommand) Usages() []string {
