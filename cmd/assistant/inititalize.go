@@ -58,6 +58,16 @@ func initializeQueues(ctx context.Context, cfg *config.Config) {
 	if err != nil {
 		panic(fmt.Errorf("error clearing proxy queue, %s", err))
 	}
+
+	daq, err := queue.InitializeDashboard(ctx, cfg, cfg.Web.Dashboard.Queue.Topic, cfg.Web.Dashboard.Queue.Subscription)
+	if err != nil {
+		panic(fmt.Errorf("error initializing dashboard queue, %s", err))
+	}
+
+	err = daq.Clear()
+	if err != nil {
+		panic(fmt.Errorf("error clearing dashboard queue, %s", err))
+	}
 }
 
 func initializeAssistant(ctx context.Context, cfg *config.Config, irc irc.IRC) {
@@ -81,6 +91,7 @@ func initializeAssistant(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 	}
 
 	processTasks(ctx, cfg, irc)
+	processDashboardRequests(ctx, cfg, irc)
 }
 
 func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, channel string) {

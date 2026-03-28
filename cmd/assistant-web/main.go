@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
+	"assistant/pkg/models"
 	"assistant/pkg/queue"
 	"context"
 	"os"
@@ -30,13 +31,18 @@ func main() {
 	initializeFirestore(ctx, cfg)
 	defer firestore.Get().Close()
 
-	initializeQueue(ctx, cfg)
+	initializeQueues(ctx, cfg)
 	defer queue.GetDefault().Close()
+	defer queue.GetDashboard().Close()
 
 	s := &server{
-		ctx: ctx,
-		cfg: cfg,
+		ctx:     ctx,
+		cfg:     cfg,
+		pending: make(map[string]chan *models.DashboardResponseTaskData),
 	}
+
+	// listen for dashboard responses
+	go s.receiveDashboardResponses()
 
 	s.start()
 }

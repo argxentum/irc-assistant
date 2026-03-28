@@ -15,7 +15,7 @@ import (
 )
 
 const dashboardSessionCookie = "dashboard_session"
-const dashboardSessionExpiry = 24 * time.Hour
+const dashboardSessionExpiry = 4 * time.Hour
 
 type dashboardSession struct {
 	Nick    string

@@ -14,9 +14,92 @@
                 {{.nick}} &middot; {{.channel}}
             </div>
         </div>
+
         <div class="bg-gray-800 rounded-lg p-6">
-            <p class="text-gray-400">Dashboard content coming soon.</p>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Channel Users</h2>
+                <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Refresh</button>
+            </div>
+            <div id="users-loading" class="text-gray-400">Loading...</div>
+            <div id="users-error" class="text-red-400 hidden"></div>
+            <table id="users-table" class="w-full hidden">
+                <thead>
+                    <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                        <th class="pb-2">Status</th>
+                        <th class="pb-2">Nick</th>
+                        <th class="pb-2">Host</th>
+                    </tr>
+                </thead>
+                <tbody id="users-body"></tbody>
+            </table>
         </div>
     </div>
+
+    <script>
+        const statusLabels = {
+            '@': 'op',
+            '%': 'hop',
+            '+': 'voice',
+            '': ''
+        };
+
+        const statusColors = {
+            '@': 'text-red-400',
+            '%': 'text-yellow-400',
+            '+': 'text-green-400',
+            '': 'text-gray-500'
+        };
+
+        async function loadUsers() {
+            const loading = document.getElementById('users-loading');
+            const error = document.getElementById('users-error');
+            const table = document.getElementById('users-table');
+            const body = document.getElementById('users-body');
+
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            table.classList.add('hidden');
+
+            try {
+                const resp = await fetch('/dashboard/api/users');
+                if (!resp.ok) throw new Error(await resp.text());
+                const users = await resp.json();
+
+                users.sort((a, b) => {
+                    const order = {'@': 0, '%': 1, '+': 2, '': 3};
+                    const diff = (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                    if (diff !== 0) return diff;
+                    return a.nick.toLowerCase().localeCompare(b.nick.toLowerCase());
+                });
+
+                body.innerHTML = '';
+                for (const user of users) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-700/50 text-sm';
+                    tr.innerHTML = `
+                        <td class="py-2 ${statusColors[user.status] || 'text-gray-500'}">${statusLabels[user.status] || ''}</td>
+                        <td class="py-2">${escapeHtml(user.nick)}</td>
+                        <td class="py-2 text-gray-400">${escapeHtml(user.host)}</td>
+                    `;
+                    body.appendChild(tr);
+                }
+
+                loading.classList.add('hidden');
+                table.classList.remove('hidden');
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.textContent = e.message;
+                error.classList.remove('hidden');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadUsers();
+    </script>
 </body>
 </html>

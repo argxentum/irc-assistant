@@ -23,9 +23,13 @@ func initializeFirestore(ctx context.Context, cfg *config.Config) {
 	}
 }
 
-func initializeQueue(ctx context.Context, cfg *config.Config) {
+func initializeQueues(ctx context.Context, cfg *config.Config) {
 	_, err := queue.InitializeDefault(ctx, cfg, cfg.Queue.Topic, "")
 	if err != nil {
 		panic(fmt.Errorf("error initializing queue, %s", err))
+	}
+	_, err = queue.InitializeDashboard(ctx, cfg, cfg.Web.Dashboard.Queue.Topic, cfg.Web.Dashboard.Queue.Subscription)
+	if err != nil {
+		panic(fmt.Errorf("error initializing dashboard queue, %s", err))
 	}
 }

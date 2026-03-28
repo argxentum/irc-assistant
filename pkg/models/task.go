@@ -27,6 +27,8 @@ const (
 	TaskTypeProxyInactivityResponse          = "proxy_inactivity_response"
 	TaskTypeProxyRedditSearchRequest         = "proxy_reddit_search_request"
 	TaskTypeProxyRedditSearchResponse        = "proxy_reddit_search_response"
+	TaskTypeDashboardRequest                 = "dashboard_request"
+	TaskTypeDashboardResponse                = "dashboard_response"
 )
 
 const (
@@ -130,6 +132,14 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypeProxyRedditSearchResponse:
 		if task.Data, err = deserializeTaskData[ProxyRedditSearchResponseTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeDashboardRequest:
+		if task.Data, err = deserializeTaskData[DashboardRequestTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeDashboardResponse:
+		if task.Data, err = deserializeTaskData[DashboardResponseTaskData](d); err != nil {
 			return nil, err
 		}
 	}

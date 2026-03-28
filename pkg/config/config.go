@@ -67,6 +67,11 @@ type WebConfig struct {
 	ExternalRootURL string `yaml:"external_root_url"`
 	DefaultRedirect string `yaml:"default_redirect"`
 	SessionSecret   string `yaml:"session_secret"`
+	Dashboard       DashboardConfig
+}
+
+type DashboardConfig struct {
+	Queue QueueConfig
 }
 
 type NickServConfig struct {
