@@ -73,8 +73,12 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Channel Users <span id="users-counts" class="text-sm font-normal text-gray-400"></span></h2>
                 <div class="flex items-center gap-3">
-                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                        <input id="include-offline" type="checkbox" onchange="loadUsers()" class="cursor-pointer" />
+                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+                        <span class="relative inline-block w-9 h-5">
+                            <input id="include-offline" type="checkbox" onchange="loadUsers()" class="peer sr-only" />
+                            <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
+                            <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                        </span>
                         Include offline
                     </label>
                     <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
