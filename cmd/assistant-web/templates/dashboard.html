@@ -255,7 +255,7 @@
             document.getElementById('action-reason').value = '';
             const btn = document.getElementById('action-submit');
             btn.textContent = label;
-            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${action === 'ban' ? 'bg-red-700 hover:bg-red-600' : 'bg-gray-800 hover:bg-gray-700'}`;
+            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${action === 'ban' ? 'bg-red-700 hover:bg-red-600' : 'bg-gray-600 hover:bg-gray-500'}`;
             btn.onclick = submitAction;
             document.getElementById('action-overlay').classList.remove('hidden');
             document.getElementById('action-panel').classList.remove('hidden');
