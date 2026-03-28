@@ -560,19 +560,6 @@
 
             body.innerHTML = '';
             cardsEl.innerHTML = '';
-            const table = document.getElementById('host-table');
-            const error = document.getElementById('host-error');
-            if (sorted.length === 0) {
-                table.classList.add('hidden');
-                cardsEl.classList.add('hidden');
-                error.textContent = 'No matching users found';
-                error.classList.remove('hidden');
-                return;
-            }
-            error.classList.add('hidden');
-            const isMobile = window.innerWidth < 768;
-            table.classList.toggle('hidden', isMobile);
-            cardsEl.classList.toggle('hidden', !isMobile);
             for (const user of sorted) {
                 const nickAttr = escapeAttr(user.nick);
 
@@ -644,6 +631,14 @@
                 renderHostUsers();
 
                 loading.classList.add('hidden');
+                if (hostUsersData.length === 0) {
+                    error.textContent = 'No matching users found';
+                    error.classList.remove('hidden');
+                } else {
+                    const isMobile = window.innerWidth < 768;
+                    table.classList.toggle('hidden', isMobile);
+                    document.getElementById('host-cards').classList.toggle('hidden', !isMobile);
+                }
             } catch (e) {
                 loading.classList.add('hidden');
                 error.textContent = e.message;
@@ -674,6 +669,14 @@
                 renderHostUsers();
 
                 loading.classList.add('hidden');
+                if (hostUsersData.length === 0) {
+                    error.textContent = 'No matching users found';
+                    error.classList.remove('hidden');
+                } else {
+                    const isMobile = window.innerWidth < 768;
+                    table.classList.toggle('hidden', isMobile);
+                    document.getElementById('host-cards').classList.toggle('hidden', !isMobile);
+                }
             } catch (e) {
                 loading.classList.add('hidden');
                 error.textContent = e.message;
