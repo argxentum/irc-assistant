@@ -8,9 +8,9 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
-    <div class="max-w-5xl mx-auto p-6">
-        <div class="flex items-center justify-between mb-8">
-            <h1 class="text-2xl font-bold">Dashboard</h1>
+    <div class="max-w-5xl mx-auto p-4 md:p-6">
+        <div class="flex items-center justify-between mb-6 md:mb-8">
+            <h1 class="text-xl md:text-2xl font-bold">Dashboard</h1>
             <div class="text-sm text-gray-400">
                 {{.nick}} &middot; {{.channel}}
             </div>
@@ -20,7 +20,7 @@
 
         <div id="modal-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeModal()"></div>
 
-        <div id="user-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg p-6 z-50 w-full max-w-2xl max-h-[80vh] overflow-y-auto hidden shadow-2xl">
+        <div id="user-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold"><span id="user-panel-nick"></span></h2>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
@@ -56,7 +56,7 @@
         </div>
 
         <div id="host-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeHostPanel()"></div>
-        <div id="host-panel" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800 rounded-lg p-6 z-50 w-full max-w-2xl max-h-[80vh] overflow-y-auto hidden shadow-2xl">
+        <div id="host-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Users with host: <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
                 <button onclick="closeHostPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
@@ -78,17 +78,17 @@
             </table>
         </div>
 
-        <div class="bg-gray-800 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
+        <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                 <h2 class="text-lg font-semibold">Channel Users <span id="users-counts" class="text-sm font-normal text-gray-400"></span></h2>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between md:justify-end gap-3">
                     <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
                         <span class="relative inline-block w-9 h-5">
                             <input id="include-offline" type="checkbox" onchange="loadUsers()" class="peer sr-only" />
                             <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
                             <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
                         </span>
-                        Show offline users?
+                        Show offline
                     </label>
                     <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                 </div>
@@ -99,7 +99,7 @@
             </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
-            <table id="users-table" class="w-full hidden md:table">
+            <table id="users-table" class="w-full hidden">
                 <thead>
                     <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
                         <th class="pb-2">Status</th>
@@ -110,7 +110,7 @@
                 </thead>
                 <tbody id="users-body"></tbody>
             </table>
-            <div id="users-cards" class="space-y-2 hidden md:!hidden"></div>
+            <div id="users-cards" class="space-y-2 hidden"></div>
         </div>
     </div>
 
@@ -255,8 +255,9 @@
                 document.getElementById('users-counts').textContent = counts;
 
                 loading.classList.add('hidden');
-                table.classList.remove('hidden');
-                cards.classList.remove('hidden');
+                const isMobile = window.innerWidth < 768;
+                table.classList.toggle('hidden', isMobile);
+                cards.classList.toggle('hidden', !isMobile);
             } catch (e) {
                 loading.classList.add('hidden');
                 error.textContent = e.message;
