@@ -9,6 +9,7 @@ import (
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
+	"time"
 )
 
 const AuthCommandName = "auth"
@@ -87,5 +88,5 @@ func (c *AuthCommand) Execute(e *irc.Event) {
 	}
 
 	url := fmt.Sprintf("%s/dashboard/%s", c.cfg.Web.ExternalRootURL, token.Token)
-	c.Replyf(e, "Dashboard access: %s (expires in %s, single use)", url, elapse.FutureTimeDescriptionConcise(token.ExpiresAt))
+	c.Replyf(e, "Dashboard access: %s (link expires in %s, session expires after %s)", url, elapse.FutureTimeDescriptionConcise(token.ExpiresAt), elapse.FutureTimeDescriptionConcise(time.Now().Add(c.cfg.Web.Dashboard.SessionExpiryDuration())))
 }

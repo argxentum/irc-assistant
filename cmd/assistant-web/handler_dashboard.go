@@ -15,7 +15,6 @@ import (
 )
 
 const dashboardSessionCookie = "dashboard_session"
-const dashboardSessionExpiry = 4 * time.Hour
 
 type dashboardSession struct {
 	Nick    string
@@ -83,7 +82,7 @@ func (s *server) dashboardAuthHandler(w http.ResponseWriter, r *http.Request) {
 		logger.Warningf(nil, "error marking auth token as used: %s", err)
 	}
 
-	expiry := time.Now().Add(dashboardSessionExpiry)
+	expiry := time.Now().Add(s.cfg.Web.Dashboard.SessionExpiryDuration())
 	cookieValue := s.signSessionCookie(token.Nick, token.Channel, expiry)
 
 	http.SetCookie(w, &http.Cookie{

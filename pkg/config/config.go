@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -71,8 +72,17 @@ type WebConfig struct {
 }
 
 type DashboardConfig struct {
+	SessionExpiry string      `yaml:"session_expiry"`
 	RequestQueue  QueueConfig `yaml:"request_queue"`
 	ResponseQueue QueueConfig `yaml:"response_queue"`
+}
+
+func (d DashboardConfig) SessionExpiryDuration() time.Duration {
+	dur, err := time.ParseDuration(d.SessionExpiry)
+	if err != nil {
+		return 4 * time.Hour
+	}
+	return dur
 }
 
 type NickServConfig struct {
