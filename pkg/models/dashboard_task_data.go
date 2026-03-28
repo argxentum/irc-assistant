@@ -11,6 +11,7 @@ const (
 	DashboardActionUnmute     = "unmute"
 	DashboardActionExpireBan  = "expire_ban"
 	DashboardActionExpireMute = "expire_mute"
+	DashboardActionListBans   = "list_bans"
 )
 
 type DashboardRequestTaskData struct {
@@ -36,6 +37,12 @@ type DashboardUser struct {
 	User   string `json:"user"`
 	Host   string `json:"host"`
 	Status string `json:"status"`
+}
+
+type DashboardBan struct {
+	Mask  string `json:"mask"`
+	SetBy string `json:"set_by,omitempty"`
+	SetAt int64  `json:"set_at,omitempty"`
 }
 
 func NewDashboardRequestTask(requestID string, data DashboardRequestTaskData) *Task {

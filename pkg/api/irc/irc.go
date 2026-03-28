@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,12 @@ const (
 type User struct {
 	Mask   *Mask
 	Status ChannelStatus
+}
+
+type BanEntry struct {
+	Mask  string
+	SetBy string
+	SetAt *time.Time
 }
 
 func UserByTrimmingStatusPrefix(u string) *User {
@@ -82,6 +89,7 @@ type IRC interface {
 	Kick(channel, nick, reason string)
 	Ban(channel, mask string)
 	Unban(channel, mask string)
+	ListBans(channel string, callback func(bans []*BanEntry))
 	Disconnect()
 }
 
@@ -382,6 +390,39 @@ func (s *service) Ban(channel, mask string) {
 
 func (s *service) Unban(channel, mask string) {
 	s.conn.Mode(channel, "-b", mask)
+}
+
+func (s *service) ListBans(channel string, callback func(bans []*BanEntry)) {
+	s.conn.SendRawf("MODE %s +b", channel)
+
+	bans := make([]*BanEntry, 0)
+
+	s.respondUntil(CodeBanListReply, CodeEndOfBanList, func(e *irce.Event) {
+		tokens := strings.Split(e.Raw, " ")
+		if len(tokens) < 5 {
+			return
+		}
+
+		entry := &BanEntry{
+			Mask: tokens[4],
+		}
+
+		if len(tokens) >= 6 {
+			entry.SetBy = tokens[5]
+		}
+
+		if len(tokens) >= 7 {
+			ts, err := strconv.ParseInt(tokens[6], 10, 64)
+			if err == nil {
+				t := time.Unix(ts, 0)
+				entry.SetAt = &t
+			}
+		}
+
+		bans = append(bans, entry)
+	}, func(e *irce.Event) {
+		callback(bans)
+	})
 }
 
 func (s *service) Disconnect() {

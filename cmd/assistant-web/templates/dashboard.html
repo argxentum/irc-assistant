@@ -20,7 +20,7 @@
 
         <div id="modal-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeModal()"></div>
 
-        <div id="user-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto hidden shadow-2xl">
+        <div id="user-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold"><span id="user-panel-nick"></span></h2>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
@@ -51,7 +51,7 @@
                     <div class="text-gray-400">Last seen</div><div id="user-updated"></div>
                 </div>
                 <h3 class="text-sm font-semibold text-gray-400 mb-2">Recent Messages</h3>
-                <div id="user-messages" class="text-sm space-y-1 md:max-h-60 md:overflow-y-auto"></div>
+                <div id="user-messages" class="text-sm space-y-1 md:max-h-60 md:overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
             </div>
         </div>
 
@@ -101,7 +101,7 @@
         </div>
 
         <div id="host-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeHostPanel()"></div>
-        <div id="host-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto hidden shadow-2xl">
+        <div id="host-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Users with host: <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
                 <button onclick="closeHostPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
@@ -139,7 +139,7 @@
                         </span>
                         Show offline
                     </label>
-                    <button onclick="loadUsers(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                    <button onclick="loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                 </div>
             </div>
             <div class="relative mb-4">
@@ -148,7 +148,7 @@
             </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
-            <div class="max-h-[70vh] overflow-y-auto">
+            <div class="max-h-[70vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
                 <table id="users-table" class="w-full hidden">
                     <thead class="sticky top-0 bg-gray-800">
                         <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
@@ -164,16 +164,24 @@
             </div>
         </div>
 
-        <div id="penalties-section" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 hidden">
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                <h2 class="text-lg font-semibold mb-1">Temporary Bans</h2>
-                <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
-                <div id="bans-list" class="space-y-2 mt-3"></div>
+                <h2 class="text-lg font-semibold mb-1">Channel Bans</h2>
+                <div id="channel-bans-loading" class="text-sm text-gray-400">Loading...</div>
+                <div id="channel-bans-empty" class="text-sm text-gray-500 hidden">No bans</div>
+                <div id="channel-bans-list" class="space-y-2 mt-3"></div>
             </div>
-            <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                <h2 class="text-lg font-semibold mb-1">Temporary Mutes</h2>
-                <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
-                <div id="mutes-list" class="space-y-2 mt-3"></div>
+            <div id="penalties-section" class="space-y-6">
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                    <h2 class="text-lg font-semibold mb-1">Temporary Bans</h2>
+                    <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
+                    <div id="bans-list" class="space-y-2 mt-3"></div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                    <h2 class="text-lg font-semibold mb-1">Temporary Mutes</h2>
+                    <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
+                    <div id="mutes-list" class="space-y-2 mt-3"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -722,7 +730,79 @@
             });
         }
 
+        async function loadBans() {
+            const loading = document.getElementById('channel-bans-loading');
+            const empty = document.getElementById('channel-bans-empty');
+            const list = document.getElementById('channel-bans-list');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/bans');
+                const bans = await resp.json();
+
+                loading.classList.add('hidden');
+
+                if (!bans || bans.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                for (const b of bans) {
+                    const card = document.createElement('div');
+                    card.className = 'flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+
+                    let meta = '';
+                    if (b.set_by) {
+                        const setter = b.set_by.split('!')[0];
+                        meta += `by ${setter}`;
+                    }
+                    if (b.set_at) {
+                        const d = new Date(b.set_at * 1000);
+                        meta += ` on ${d.toLocaleDateString()}`;
+                    }
+
+                    const escapedMask = b.mask.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    card.innerHTML = `
+                        <div>
+                            <span class="font-mono text-gray-200">${b.mask}</span>
+                            ${meta ? `<span class="text-gray-500 ml-2">${meta}</span>` : ''}
+                        </div>
+                        <button onclick="removeBan('${escapedMask}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-red-800 hover:bg-red-700">Remove</button>
+                    `;
+                    list.appendChild(card);
+                }
+            } catch (e) {
+                loading.classList.add('hidden');
+                console.error('Failed to load bans:', e);
+            }
+        }
+
+        function removeBan(mask) {
+            showConfirm(`Remove ban ${mask}?`, 'Remove', 'bg-red-700 hover:bg-red-600', async () => {
+                try {
+                    const resp = await fetch('/dashboard/api/bans/remove', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({mask})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showToast(`Removed ban: ${mask}`, true);
+                        loadBans();
+                    } else {
+                        showToast(data.error || 'Failed to remove ban', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
+                }
+            });
+        }
+
         loadUsers();
+        loadBans();
         loadPenalties();
         lucide.createIcons();
     </script>

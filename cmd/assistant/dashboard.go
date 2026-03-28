@@ -40,6 +40,8 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardUserAction(ircs, data)
 			case models.DashboardActionUnmute:
 				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionListBans:
+				resp = handleDashboardListBans(ircs, data)
 			case models.DashboardActionExpireBan:
 				resp = handleDashboardExpireBan(ircs, data)
 			case models.DashboardActionExpireMute:
@@ -175,4 +177,26 @@ func handleDashboardExpireMute(ircs irc.IRC, data models.DashboardRequestTaskDat
 	logger.Infof(nil, "dashboard: expired mute for %s in %s", data.Nick, data.Channel)
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardListBans(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	done := make(chan []*irc.BanEntry, 1)
+	ircs.ListBans(data.Channel, func(bans []*irc.BanEntry) {
+		done <- bans
+	})
+	bans := <-done
+
+	dashBans := make([]models.DashboardBan, 0, len(bans))
+	for _, b := range bans {
+		entry := models.DashboardBan{
+			Mask:  b.Mask,
+			SetBy: b.SetBy,
+		}
+		if b.SetAt != nil {
+			entry.SetAt = b.SetAt.Unix()
+		}
+		dashBans = append(dashBans, entry)
+	}
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", dashBans)
 }

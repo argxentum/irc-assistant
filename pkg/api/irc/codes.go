@@ -16,6 +16,8 @@ const (
 	CodeEndOfWhoIs   = "318"
 	CodeWhoReply     = "352"
 	CodeNamesReply   = "353"
+	CodeBanListReply = "367"
+	CodeEndOfBanList = "368"
 	CodeEndOfNames   = "366"
 	CodeEndOfMotd    = "376"
 	CodeNickReserved = "432"
