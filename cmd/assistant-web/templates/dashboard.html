@@ -795,7 +795,7 @@
                     let setByHtml = '';
                     if (b.set_by) {
                         const setter = b.set_by.split('!')[0];
-                        setByHtml = `<div class="text-gray-500 text-xs">by ${setter}</div>`;
+                        setByHtml = `<div class="text-gray-500 text-xs">by <span class="font-mono">${setter}</span></div>`;
                     }
                     let setAtHtml = '';
                     if (b.set_at) {
