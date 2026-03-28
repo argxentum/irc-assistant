@@ -44,7 +44,7 @@
         <div class="bg-gray-800 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Channel Users</h2>
-                <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Refresh</button>
+                <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
             </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
@@ -97,7 +97,7 @@
         }
 
         function actionButton(label, cls, onclick) {
-            return `<button onclick="${onclick}" class="text-xs px-2 py-1 rounded ${cls}">${label}</button>`;
+            return `<button onclick="${onclick}" class="text-xs px-2 py-1 rounded cursor-pointer ${cls}">${label}</button>`;
         }
 
         async function loadUsers() {
