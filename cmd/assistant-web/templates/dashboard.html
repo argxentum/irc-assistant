@@ -22,7 +22,7 @@
 
         <div id="user-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold"><span id="user-panel-nick"></span></h2>
+                <h2 class="text-lg font-semibold font-mono"><span id="user-panel-nick"></span></h2>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -31,8 +31,8 @@
             <div id="user-error" class="text-red-400 hidden"></div>
             <div id="user-content" class="hidden">
                 <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
-                    <div class="text-gray-400">User ID</div><div id="user-userid"></div>
-                    <div class="text-gray-400">Host</div><div id="user-host"></div>
+                    <div class="text-gray-400">User ID</div><div id="user-userid" class="font-mono"></div>
+                    <div class="text-gray-400">Host</div><div id="user-host" class="font-mono"></div>
                     <div class="text-gray-400">Auto-voiced</div>
                     <div>
                         <label class="inline-flex items-center cursor-pointer select-none">
@@ -165,22 +165,43 @@
         </div>
 
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                <h2 class="text-lg font-semibold mb-1">Channel Bans</h2>
+            <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col md:max-h-[calc(100vh-12rem)]">
+                <div class="flex items-center justify-between mb-1">
+                    <h2 class="text-lg font-semibold">Channel Bans</h2>
+                    <span id="channel-bans-count" class="text-sm text-gray-400"></span>
+                </div>
+                <div class="relative mb-3 mt-2">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="bans-search" type="text" placeholder="Filter bans..." oninput="filterBans()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
                 <div id="channel-bans-loading" class="text-sm text-gray-400">Loading...</div>
                 <div id="channel-bans-empty" class="text-sm text-gray-500 hidden">No bans</div>
-                <div id="channel-bans-list" class="space-y-2 mt-3"></div>
+                <div id="channel-bans-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
             </div>
             <div id="penalties-section" class="space-y-6">
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                    <h2 class="text-lg font-semibold mb-1">Temporary Bans</h2>
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Temporary Bans</h2>
+                        <span id="temp-bans-count" class="text-sm text-gray-400"></span>
+                    </div>
+                    <div class="relative mb-3 mt-2">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="temp-bans-search" type="text" placeholder="Filter..." oninput="filterTempBans()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
                     <div id="bans-empty" class="text-sm text-gray-500 hidden">No temporary bans</div>
-                    <div id="bans-list" class="space-y-2 mt-3"></div>
+                    <div id="bans-list" class="space-y-2"></div>
                 </div>
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                    <h2 class="text-lg font-semibold mb-1">Temporary Mutes</h2>
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Temporary Mutes</h2>
+                        <span id="temp-mutes-count" class="text-sm text-gray-400"></span>
+                    </div>
+                    <div class="relative mb-3 mt-2">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="temp-mutes-search" type="text" placeholder="Filter..." oninput="filterTempMutes()" class="w-full pl-9 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
                     <div id="mutes-empty" class="text-sm text-gray-500 hidden">No temporary mutes</div>
-                    <div id="mutes-list" class="space-y-2 mt-3"></div>
+                    <div id="mutes-list" class="space-y-2"></div>
                 </div>
             </div>
         </div>
@@ -379,8 +400,8 @@
                     tr.className = 'border-b border-gray-700/50 text-sm';
                     tr.innerHTML = `
                         <td class="py-2 ${statusColor}">${statusLabel}</td>
-                        <td class="py-2"><a href="#" onclick="loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
-                        <td class="py-2"><a href="#" onclick="loadHostUsers('${hostAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></td>
+                        <td class="py-2 font-mono"><a href="#" onclick="loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
+                        <td class="py-2 font-mono"><a href="#" onclick="loadHostUsers('${hostAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></td>
                         <td class="py-2 text-right space-x-1">${actions}</td>
                     `;
                     body.appendChild(tr);
@@ -391,10 +412,10 @@
                     card.onclick = (e) => { if (e.target.closest('button')) return; loadUser(user.nick); };
                     card.innerHTML = `
                         <div class="flex items-center justify-between mb-1">
-                            <span class="font-medium">${escapeHtml(user.nick)}</span>
+                            <span class="font-medium font-mono">${escapeHtml(user.nick)}</span>
                             ${statusLabel ? `<span class="${statusColor} text-xs">${statusLabel}</span>` : ''}
                         </div>
-                        <div class="text-gray-400 text-xs mb-2">${escapeHtml(user.host)}</div>
+                        <div class="text-gray-400 text-xs mb-2 font-mono">${escapeHtml(user.host)}</div>
                         ${actions ? `<div class="flex flex-wrap gap-1">${actions}</div>` : ''}
                     `;
                     cards.appendChild(card);
@@ -484,7 +505,7 @@
 
                 document.getElementById('user-userid').textContent = user.user_id || '-';
                 document.getElementById('user-host').innerHTML = user.host
-                    ? `<a href="#" onclick="closeModal(); loadHostUsers('${escapeAttr(user.host)}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a>`
+                    ? `<a href="#" onclick="closeModal(); loadHostUsers('${escapeAttr(user.host)}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a>`
                     : '-';
                 document.getElementById('user-karma').textContent = user.karma;
                 document.getElementById('user-penalty').textContent = user.penalty || '0';
@@ -546,7 +567,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-gray-700/50 text-sm';
                 tr.innerHTML = `
-                    <td class="py-2"><a href="#" onclick="closeHostPanel(); loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
+                    <td class="py-2 font-mono"><a href="#" onclick="closeHostPanel(); loadUser('${nickAttr}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.nick)}</a></td>
                     <td class="py-2 text-gray-400">${escapeHtml(user.user_id)}</td>
                     <td class="py-2 text-gray-400">${formatDate(user.created_at)}</td>
                     <td class="py-2 text-gray-400">${formatDate(user.updated_at)}</td>
@@ -558,7 +579,7 @@
                 card.className = 'bg-gray-700/50 rounded-lg p-3 text-sm cursor-pointer active:bg-gray-700';
                 card.onclick = () => { closeHostPanel(); loadUser(user.nick); };
                 card.innerHTML = `
-                    <div class="font-medium mb-1">${escapeHtml(user.nick)}</div>
+                    <div class="font-medium font-mono mb-1">${escapeHtml(user.nick)}</div>
                     <div class="text-gray-400 text-xs">${escapeHtml(user.user_id)}</div>
                     <div class="flex justify-between text-gray-500 text-xs mt-2">
                         <span>First: ${formatDate(user.created_at)}</span>
@@ -645,12 +666,8 @@
                 bansList.innerHTML = '';
                 mutesList.innerHTML = '';
 
-                if (bans.length === 0 && mutes.length === 0) {
-                    section.classList.add('hidden');
-                    return;
-                }
-
-                section.classList.remove('hidden');
+                document.getElementById('temp-bans-count').textContent = bans.length > 0 ? `${bans.length}` : '';
+                document.getElementById('temp-mutes-count').textContent = mutes.length > 0 ? `${mutes.length}` : '';
 
                 if (bans.length === 0) {
                     bansEmpty.classList.remove('hidden');
@@ -676,9 +693,10 @@
 
         function penaltyCard(p) {
             const card = document.createElement('div');
-            card.className = 'flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+            card.className = `penalty-card penalty-${p.type} flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm`;
 
             const label = p.type === 'ban' ? p.mask : p.nick;
+            card.dataset.filter = label.toLowerCase();
             const expires = new Date(p.due_at * 1000);
             const now = Date.now();
             const diff = expires - now;
@@ -699,12 +717,28 @@
                 timeLeft = h > 0 ? `${d}d ${h}h` : `${d}d`;
             }
 
+            let labelHtml;
+            if (p.type === 'mute') {
+                const escapedNick = label.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                labelHtml = `<a href="#" onclick="loadUser('${escapedNick}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${label}</a>`;
+            } else if (p.type === 'ban') {
+                const hostMatch = label.match(/@(.+)$/);
+                if (hostMatch) {
+                    const escapedHost = hostMatch[1].replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    labelHtml = `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${label}</a>`;
+                } else {
+                    labelHtml = `<span class="font-mono text-gray-200">${label}</span>`;
+                }
+            } else {
+                labelHtml = `<span class="font-mono text-gray-200">${label}</span>`;
+            }
+
             card.innerHTML = `
                 <div>
-                    <span class="font-mono text-gray-200">${label}</span>
+                    ${labelHtml}
                     <span class="text-gray-400 ml-2">expires in ${timeLeft}</span>
                 </div>
-                <button onclick="expirePenalty('${p.id}', '${p.type}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-yellow-800 hover:bg-yellow-700">Expire Now</button>
+                <button onclick="expirePenalty('${p.id}', '${p.type}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-yellow-800 hover:bg-yellow-700 shrink-0">Expire Now</button>
             `;
             return card;
         }
@@ -745,14 +779,18 @@
 
                 loading.classList.add('hidden');
 
+                document.getElementById('channel-bans-count').textContent = '';
                 if (!bans || bans.length === 0) {
                     empty.classList.remove('hidden');
                     return;
                 }
 
+                document.getElementById('channel-bans-count').textContent = `${bans.length}`;
+
                 for (const b of bans) {
                     const card = document.createElement('div');
-                    card.className = 'flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+                    card.className = 'ban-card flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+                    card.dataset.filter = (b.mask + ' ' + (b.set_by || '')).toLowerCase();
 
                     let meta = '';
                     if (b.set_by) {
@@ -765,12 +803,18 @@
                     }
 
                     const escapedMask = b.mask.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const hostMatch = b.mask.match(/@(.+)$/);
+                    const hostPart = hostMatch ? hostMatch[1] : '';
+                    const escapedHost = hostPart.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const maskHtml = hostPart
+                        ? `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${b.mask}</a>`
+                        : `<span class="font-mono text-gray-200">${b.mask}</span>`;
                     card.innerHTML = `
                         <div>
-                            <span class="font-mono text-gray-200">${b.mask}</span>
+                            ${maskHtml}
                             ${meta ? `<span class="text-gray-500 ml-2">${meta}</span>` : ''}
                         </div>
-                        <button onclick="removeBan('${escapedMask}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-red-800 hover:bg-red-700">Remove</button>
+                        <button onclick="removeBan('${escapedMask}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-red-800 hover:bg-red-700 shrink-0">Remove</button>
                     `;
                     list.appendChild(card);
                 }
@@ -798,6 +842,27 @@
                 } catch (e) {
                     showToast(e.message, false);
                 }
+            });
+        }
+
+        function filterBans() {
+            const q = document.getElementById('bans-search').value.toLowerCase();
+            document.querySelectorAll('.ban-card').forEach(c => {
+                c.classList.toggle('hidden', q && !c.dataset.filter.includes(q));
+            });
+        }
+
+        function filterTempBans() {
+            const q = document.getElementById('temp-bans-search').value.toLowerCase();
+            document.querySelectorAll('.penalty-ban').forEach(c => {
+                c.classList.toggle('hidden', q && !c.dataset.filter.includes(q));
+            });
+        }
+
+        function filterTempMutes() {
+            const q = document.getElementById('temp-mutes-search').value.toLowerCase();
+            document.querySelectorAll('.penalty-mute').forEach(c => {
+                c.classList.toggle('hidden', q && !c.dataset.filter.includes(q));
             });
         }
 
