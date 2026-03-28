@@ -299,11 +299,11 @@ func (s *service) ListUsersByMask(channel, mask string, callback func(users []*U
 
 		if m.Matches(um) {
 			var status ChannelStatus
-			if strings.Contains(tokens[9], string(ChannelStatusOperator)) {
+			if strings.Contains(tokens[8], string(ChannelStatusOperator)) {
 				status = ChannelStatusOperator
-			} else if strings.Contains(tokens[9], string(ChannelStatusHalfOperator)) {
+			} else if strings.Contains(tokens[8], string(ChannelStatusHalfOperator)) {
 				status = ChannelStatusHalfOperator
-			} else if strings.Contains(tokens[9], string(ChannelStatusVoice)) {
+			} else if strings.Contains(tokens[8], string(ChannelStatusVoice)) {
 				status = ChannelStatusVoice
 			} else {
 				status = ChannelStatusNone
