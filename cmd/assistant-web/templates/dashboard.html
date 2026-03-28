@@ -17,6 +17,26 @@
 
         <div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded text-sm hidden z-50"></div>
 
+        <div id="host-panel" class="bg-gray-800 rounded-lg p-6 mb-6 hidden">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Users with host: <span id="host-panel-host" class="text-blue-400 font-mono"></span></h2>
+                <button onclick="closeHostPanel()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Close</button>
+            </div>
+            <div id="host-loading" class="text-gray-400">Loading...</div>
+            <div id="host-error" class="text-red-400 hidden"></div>
+            <table id="host-table" class="w-full hidden">
+                <thead>
+                    <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                        <th class="pb-2">Nick</th>
+                        <th class="pb-2">User ID</th>
+                        <th class="pb-2">First Seen</th>
+                        <th class="pb-2">Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody id="host-body"></tbody>
+            </table>
+        </div>
+
         <div class="bg-gray-800 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Channel Users</h2>
@@ -118,7 +138,7 @@
                     tr.innerHTML = `
                         <td class="py-2 ${statusColors[user.status] || 'text-gray-500'}">${statusLabels[user.status] || ''}</td>
                         <td class="py-2">${escapeHtml(user.nick)}</td>
-                        <td class="py-2 text-gray-400">${escapeHtml(user.host)}</td>
+                        <td class="py-2"><a href="#" onclick="loadHostUsers('${escapeAttr(user.host)}'); return false;" class="text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a></td>
                         <td class="py-2 text-right space-x-1">${actions}</td>
                     `;
                     body.appendChild(tr);
@@ -141,6 +161,59 @@
 
         function escapeAttr(text) {
             return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function closeHostPanel() {
+            document.getElementById('host-panel').classList.add('hidden');
+        }
+
+        function formatDate(unix) {
+            if (!unix || unix <= 0) return '';
+            const d = new Date(unix * 1000);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+
+        async function loadHostUsers(host) {
+            const panel = document.getElementById('host-panel');
+            const loading = document.getElementById('host-loading');
+            const error = document.getElementById('host-error');
+            const table = document.getElementById('host-table');
+            const body = document.getElementById('host-body');
+
+            document.getElementById('host-panel-host').textContent = host;
+            panel.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            table.classList.add('hidden');
+
+            try {
+                const resp = await fetch(`/dashboard/api/users/host/${encodeURIComponent(host)}`);
+                if (!resp.ok) throw new Error(await resp.text());
+                const users = await resp.json();
+
+                users.sort((a, b) => b.updated_at - a.updated_at);
+
+                body.innerHTML = '';
+                for (const user of users) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-gray-700/50 text-sm';
+                    tr.innerHTML = `
+                        <td class="py-2">${escapeHtml(user.nick)}</td>
+                        <td class="py-2 text-gray-400">${escapeHtml(user.user_id)}</td>
+                        <td class="py-2 text-gray-400">${formatDate(user.created_at)}</td>
+                        <td class="py-2 text-gray-400">${formatDate(user.updated_at)}</td>
+                    `;
+                    body.appendChild(tr);
+                }
+
+                loading.classList.add('hidden');
+                table.classList.remove('hidden');
+                panel.scrollIntoView({behavior: 'smooth'});
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.textContent = e.message;
+                error.classList.remove('hidden');
+            }
         }
 
         loadUsers();
