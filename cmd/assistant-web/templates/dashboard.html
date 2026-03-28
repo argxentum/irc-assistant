@@ -792,14 +792,15 @@
                     card.className = 'ban-card flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
                     card.dataset.filter = (b.mask + ' ' + (b.set_by || '')).toLowerCase();
 
-                    let meta = '';
+                    let setByHtml = '';
                     if (b.set_by) {
                         const setter = b.set_by.split('!')[0];
-                        meta += `by ${setter}`;
+                        setByHtml = `<div class="text-gray-500 text-xs">by ${setter}</div>`;
                     }
+                    let setAtHtml = '';
                     if (b.set_at) {
                         const d = new Date(b.set_at * 1000);
-                        meta += ` on ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+                        setAtHtml = `<div class="text-gray-500 text-xs">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>`;
                     }
 
                     const escapedMask = b.mask.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -812,9 +813,10 @@
                     card.innerHTML = `
                         <div>
                             ${maskHtml}
-                            ${meta ? `<span class="text-gray-500 ml-2">${meta}</span>` : ''}
+                            ${setByHtml}
+                            ${setAtHtml}
                         </div>
-                        <button onclick="removeBan('${escapedMask}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-red-800 hover:bg-red-700 shrink-0">Remove</button>
+                        <button onclick="removeBan('${escapedMask}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-red-800 hover:bg-red-700 shrink-0 self-center">Remove</button>
                     `;
                     list.appendChild(card);
                 }
