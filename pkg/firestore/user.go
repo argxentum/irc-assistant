@@ -59,6 +59,11 @@ func (fs *Firestore) GetUsersByHost(channel, host string) ([]*models.User, error
 	return query[models.User](fs.ctx, fs.client, criteria)
 }
 
+func (fs *Firestore) GetAllUsers(channel string) ([]*models.User, error) {
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers)
+	return list[models.User](fs.ctx, fs.client, path)
+}
+
 func (fs *Firestore) GetUserByNick(channel, nick string) (*models.User, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathUsers, nick)
 	return get[models.User](fs.ctx, fs.client, path)

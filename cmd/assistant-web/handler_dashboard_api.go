@@ -34,6 +34,43 @@ func (s *server) dashboardUsersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp.Data)
 }
 
+func (s *server) dashboardAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	users, err := firestore.Get().GetAllUsers(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard all users query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type allUser struct {
+		Nick        string  `json:"nick"`
+		Host        string  `json:"host"`
+		IsAutoVoiced bool   `json:"is_auto_voiced"`
+		Karma       int     `json:"karma"`
+		UpdatedAt   int64   `json:"updated_at"`
+	}
+
+	result := make([]allUser, 0, len(users))
+	for _, u := range users {
+		result = append(result, allUser{
+			Nick:         u.Nick,
+			Host:         u.Host,
+			IsAutoVoiced: u.IsAutoVoiced,
+			Karma:        u.Karma,
+			UpdatedAt:    u.UpdatedAt.Unix(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
 type dashboardActionRequest struct {
 	Nick     string `json:"nick"`
 	Duration string `json:"duration,omitempty"`

@@ -50,6 +50,7 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/{token}", s.dashboardAuthHandler)
 	http.HandleFunc("/dashboard", s.dashboardHandler)
 	http.HandleFunc("/dashboard/api/users", s.dashboardUsersHandler)
+	http.HandleFunc("/dashboard/api/users/all", s.dashboardAllUsersHandler)
 	http.HandleFunc("/dashboard/api/users/host/{host}", s.dashboardUsersByHostHandler)
 	http.HandleFunc("/dashboard/api/user/{nick}", s.dashboardUserHandler)
 	http.HandleFunc("POST /dashboard/api/action/{action}", s.dashboardActionHandler)

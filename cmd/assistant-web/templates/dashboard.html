@@ -72,7 +72,13 @@
         <div class="bg-gray-800 rounded-lg p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold">Channel Users <span id="users-counts" class="text-sm font-normal text-gray-400"></span></h2>
-                <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                        <input id="include-offline" type="checkbox" onchange="loadUsers()" class="cursor-pointer" />
+                        Include offline
+                    </label>
+                    <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                </div>
             </div>
             <div class="relative mb-4">
                 <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -95,8 +101,8 @@
     </div>
 
     <script>
-        const statusLabels = {'@': 'op', '%': 'hop', '+': 'voice', '': ''};
-        const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500'};
+        const statusLabels = {'@': 'op', '%': 'hop', '+': 'voice', '': '', 'offline': 'offline'};
+        const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500', 'offline': 'text-gray-600'};
         const protectedStatuses = new Set(['@', '%']);
 
         function showToast(message, success) {
@@ -147,8 +153,21 @@
                 if (!resp.ok) throw new Error(await resp.text());
                 const users = await resp.json();
 
+                if (document.getElementById('include-offline').checked) {
+                    const allResp = await fetch('/dashboard/api/users/all');
+                    if (allResp.ok) {
+                        const allUsers = await allResp.json();
+                        const onlineNicks = new Set(users.map(u => u.nick.toLowerCase()));
+                        for (const u of allUsers) {
+                            if (!onlineNicks.has(u.nick.toLowerCase())) {
+                                users.push({nick: u.nick, host: u.host, status: 'offline'});
+                            }
+                        }
+                    }
+                }
+
                 users.sort((a, b) => {
-                    const order = {'@': 0, '%': 1, '+': 2, '': 3};
+                    const order = {'@': 0, '%': 1, '+': 2, '': 3, 'offline': 4};
                     const diff = (order[a.status] ?? 3) - (order[b.status] ?? 3);
                     if (diff !== 0) return diff;
                     return a.nick.toLowerCase().localeCompare(b.nick.toLowerCase());
@@ -160,7 +179,7 @@
                     tr.className = 'border-b border-gray-700/50 text-sm';
 
                     let actions = '';
-                    if (!protectedStatuses.has(user.status)) {
+                    if (!protectedStatuses.has(user.status) && user.status !== 'offline') {
                         const nick = escapeAttr(user.nick);
                         actions = [
                             actionButton('Kick', 'bg-yellow-800 hover:bg-yellow-700', `doAction('kick','${nick}')`),
@@ -183,9 +202,13 @@
                     body.appendChild(tr);
                 }
 
-                const voiced = users.filter(u => u.status === '@' || u.status === '%' || u.status === '+').length;
-                const unvoiced = users.length - voiced;
-                document.getElementById('users-counts').textContent = `(${users.length} users: ${voiced} voiced, ${unvoiced} unvoiced)`;
+                const online = users.filter(u => u.status !== 'offline');
+                const offline = users.length - online.length;
+                const voiced = online.filter(u => u.status === '@' || u.status === '%' || u.status === '+').length;
+                const unvoiced = online.length - voiced;
+                let counts = `(${online.length} users: ${voiced} voiced, ${unvoiced} unvoiced)`;
+                if (offline > 0) counts = `(${online.length} online, ${offline} offline — ${voiced} voiced, ${unvoiced} unvoiced)`;
+                document.getElementById('users-counts').textContent = counts;
 
                 loading.classList.add('hidden');
                 table.classList.remove('hidden');
