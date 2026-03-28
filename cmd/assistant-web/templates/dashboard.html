@@ -46,6 +46,10 @@
                 <h2 class="text-lg font-semibold">Channel Users</h2>
                 <button onclick="loadUsers()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
             </div>
+            <div class="relative mb-4">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input id="users-search" type="text" placeholder="Filter users..." oninput="filterUsers()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+            </div>
             <div id="users-loading" class="text-gray-400">Loading...</div>
             <div id="users-error" class="text-red-400 hidden"></div>
             <table id="users-table" class="w-full hidden">
@@ -240,6 +244,15 @@
                 loading.classList.add('hidden');
                 error.textContent = e.message;
                 error.classList.remove('hidden');
+            }
+        }
+
+        function filterUsers() {
+            const q = document.getElementById('users-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#users-body tr');
+            for (const row of rows) {
+                const text = row.textContent.toLowerCase();
+                row.classList.toggle('hidden', q && !text.includes(q));
             }
         }
 
