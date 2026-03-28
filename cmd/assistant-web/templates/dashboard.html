@@ -33,7 +33,16 @@
                 <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm mb-6">
                     <div class="text-gray-400">User ID</div><div id="user-userid"></div>
                     <div class="text-gray-400">Host</div><div id="user-host"></div>
-                    <div class="text-gray-400">Auto-voiced</div><div id="user-autovoiced"></div>
+                    <div class="text-gray-400">Auto-voiced</div>
+                    <div>
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <span class="relative inline-block w-9 h-5">
+                                <input id="user-autovoiced-toggle" type="checkbox" onchange="toggleAutoVoice()" class="peer sr-only" />
+                                <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
+                                <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                            </span>
+                        </label>
+                    </div>
                     <div class="text-gray-400">Credibility</div><div id="user-credibility"></div>
                     <div class="text-gray-400">Penalty</div><div id="user-penalty"></div>
                     <div class="text-gray-400">Location</div><div id="user-location"></div>
@@ -108,6 +117,7 @@
         const statusLabels = {'@': 'op', '%': 'hop', '+': 'voice', '': '', 'offline': 'offline'};
         const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500', 'offline': 'text-gray-600'};
         const protectedStatuses = new Set(['@', '%']);
+        let currentUserNick = '';
 
         function showToast(message, success) {
             const toast = document.getElementById('toast');
@@ -233,7 +243,7 @@
         }
 
         function escapeAttr(text) {
-            return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
         async function doAutoVoice(nick) {
@@ -256,6 +266,28 @@
             }
         }
 
+        async function toggleAutoVoice() {
+            const enabled = document.getElementById('user-autovoiced-toggle').checked;
+            const action = enabled ? 'autovoice' : 'removeautovoice';
+            try {
+                const resp = await fetch(`/dashboard/api/action/${action}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nick: currentUserNick})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`${enabled ? 'Auto-voiced' : 'Removed auto-voice'}: ${currentUserNick}`, true);
+                } else {
+                    showToast(data.error || 'Action failed', false);
+                    document.getElementById('user-autovoiced-toggle').checked = !enabled;
+                }
+            } catch (e) {
+                showToast(e.message, false);
+                document.getElementById('user-autovoiced-toggle').checked = !enabled;
+            }
+        }
+
         function closeModal() {
             document.getElementById('user-panel').classList.add('hidden');
             document.getElementById('host-panel').classList.add('hidden');
@@ -274,6 +306,7 @@
             const error = document.getElementById('user-error');
             const content = document.getElementById('user-content');
 
+            currentUserNick = nick;
             document.getElementById('user-panel-nick').textContent = nick;
             document.getElementById('modal-overlay').classList.remove('hidden');
             panel.classList.remove('hidden');
@@ -302,7 +335,7 @@
                     document.getElementById('user-credibility').textContent = '-';
                     document.getElementById('user-credibility').className = '';
                 }
-                document.getElementById('user-autovoiced').textContent = user.is_auto_voiced ? 'Yes' : 'No';
+                document.getElementById('user-autovoiced-toggle').checked = user.is_auto_voiced;
                 document.getElementById('user-created').textContent = formatDate(user.created_at);
                 document.getElementById('user-updated').textContent = formatDate(user.updated_at);
 

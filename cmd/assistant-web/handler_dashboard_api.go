@@ -98,7 +98,12 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if action == "autovoice" {
-		s.handleAutoVoiceAction(w, session.Channel, req.Nick)
+		s.handleAutoVoiceAction(w, session.Channel, req.Nick, true)
+		return
+	}
+
+	if action == "removeautovoice" {
+		s.handleAutoVoiceAction(w, session.Channel, req.Nick, false)
 		return
 	}
 
@@ -119,7 +124,7 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick string) {
+func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick string, enable bool) {
 	fs := firestore.Get()
 	user, err := fs.GetUserByNick(channel, nick)
 	if err != nil || user == nil {
@@ -128,7 +133,7 @@ func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick stri
 		return
 	}
 
-	err = fs.UpdateUser(channel, user, map[string]any{"is_auto_voiced": true})
+	err = fs.UpdateUser(channel, user, map[string]any{"is_auto_voiced": enable})
 	if err != nil {
 		log.Logger().Errorf(nil, "dashboard auto-voice failed: %s", err)
 		w.Header().Set("Content-Type", "application/json")
@@ -136,19 +141,21 @@ func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick stri
 		return
 	}
 
-	// also voice the user via IRC
-	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
-		Action:  models.DashboardActionUnmute,
-		Channel: channel,
-		Nick:    nick,
-	})
-	if err != nil {
-		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
-	} else if !resp.Success {
-		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
+	if enable {
+		// also voice the user via IRC
+		resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+			Action:  models.DashboardActionUnmute,
+			Channel: channel,
+			Nick:    nick,
+		})
+		if err != nil {
+			log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
+		} else if !resp.Success {
+			log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
+		}
 	}
 
-	log.Logger().Infof(nil, "dashboard: auto-voiced %s in %s", nick, channel)
+	log.Logger().Infof(nil, "dashboard: set auto-voice %v for %s in %s", enable, nick, channel)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
