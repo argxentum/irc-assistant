@@ -143,6 +143,7 @@ func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, cha
 	}
 
 	if task != nil {
+		task.Data = models.PersistentTaskData{Channel: channel}
 		if _, err := cloudtasks.Get().CreateTask(task); err != nil {
 			logger.Errorf(nil, "error scheduling cloud task for channel %s inactivity: %s", channel, err)
 		}

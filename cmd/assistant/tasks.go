@@ -261,6 +261,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 	}
 	if current != nil && !current.IsDue() {
 		logger.Debugf(nil, "stale cloud task for %s, actual due at %s — rescheduling", task.ID, current.DueAt)
+		current.Data = models.PersistentTaskData{Channel: channelName}
 		if _, err := cloudtasks.Get().CreateTask(current); err != nil {
 			logger.Errorf(nil, "error rescheduling stale cloud task %s: %s", task.ID, err)
 		}
