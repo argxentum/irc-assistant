@@ -201,7 +201,7 @@
                     </div>
                     <div id="channel-bans-loading" class="text-sm text-gray-400">Loading...</div>
                     <div id="channel-bans-empty" class="text-sm text-gray-500 hidden">No bans</div>
-                    <div id="channel-bans-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                    <div id="channel-bans-list" class="space-y-2 flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
             </div>
         </div>
@@ -736,7 +736,7 @@
             card.innerHTML = `
                 <div>
                     ${labelHtml}
-                    <span class="text-gray-400 ml-2">expires in ${timeLeft}</span>
+                    <div class="text-gray-500 text-xs">expires in ${timeLeft}</div>
                 </div>
                 <button onclick="expirePenalty('${p.id}', '${p.type}')" class="text-xs px-2 py-1 rounded cursor-pointer bg-yellow-800 hover:bg-yellow-700 shrink-0">Expire Now</button>
             `;
@@ -790,7 +790,7 @@
 
                 for (const b of bans) {
                     const card = document.createElement('div');
-                    card.className = 'ban-card flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm';
+                    card.className = 'ban-card flex items-center justify-between bg-gray-700/50 rounded px-3 py-2 text-sm min-w-0';
                     card.dataset.filter = (b.mask + ' ' + (b.set_by || '')).toLowerCase();
 
                     let setByHtml = '';
@@ -809,10 +809,10 @@
                     const hostPart = hostMatch ? hostMatch[1] : '';
                     const escapedHost = hostPart.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     const maskHtml = hostPart
-                        ? `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${b.mask}</a>`
-                        : `<span class="font-mono text-gray-200">${b.mask}</span>`;
+                        ? `<a href="#" onclick="loadHostUsers('${escapedHost}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline break-all">${b.mask}</a>`
+                        : `<span class="font-mono text-gray-200 break-all">${b.mask}</span>`;
                     card.innerHTML = `
-                        <div>
+                        <div class="min-w-0">
                             ${maskHtml}
                             ${setByHtml}
                             ${setAtHtml}
