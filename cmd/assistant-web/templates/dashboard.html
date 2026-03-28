@@ -109,6 +109,7 @@
                 </button>
             </div>
             <div id="host-loading" class="text-gray-400">Loading...</div>
+            <div id="host-empty" class="text-sm text-gray-500 hidden">No matching users found</div>
             <div id="host-error" class="text-red-400 hidden"></div>
             <table id="host-table" class="w-full hidden">
                 <thead>
@@ -147,20 +148,22 @@
                     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input id="users-search" type="text" placeholder="Filter users..." oninput="filterUsers()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                 </div>
-                <div id="users-loading" class="text-gray-400">Loading...</div>
-                <div id="users-error" class="text-red-400 hidden"></div>
-                <table id="users-table" class="w-full hidden">
-                    <thead class="sticky top-0 bg-gray-800">
-                        <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
-                            <th class="pb-2">Status</th>
-                            <th class="pb-2">Nick</th>
-                            <th class="pb-2">Host</th>
-                            <th class="pb-2 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-body"></tbody>
-                </table>
-                <div id="users-cards" class="space-y-2 hidden"></div>
+                <div class="max-h-[60vh] md:max-h-none overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                    <div id="users-loading" class="text-gray-400">Loading...</div>
+                    <div id="users-error" class="text-red-400 hidden"></div>
+                    <table id="users-table" class="w-full hidden">
+                        <thead class="sticky top-0 bg-gray-800">
+                            <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                                <th class="pb-2">Status</th>
+                                <th class="pb-2">Nick</th>
+                                <th class="pb-2">Host</th>
+                                <th class="pb-2 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-body"></tbody>
+                    </table>
+                    <div id="users-cards" class="space-y-2 hidden"></div>
+                </div>
             </div>
 
             <div class="md:w-1/4 space-y-6 mt-6 md:mt-0">
@@ -621,6 +624,7 @@
             loading.classList.remove('hidden');
             error.classList.add('hidden');
             table.classList.add('hidden');
+            document.getElementById('host-empty').classList.add('hidden');
 
             try {
                 const resp = await fetch(`/dashboard/api/users/host/${encodeURIComponent(host)}`);
@@ -634,8 +638,7 @@
                 if (!hostUsersData || hostUsersData.length === 0) {
                     table.classList.add('hidden');
                     document.getElementById('host-cards').classList.add('hidden');
-                    error.textContent = 'No matching users found';
-                    error.classList.remove('hidden');
+                    document.getElementById('host-empty').classList.remove('hidden');
                 } else {
                     const isMobile = window.innerWidth < 768;
                     table.classList.toggle('hidden', isMobile);
@@ -661,6 +664,7 @@
             loading.classList.remove('hidden');
             error.classList.add('hidden');
             table.classList.add('hidden');
+            document.getElementById('host-empty').classList.add('hidden');
 
             try {
                 const resp = await fetch(`/dashboard/api/users/mask/${encodeURIComponent(mask)}`);
@@ -674,8 +678,7 @@
                 if (!hostUsersData || hostUsersData.length === 0) {
                     table.classList.add('hidden');
                     document.getElementById('host-cards').classList.add('hidden');
-                    error.textContent = 'No matching users found';
-                    error.classList.remove('hidden');
+                    document.getElementById('host-empty').classList.remove('hidden');
                 } else {
                     const isMobile = window.innerWidth < 768;
                     table.classList.toggle('hidden', isMobile);
