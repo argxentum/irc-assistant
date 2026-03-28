@@ -77,6 +77,56 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(resp)
 }
 
+func (s *server) dashboardAutoVoiceHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req dashboardActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Nick == "" {
+		http.Error(w, "Nick is required", http.StatusBadRequest)
+		return
+	}
+
+	fs := firestore.Get()
+	user, err := fs.GetUserByNick(session.Channel, req.Nick)
+	if err != nil || user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	err = fs.UpdateUser(session.Channel, user, map[string]any{"is_auto_voiced": true})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard auto-voice failed: %s", err)
+		http.Error(w, "Update failed", http.StatusInternalServerError)
+		return
+	}
+
+	// also unmute (voice) the user via IRC
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  models.DashboardActionUnmute,
+		Channel: session.Channel,
+		Nick:    req.Nick,
+	})
+	if err != nil {
+		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
+	} else if !resp.Success {
+		log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
+	}
+
+	log.Logger().Infof(nil, "dashboard: auto-voiced %s in %s", req.Nick, session.Channel)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {

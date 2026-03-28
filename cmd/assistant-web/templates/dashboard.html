@@ -131,8 +131,11 @@
                             actionButton('Ban', 'bg-red-800 hover:bg-red-700', `doAction('ban','${nick}')`),
                             user.status === '+'
                                 ? actionButton('Mute', 'bg-orange-800 hover:bg-orange-700', `doAction('mute','${nick}')`)
-                                : actionButton('Unmute', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`)
-                        ].join(' ');
+                                : actionButton('Unmute', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}')`),
+                            user.status === ''
+                                ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}')`)
+                                : ''
+                        ].filter(Boolean).join(' ');
                     }
 
                     tr.innerHTML = `
@@ -161,6 +164,25 @@
 
         function escapeAttr(text) {
             return text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        async function doAutoVoice(nick) {
+            if (!confirm(`Auto-voice ${nick}?`)) return;
+            try {
+                const resp = await fetch('/dashboard/api/autovoice', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nick})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`Auto-voiced: ${nick}`, true);
+                } else {
+                    showToast(data.error || 'Action failed', false);
+                }
+            } catch (e) {
+                showToast(e.message, false);
+            }
         }
 
         function closeHostPanel() {

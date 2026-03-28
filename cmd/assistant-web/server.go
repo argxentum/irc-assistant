@@ -51,6 +51,7 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard", s.dashboardHandler)
 	http.HandleFunc("/dashboard/api/users", s.dashboardUsersHandler)
 	http.HandleFunc("POST /dashboard/api/action/{action}", s.dashboardActionHandler)
+	http.HandleFunc("POST /dashboard/api/autovoice", s.dashboardAutoVoiceHandler)
 	http.HandleFunc("/dashboard/api/users/host/{host}", s.dashboardUsersByHostHandler)
 
 	nativeLog.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.cfg.Web.Port), nil))
