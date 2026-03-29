@@ -442,12 +442,12 @@
         <div id="disinfo-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeDisinfoPanel()"></div>
         <div id="disinfo-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Add Disinformation Source</h2>
+                <h2 id="disinfo-panel-title" class="text-lg font-semibold">Add Disinformation Source</h2>
                 <button onclick="closeDisinfoPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="space-y-4">
+            <div id="disinfo-add-view" class="space-y-4">
                 <div>
                     <input id="disinfo-input" type="text" placeholder="e.g. example.com" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                     <p class="text-xs text-gray-500 mt-1">URLs starting with this prefix will be flagged as disinformation.</p>
@@ -455,6 +455,17 @@
                 <div class="flex gap-2">
                     <button onclick="closeDisinfoPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
                     <button onclick="submitDisinfoSource()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Add</button>
+                </div>
+            </div>
+            <div id="disinfo-detail-view" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Source prefix</label>
+                    <p id="disinfo-detail-source" class="font-mono text-sm text-gray-100 bg-gray-700/50 rounded p-3 break-all"></p>
+                </div>
+                <p class="text-xs text-gray-500">Any URL starting with this prefix will be flagged as disinformation and the user penalized.</p>
+                <div class="flex gap-2">
+                    <button onclick="closeDisinfoPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                    <button onclick="removeDisinfoSourceFromPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600">Delete</button>
                 </div>
             </div>
         </div>
@@ -1928,11 +1939,9 @@
 
                 for (const src of sources) {
                     const el = document.createElement('div');
-                    el.className = 'bg-gray-700/50 rounded p-2 text-sm flex items-center justify-between gap-2';
-                    el.innerHTML = `
-                        <span class="font-mono text-gray-100 truncate">${escapeHtml(src.source)}</span>
-                        <button onclick="removeDisinfoSource('${escapeAttr(src.source)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 shrink-0">Remove</button>
-                    `;
+                    el.className = 'bg-gray-700/50 rounded p-2 text-sm font-mono text-gray-100 truncate cursor-pointer hover:bg-gray-600/50';
+                    el.textContent = src.source;
+                    el.onclick = () => showDisinfoDetail(src.source);
                     list.appendChild(el);
                 }
             } catch (e) {
@@ -1949,12 +1958,28 @@
             }
         }
 
-        function showAddDisinfoSource() {
-            document.getElementById('disinfo-input').value = '';
+        let disinfoPanelSource = '';
+
+        function openDisinfoPanel(mode) {
+            document.getElementById('disinfo-add-view').classList.toggle('hidden', mode !== 'add');
+            document.getElementById('disinfo-detail-view').classList.toggle('hidden', mode !== 'detail');
             document.getElementById('disinfo-overlay').classList.remove('hidden');
             document.getElementById('disinfo-panel').classList.remove('hidden');
             lucide.createIcons();
+        }
+
+        function showAddDisinfoSource() {
+            document.getElementById('disinfo-panel-title').textContent = 'Add Disinformation Source';
+            document.getElementById('disinfo-input').value = '';
+            openDisinfoPanel('add');
             document.getElementById('disinfo-input').focus();
+        }
+
+        function showDisinfoDetail(source) {
+            disinfoPanelSource = source;
+            document.getElementById('disinfo-panel-title').textContent = 'Disinformation Source';
+            document.getElementById('disinfo-detail-source').textContent = source;
+            openDisinfoPanel('detail');
         }
 
         function closeDisinfoPanel() {
@@ -1984,25 +2009,25 @@
             }
         }
 
-        function removeDisinfoSource(source) {
-            showConfirm('Remove disinformation source?', 'Remove', 'bg-red-700 hover:bg-red-600', async () => {
-                try {
-                    const resp = await fetch('/dashboard/api/disinfo/remove', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({source}),
-                    });
-                    const result = await resp.json();
-                    if (result.success) {
-                        showToast('Disinformation source removed', true);
-                        loadDisinfoSources();
-                    } else {
-                        showToast(result.error || 'Remove failed', false);
-                    }
-                } catch (e) {
-                    showToast('Remove failed: ' + e.message, false);
+        async function removeDisinfoSourceFromPanel() {
+            const source = disinfoPanelSource;
+            closeDisinfoPanel();
+            try {
+                const resp = await fetch('/dashboard/api/disinfo/remove', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({source}),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast('Disinformation source removed', true);
+                    loadDisinfoSources();
+                } else {
+                    showToast(result.error || 'Remove failed', false);
                 }
-            });
+            } catch (e) {
+                showToast('Remove failed: ' + e.message, false);
+            }
         }
 
         function maskWord(word) {
