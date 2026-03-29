@@ -2015,7 +2015,7 @@
                 commandsData = await resp.json();
                 commandsLoaded = true;
 
-                commandsData.sort((a, b) => (a.triggers[0] || '').localeCompare(b.triggers[0] || ''));
+                commandsData.sort((a, b) => (a.triggers?.[0] || a.name).localeCompare(b.triggers?.[0] || b.name));
 
                 const enabled = commandsData.filter(c => c.enabled).length;
                 const disabled = commandsData.length - enabled;
@@ -2050,7 +2050,7 @@
             for (const cmd of filtered) {
                 const el = document.createElement('div');
                 el.className = 'bg-gray-700/50 rounded p-3 text-sm flex items-center justify-between gap-3';
-                const triggers = cmd.triggers.map(t => `!${escapeHtml(t)}`).join(', ');
+                const triggers = cmd.triggers && cmd.triggers.length > 0 ? cmd.triggers.map(t => `!${escapeHtml(t)}`).join(', ') : escapeHtml(cmd.name);
                 const authBadge = cmd.requires_auth ? '<span class="text-xs bg-yellow-900/50 text-yellow-400 px-1.5 py-0.5 rounded ml-2">auth</span>' : '';
                 el.innerHTML = `
                     <div class="min-w-0">

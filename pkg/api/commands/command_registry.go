@@ -74,9 +74,6 @@ func (cr *commandRegistry) CommandsSortedForProcessing() []Command {
 func (cr *commandRegistry) CommandInfoList() []*models.CommandInfo {
 	result := make([]*models.CommandInfo, 0, len(cr.commands))
 	for _, cmd := range cr.commands {
-		if len(cmd.Triggers()) == 0 {
-			continue
-		}
 		requiresAuth := len(cmd.Authorizer().RequiredRole()) > 0 || len(cmd.Authorizer().RequiredChannelStatus()) > 0
 		result = append(result, &models.CommandInfo{
 			Name:         cmd.Name(),
