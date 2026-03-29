@@ -90,7 +90,7 @@ func (c *TriviaCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	setupURL := c.cfg.Web.ExternalRootURL + "/trivia/" + url.PathEscape(e.ReplyTarget()) + "?started_by=" + url.QueryEscape(e.From)
+	setupURL := c.cfg.Web.ExternalRootURL + "/trivia/" + url.PathEscape(e.ReplyTarget())
 	c.SendMessage(e, e.From, fmt.Sprintf("Set up your trivia game: %s", setupURL))
 	c.Replyf(e, "Check your DMs for the trivia setup link!")
 }
@@ -115,7 +115,7 @@ func (c *TriviaCommand) startWithCategory(e *irc.Event, categoryID, categoryName
 		return
 	}
 
-	mode := modes.NewTriviaMode(e.ReplyTarget(), c.irc, c.cfg, questions, e.From)
+	mode := modes.NewTriviaMode(e.ReplyTarget(), c.irc, c.cfg, questions)
 	cooldown := c.triviaCooldown()
 	if err := modes.GetManager().Activate(mode, cooldown); err != nil {
 		c.Replyf(e, "%s", err)

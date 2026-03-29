@@ -716,7 +716,7 @@ func processProxyRedditSearchResponse(cfg *config.Config, ircs irc.IRC, task *mo
 func processTriviaStart(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
 	data := task.Data.(models.TriviaStartTaskData)
 	logger := log.Logger()
-	logger.Debugf(nil, "processing trivia start for %s in %s", data.StartedBy, data.Channel)
+	logger.Debugf(nil, "processing trivia start in %s", data.Channel)
 
 	questions := make([]trivia.Question, 0, len(data.Questions))
 	for _, q := range data.Questions {
@@ -729,7 +729,7 @@ func processTriviaStart(cfg *config.Config, ircs irc.IRC, task *models.Task) err
 		})
 	}
 
-	mode := modes.NewTriviaMode(data.Channel, ircs, cfg, questions, data.StartedBy)
+	mode := modes.NewTriviaMode(data.Channel, ircs, cfg, questions)
 	mode.SetFirstAnswerOnly(data.FirstAnswerOnly)
 
 	var cooldown time.Duration

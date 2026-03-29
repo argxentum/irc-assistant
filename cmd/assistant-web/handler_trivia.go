@@ -30,11 +30,8 @@ func (s *server) triviaSetupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nick := r.URL.Query().Get("started_by")
-
 	args := map[string]any{
 		"channel":      channel,
-		"nick":         nick,
 		"categories":   trivia.Categories,
 		"maxQuestions":  s.cfg.Trivia.MaxQuestions,
 		"defaultCount": s.cfg.Trivia.DefaultCount,
@@ -60,7 +57,6 @@ func (s *server) triviaStartHandler(w http.ResponseWriter, r *http.Request) {
 	category := r.FormValue("category")
 	difficulty := r.FormValue("difficulty")
 	countStr := r.FormValue("count")
-	startedBy := r.FormValue("started_by")
 	firstAnswerOnly := r.FormValue("first_answer_only") == "true"
 
 	if channel == "" {
@@ -104,7 +100,7 @@ func (s *server) triviaStartHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	task := models.NewTriviaStartTask(channel, startedBy, taskQuestions, firstAnswerOnly)
+	task := models.NewTriviaStartTask(channel, taskQuestions, firstAnswerOnly)
 	if err := queue.GetDefault().Publish(task); err != nil {
 		logger.Errorf(nil, "error publishing trivia start task: %s", err)
 		http.Error(w, "Failed to start trivia game. Try again later.", http.StatusInternalServerError)

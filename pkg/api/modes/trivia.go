@@ -3,6 +3,7 @@ package modes
 import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/style"
 	"assistant/pkg/api/trivia"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -47,10 +48,9 @@ type TriviaMode struct {
 	mu              sync.Mutex
 	cancel          chan struct{}
 	ended           bool
-	startedBy       string
 }
 
-func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions []trivia.Question, startedBy string) *TriviaMode {
+func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions []trivia.Question) *TriviaMode {
 	return &TriviaMode{
 		channel:         channel,
 		ircs:            ircs,
@@ -61,7 +61,6 @@ func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions [
 		firstAnswerOnly: true,
 		state:           triviaStateAnnouncing,
 		cancel:          make(chan struct{}),
-		startedBy:       startedBy,
 	}
 }
 
@@ -69,9 +68,9 @@ func (t *TriviaMode) SetFirstAnswerOnly(v bool) { t.firstAnswerOnly = v }
 
 func (t *TriviaMode) firstAnswerHint() string {
 	if t.firstAnswerOnly {
-		return "but only your first answer is accepted"
+		return style.Bold("but only your first answer is accepted")
 	}
-	return "you can answer as many times as you like"
+	return style.Bold("you can answer as many times as you like")
 }
 
 func (t *TriviaMode) Name() string    { return triviaModeName }
@@ -105,7 +104,7 @@ func (t *TriviaMode) questionTimeout() time.Duration {
 
 func (t *TriviaMode) OnStart() {
 	logger := log.Logger()
-	logger.Infof(nil, "trivia mode starting in %s (%d questions, started by %s)", t.channel, len(t.questions), t.startedBy)
+	logger.Infof(nil, "trivia mode starting in %s (%d questions)", t.channel, len(t.questions))
 
 	q := t.questions[0]
 	t.ircs.SendMessages(t.channel, []string{

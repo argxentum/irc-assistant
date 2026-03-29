@@ -4,7 +4,6 @@ import "time"
 
 type TriviaStartTaskData struct {
 	Channel         string           `json:"channel"`
-	StartedBy       string           `json:"started_by"`
 	Questions       []TriviaQuestion `json:"questions"`
 	FirstAnswerOnly bool             `json:"first_answer_only"`
 }
@@ -17,10 +16,9 @@ type TriviaQuestion struct {
 	Difficulty   string   `json:"difficulty"`
 }
 
-func NewTriviaStartTask(channel, startedBy string, questions []TriviaQuestion, firstAnswerOnly bool) *Task {
+func NewTriviaStartTask(channel string, questions []TriviaQuestion, firstAnswerOnly bool) *Task {
 	return newTask(TaskTypeTriviaStart, time.Now(), TriviaStartTaskData{
 		Channel:         channel,
-		StartedBy:       startedBy,
 		Questions:       questions,
 		FirstAnswerOnly: firstAnswerOnly,
 	})
