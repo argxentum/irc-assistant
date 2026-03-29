@@ -11,6 +11,8 @@ const (
 )
 
 const (
+	CodeTopicReply   = "332"
+	CodeNoTopic      = "331"
 	CodeWhoIsReply   = "311"
 	CodeEndOfWho     = "315"
 	CodeEndOfWhoIs   = "318"

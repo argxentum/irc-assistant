@@ -90,6 +90,8 @@ type IRC interface {
 	Ban(channel, mask string)
 	Unban(channel, mask string)
 	ListBans(channel string, callback func(bans []*BanEntry))
+	GetTopic(channel string, callback func(topic string))
+	SetTopic(channel, topic string)
 	Disconnect()
 }
 
@@ -424,6 +426,29 @@ func (s *service) ListBans(channel string, callback func(bans []*BanEntry)) {
 	}, func(e *irce.Event) {
 		callback(bans)
 	})
+}
+
+func (s *service) GetTopic(channel string, callback func(topic string)) {
+	s.conn.SendRawf("TOPIC %s", channel)
+
+	var topicID int
+	var noTopicID int
+
+	topicID = s.conn.AddCallback(CodeTopicReply, func(e *irce.Event) {
+		s.conn.RemoveCallback(CodeTopicReply, topicID)
+		s.conn.RemoveCallback(CodeNoTopic, noTopicID)
+		callback(e.Message())
+	})
+
+	noTopicID = s.conn.AddCallback(CodeNoTopic, func(e *irce.Event) {
+		s.conn.RemoveCallback(CodeTopicReply, topicID)
+		s.conn.RemoveCallback(CodeNoTopic, noTopicID)
+		callback("")
+	})
+}
+
+func (s *service) SetTopic(channel, topic string) {
+	s.conn.SendRawf("TOPIC %s :%s", channel, topic)
 }
 
 func (s *service) Disconnect() {

@@ -57,6 +57,22 @@
             </div>
         </div>
 
+        <div id="topic-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeTopicPanel()"></div>
+        <div id="topic-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-lg hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Channel Topic</h2>
+                <button onclick="closeTopicPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="topic-loading" class="text-sm text-gray-400 mb-4">Loading...</div>
+            <textarea id="topic-input" rows="3" class="hidden w-full px-3 py-2 mb-4 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"></textarea>
+            <div id="topic-buttons" class="flex gap-2 hidden">
+                <button onclick="closeTopicPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                <button onclick="submitTopic()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Set Topic</button>
+            </div>
+        </div>
+
         <div id="addban-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeAddBanPanel()"></div>
         <div id="addban-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -140,6 +156,10 @@
                 <tbody id="host-body"></tbody>
             </table>
             <div id="host-cards" class="space-y-2 hidden"></div>
+        </div>
+
+        <div class="flex justify-end mb-3">
+            <button onclick="showTopicPanel()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="message-square-text" class="w-3.5 h-3.5"></i> Topic</button>
         </div>
 
         <div class="bg-gray-800 rounded-lg p-4 md:p-6 mb-6">
@@ -986,6 +1006,51 @@
                     loadBans();
                 } else {
                     showToast(data.error || 'Failed to add ban', false);
+                }
+            } catch (e) {
+                showToast(e.message, false);
+            }
+        }
+
+        async function showTopicPanel() {
+            document.getElementById('topic-loading').classList.remove('hidden');
+            document.getElementById('topic-input').classList.add('hidden');
+            document.getElementById('topic-buttons').classList.add('hidden');
+            document.getElementById('topic-overlay').classList.remove('hidden');
+            document.getElementById('topic-panel').classList.remove('hidden');
+            lucide.createIcons();
+            try {
+                const resp = await fetch('/dashboard/api/topic');
+                const data = await resp.json();
+                document.getElementById('topic-input').value = data.topic || '';
+            } catch (e) {
+                document.getElementById('topic-input').value = '';
+            }
+            document.getElementById('topic-loading').classList.add('hidden');
+            document.getElementById('topic-input').classList.remove('hidden');
+            document.getElementById('topic-buttons').classList.remove('hidden');
+            document.getElementById('topic-input').focus();
+        }
+
+        function closeTopicPanel() {
+            document.getElementById('topic-panel').classList.add('hidden');
+            document.getElementById('topic-overlay').classList.add('hidden');
+        }
+
+        async function submitTopic() {
+            const topic = document.getElementById('topic-input').value;
+            closeTopicPanel();
+            try {
+                const resp = await fetch('/dashboard/api/topic', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({topic})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast('Topic updated', true);
+                } else {
+                    showToast(data.error || 'Failed to set topic', false);
                 }
             } catch (e) {
                 showToast(e.message, false);

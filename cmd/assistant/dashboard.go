@@ -40,6 +40,10 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardUserAction(ircs, data)
 			case models.DashboardActionAddBan:
 				resp = handleDashboardAddBan(ircs, data)
+			case models.DashboardActionGetTopic:
+				resp = handleDashboardGetTopic(ircs, data)
+			case models.DashboardActionSetTopic:
+				resp = handleDashboardSetTopic(ircs, data)
 			case models.DashboardActionListBans:
 				resp = handleDashboardListBans(ircs, data)
 			case models.DashboardActionExpireBan:
@@ -135,6 +139,25 @@ func handleDashboardAddBan(ircs irc.IRC, data models.DashboardRequestTaskData) *
 
 	ircs.Ban(data.Channel, data.Mask)
 	logger.Infof(nil, "dashboard: added ban %s in %s", data.Mask, data.Channel)
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardGetTopic(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	done := make(chan string, 1)
+	ircs.GetTopic(data.Channel, func(topic string) {
+		done <- topic
+	})
+	topic := <-done
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", topic)
+}
+
+func handleDashboardSetTopic(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	ircs.SetTopic(data.Channel, data.Topic)
+	logger.Infof(nil, "dashboard: set topic in %s", data.Channel)
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
 }

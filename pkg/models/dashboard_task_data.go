@@ -13,6 +13,8 @@ const (
 	DashboardActionExpireMute = "expire_mute"
 	DashboardActionAddBan     = "add_ban"
 	DashboardActionListBans   = "list_bans"
+	DashboardActionGetTopic   = "get_topic"
+	DashboardActionSetTopic   = "set_topic"
 )
 
 type DashboardRequestTaskData struct {
@@ -23,6 +25,7 @@ type DashboardRequestTaskData struct {
 	Mask      string `json:"mask,omitempty"`
 	Duration  string `json:"duration,omitempty"`
 	Reason    string `json:"reason,omitempty"`
+	Topic     string `json:"topic,omitempty"`
 }
 
 type DashboardResponseTaskData struct {

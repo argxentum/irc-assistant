@@ -255,6 +255,58 @@ func (s *server) dashboardBansHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp.Data)
 }
 
+func (s *server) dashboardGetTopicHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  models.DashboardActionGetTopic,
+		Channel: session.Channel,
+	})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard get topic failed: %s", err)
+		http.Error(w, "Request failed", http.StatusGatewayTimeout)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": resp.Success, "topic": resp.Data})
+}
+
+func (s *server) dashboardSetTopicHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Topic string `json:"topic"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  models.DashboardActionSetTopic,
+		Channel: session.Channel,
+		Topic:   req.Topic,
+	})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard set topic failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "action failed"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": resp.Success, "error": resp.Error})
+}
+
 func (s *server) dashboardAddBanHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {
