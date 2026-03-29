@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
+	"assistant/pkg/api/stats"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -169,6 +170,7 @@ func (eh *handler) Handle(e *irc.Event) {
 
 		if !isPrivate {
 			eh.resetChannelInactivityTimeout(e)
+			stats.IncrementMessages(e.ReplyTarget())
 
 			bannedWords := eh.bannedWordsInMessage(e, tokens)
 			if len(bannedWords) > 0 {

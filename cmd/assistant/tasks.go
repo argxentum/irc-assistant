@@ -8,6 +8,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
+	"assistant/pkg/api/stats"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/summary"
 	"assistant/pkg/cloudtasks"
@@ -724,17 +725,20 @@ func processChannelStats(ircs irc.IRC, task *models.Task) error {
 		}
 	}
 
-	stats := &models.ChannelStats{
-		TotalUsers:  total,
-		VoicedUsers: voiced,
-		Timestamp:   time.Now(),
+	messageCount := stats.ReadAndResetMessages(channelName)
+
+	channelStats := &models.ChannelStats{
+		TotalUsers:   total,
+		VoicedUsers:  voiced,
+		MessageCount: messageCount,
+		Timestamp:    time.Now(),
 	}
 
-	if err := fs.AddChannelStats(channelName, stats); err != nil {
+	if err := fs.AddChannelStats(channelName, channelStats); err != nil {
 		logger.Errorf(nil, "error adding channel stats for %s: %s", channelName, err)
 		return err
 	}
 
-	logger.Debugf(nil, "channel stats for %s: %d total, %d voiced", channelName, total, voiced)
+	logger.Debugf(nil, "channel stats for %s: %d total, %d voiced, %d messages", channelName, total, voiced, messageCount)
 	return nil
 }
