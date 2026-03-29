@@ -1,14 +1,88 @@
 package firestore
 
 import (
+	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"fmt"
+	"time"
 
 	"cloud.google.com/go/firestore"
 )
 
 func (fs *Firestore) ListSources() ([]*models.Source, error) {
-	return list[models.Source](fs.ctx, fs.client, fs.pathToSources())
+	cr := fs.client.Collection(fs.pathToSources())
+	if cr == nil {
+		return nil, fmt.Errorf("invalid collection path, %s", fs.pathToSources())
+	}
+
+	iter := cr.Documents(fs.ctx)
+	ds, err := iter.GetAll()
+	if err != nil {
+		return nil, fmt.Errorf("error listing sources: %w", err)
+	}
+
+	sources := make([]*models.Source, 0, len(ds))
+	for _, d := range ds {
+		data := d.Data()
+		src := &models.Source{
+			ID:          stringVal(data, "id"),
+			Title:       stringVal(data, "title"),
+			Bias:        stringVal(data, "bias"),
+			Factuality:  stringVal(data, "factuality"),
+			Credibility: stringVal(data, "credibility"),
+			Reviews:     stringSliceVal(data, "reviews"),
+			URLs:        stringSliceVal(data, "urls"),
+			Paywall:     boolVal(data, "paywall"),
+			Keywords:    stringSliceVal(data, "keywords"),
+			CreatedAt:   timeVal(data, "created_at"),
+			UpdatedAt:   timeVal(data, "updated_at"),
+		}
+		sources = append(sources, src)
+	}
+
+	return sources, nil
+}
+
+func stringVal(data map[string]any, key string) string {
+	if v, ok := data[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func boolVal(data map[string]any, key string) bool {
+	if v, ok := data[key].(bool); ok {
+		return v
+	}
+	return false
+}
+
+func timeVal(data map[string]any, key string) time.Time {
+	if v, ok := data[key].(time.Time); ok {
+		return v
+	}
+	return time.Time{}
+}
+
+func stringSliceVal(data map[string]any, key string) []string {
+	switch v := data[key].(type) {
+	case []any:
+		result := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	case string:
+		if v != "" {
+			log.Logger().Debugf(nil, "source field %s is string instead of array, converting", key)
+			return []string{v}
+		}
+		return []string{}
+	default:
+		return []string{}
+	}
 }
 
 func (fs *Firestore) GetSource(id string) (*models.Source, error) {
