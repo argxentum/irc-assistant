@@ -417,6 +417,7 @@
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button onclick="closeSourcePanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                    <button id="source-copy-btn" onclick="copySource()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-600 hover:bg-gray-500 hidden">Copy</button>
                     <button id="source-delete-btn" onclick="deleteSource()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600 hidden">Delete</button>
                     <button onclick="saveSource()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Save</button>
                 </div>
@@ -1547,6 +1548,7 @@
             const overlay = document.getElementById('source-overlay');
             const title = document.getElementById('source-panel-title');
             const deleteBtn = document.getElementById('source-delete-btn');
+            const copyBtn = document.getElementById('source-copy-btn');
 
             document.getElementById('source-id').value = '';
             document.getElementById('source-title').value = '';
@@ -1563,6 +1565,7 @@
                 if (src) {
                     title.textContent = 'Edit Source';
                     deleteBtn.classList.remove('hidden');
+                    copyBtn.classList.remove('hidden');
                     document.getElementById('source-id').value = src.id;
                     document.getElementById('source-title').value = src.title;
                     document.getElementById('source-bias').value = src.bias || '';
@@ -1576,6 +1579,7 @@
             } else {
                 title.textContent = 'Add Source';
                 deleteBtn.classList.add('hidden');
+                copyBtn.classList.add('hidden');
             }
 
             overlay.classList.remove('hidden');
@@ -1591,8 +1595,9 @@
         async function saveSource() {
             const id = document.getElementById('source-id').value;
             const title = document.getElementById('source-title').value.trim();
-            if (!title) { showToast('Title is required', false); return; }
-
+            const bias = document.getElementById('source-bias').value.trim();
+            const credibility = document.getElementById('source-credibility').value.trim();
+            const factuality = document.getElementById('source-factuality').value.trim();
             const urlsRaw = document.getElementById('source-urls').value.trim();
             const urls = urlsRaw ? urlsRaw.split(',').map(u => u.trim()).filter(u => u) : [];
             const kwRaw = document.getElementById('source-keywords').value.trim();
@@ -1600,12 +1605,17 @@
             const reviewsRaw = document.getElementById('source-reviews').value.trim();
             const reviews = reviewsRaw ? reviewsRaw.split('\n').map(r => r.trim()).filter(r => r) : [];
 
+            if (!title || !bias || !credibility || !factuality || urls.length === 0 || keywords.length === 0 || reviews.length === 0) {
+                showToast('All fields are required', false);
+                return;
+            }
+
             const body = {
                 id: id || undefined,
                 title,
-                bias: document.getElementById('source-bias').value.trim(),
-                credibility: document.getElementById('source-credibility').value.trim(),
-                factuality: document.getElementById('source-factuality').value.trim(),
+                bias,
+                credibility,
+                factuality,
                 urls,
                 keywords,
                 reviews,
@@ -1629,6 +1639,14 @@
             } catch (e) {
                 showToast('Save failed: ' + e.message, false);
             }
+        }
+
+        function copySource() {
+            document.getElementById('source-id').value = '';
+            document.getElementById('source-title').value += ' (copy)';
+            document.getElementById('source-panel-title').textContent = 'Add Source';
+            document.getElementById('source-delete-btn').classList.add('hidden');
+            document.getElementById('source-copy-btn').classList.add('hidden');
         }
 
         async function deleteSource() {
