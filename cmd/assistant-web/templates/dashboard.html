@@ -22,6 +22,7 @@
         <div class="flex items-center gap-1 mb-6 border-b border-gray-700 overflow-x-auto [&::-webkit-scrollbar]:h-0">
             <button onclick="switchTab('users-activity')" id="tab-btn-users-activity" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-blue-500 text-blue-400"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview</button>
             <button onclick="switchTab('sources')" id="tab-btn-sources" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="globe" class="w-4 h-4"></i> Sources</button>
+            <button onclick="switchTab('commands')" id="tab-btn-commands" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="terminal" class="w-4 h-4"></i> Commands</button>
             <button onclick="switchTab('banned-words')" id="tab-btn-banned-words" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="shield-ban" class="w-4 h-4"></i> Banned Words</button>
         </div>
 
@@ -341,6 +342,42 @@
         </div>
         </div>
 
+        <div id="tab-commands" class="hidden">
+        <div class="md:flex md:gap-6">
+            <div class="md:w-3/4 bg-gray-800 rounded-lg p-4 md:p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">Commands</h2>
+                        <div id="commands-count" class="text-sm text-gray-400"></div>
+                    </div>
+                    <div class="flex items-center justify-between md:justify-end gap-3">
+                        <button onclick="loadCommands(); loadCommandUsage()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                    </div>
+                </div>
+                <div class="relative mb-4">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="commands-search" type="text" placeholder="Filter..." oninput="filterCommands()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div class="max-h-[60vh] md:max-h-none overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
+                    <div id="commands-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="commands-error" class="text-red-400 hidden"></div>
+                    <div id="commands-empty" class="text-sm text-gray-500 hidden">No commands found</div>
+                    <div id="commands-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div class="md:w-1/4 mt-6 md:mt-0">
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
+                    <h2 class="text-lg font-semibold mb-1">Top Commands</h2>
+                    <p class="text-xs text-gray-500 mb-3">Most used commands by frequency</p>
+                    <div id="cmd-usage-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="cmd-usage-empty" class="text-sm text-gray-500 hidden">No usage data yet</div>
+                    <div id="cmd-usage-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+            </div>
+        </div>
+        </div>
+
         <div id="tab-banned-words" class="hidden">
             <div class="bg-gray-800 rounded-lg p-4 md:p-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
@@ -357,10 +394,12 @@
                     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input id="bw-search" type="text" placeholder="Filter..." oninput="filterBannedWords()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                 </div>
-                <div id="bw-loading" class="text-sm text-gray-400">Loading...</div>
-                <div id="bw-error" class="text-red-400 hidden"></div>
-                <div id="bw-empty" class="text-sm text-gray-500 hidden">No banned words</div>
-                <div id="bw-list" class="space-y-2 max-h-[60vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                <div class="max-h-[60vh] md:max-h-none overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
+                    <div id="bw-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="bw-error" class="text-red-400 hidden"></div>
+                    <div id="bw-empty" class="text-sm text-gray-500 hidden">No banned words</div>
+                    <div id="bw-list" class="space-y-2"></div>
+                </div>
             </div>
         </div>
 
@@ -480,19 +519,22 @@
         let sourcesLoaded = false;
         let bannedWordsData = [];
         let bannedWordsLoaded = false;
+        let commandsData = [];
+        let commandsLoaded = false;
 
         function switchTab(tab) {
-            const tabs = ['users-activity', 'sources', 'banned-words'];
+            const tabs = ['users-activity', 'sources', 'commands', 'banned-words'];
             tabs.forEach(t => {
                 document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById('tab-btn-' + t);
                 if (t === tab) {
-                    btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-blue-500 text-blue-400';
+                    btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-blue-500 text-blue-400';
                 } else {
-                    btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-transparent text-gray-400 hover:text-gray-200';
+                    btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200';
                 }
             });
             if (tab === 'sources' && !sourcesLoaded) { loadSources(); loadTopSources(); loadUnknownSources(); }
+            if (tab === 'commands' && !commandsLoaded) { loadCommands(); loadCommandUsage(); }
             if (tab === 'banned-words' && !bannedWordsLoaded) { loadBannedWords(); }
             lucide.createIcons();
         }
@@ -1880,10 +1922,7 @@
                 const masked = maskWord(item.word);
                 el.innerHTML = `
                     <span class="bw-label font-mono cursor-pointer select-none" onclick="toggleBannedWord(this)" title="Click to reveal">${esc(masked)}</span>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="editBannedWord(this.closest('[data-word]').dataset.word)" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-gray-600 hover:bg-gray-500 flex items-center gap-1"><i data-lucide="pencil" class="w-3 h-3"></i> Edit</button>
-                        <button onclick="removeBannedWord(this.closest('[data-word]').dataset.word)" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 flex items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove</button>
-                    </div>
+                    <button onclick="removeBannedWord(this.closest('[data-word]').dataset.word)" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 flex items-center gap-1 shrink-0"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove</button>
                 `;
                 list.appendChild(el);
             }
@@ -1901,30 +1940,8 @@
             renderBannedWords();
         }
 
-        let bwEditingOldWord = '';
-
         function showAddBannedWord() {
-            bwEditingOldWord = '';
-            document.getElementById('bw-panel-title').textContent = 'Add Banned Word';
             document.getElementById('bw-input').value = '';
-            const btn = document.getElementById('bw-submit');
-            btn.textContent = 'Add';
-            btn.className = 'flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600';
-            btn.onclick = submitBannedWord;
-            document.getElementById('bw-overlay').classList.remove('hidden');
-            document.getElementById('bw-panel').classList.remove('hidden');
-            lucide.createIcons();
-            document.getElementById('bw-input').focus();
-        }
-
-        function editBannedWord(oldWord) {
-            bwEditingOldWord = oldWord;
-            document.getElementById('bw-panel-title').textContent = 'Edit Banned Word';
-            document.getElementById('bw-input').value = oldWord;
-            const btn = document.getElementById('bw-submit');
-            btn.textContent = 'Save';
-            btn.className = 'flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600';
-            btn.onclick = submitBannedWord;
             document.getElementById('bw-overlay').classList.remove('hidden');
             document.getElementById('bw-panel').classList.remove('hidden');
             lucide.createIcons();
@@ -1940,45 +1957,21 @@
             const word = document.getElementById('bw-input').value.trim();
             if (!word) return;
             closeBannedWordPanel();
-            if (bwEditingOldWord) {
-                if (word === bwEditingOldWord) return;
-                updateBannedWord(bwEditingOldWord, word);
-            } else {
-                try {
-                    const resp = await fetch('/dashboard/api/bannedwords/add', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({word}),
-                    });
-                    const result = await resp.json();
-                    if (result.success) {
-                        showToast('Banned word added', true);
-                        loadBannedWords();
-                    } else {
-                        showToast(result.error || 'Add failed', false);
-                    }
-                } catch (e) {
-                    showToast('Add failed: ' + e.message, false);
-                }
-            }
-        }
-
-        async function updateBannedWord(oldWord, newWord) {
             try {
-                const resp = await fetch('/dashboard/api/bannedwords/update', {
+                const resp = await fetch('/dashboard/api/bannedwords/add', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({old_word: oldWord, new_word: newWord}),
+                    body: JSON.stringify({word}),
                 });
                 const result = await resp.json();
                 if (result.success) {
-                    showToast('Banned word updated', true);
+                    showToast('Banned word added', true);
                     loadBannedWords();
                 } else {
-                    showToast(result.error || 'Update failed', false);
+                    showToast(result.error || 'Add failed', false);
                 }
             } catch (e) {
-                showToast('Update failed: ' + e.message, false);
+                showToast('Add failed: ' + e.message, false);
             }
         }
 
@@ -2001,6 +1994,149 @@
                     showToast('Remove failed: ' + e.message, false);
                 }
             });
+        }
+
+        // ── Commands tab ──
+
+        async function loadCommands() {
+            const loading = document.getElementById('commands-loading');
+            const error = document.getElementById('commands-error');
+            const empty = document.getElementById('commands-empty');
+            const list = document.getElementById('commands-list');
+
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/commands');
+                if (!resp.ok) throw new Error(await resp.text());
+                commandsData = await resp.json();
+                commandsLoaded = true;
+
+                commandsData.sort((a, b) => a.name.localeCompare(b.name));
+
+                const enabled = commandsData.filter(c => c.enabled).length;
+                const disabled = commandsData.length - enabled;
+                let countText = `${commandsData.length} commands`;
+                if (disabled > 0) countText += ` — ${disabled} disabled`;
+                document.getElementById('commands-count').textContent = countText;
+
+                renderCommands();
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.textContent = e.message;
+                error.classList.remove('hidden');
+            }
+        }
+
+        function renderCommands() {
+            const loading = document.getElementById('commands-loading');
+            const empty = document.getElementById('commands-empty');
+            const list = document.getElementById('commands-list');
+
+            list.innerHTML = '';
+            const q = document.getElementById('commands-search').value.toLowerCase();
+            const filtered = commandsData.filter(c => !q || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.triggers.some(t => t.toLowerCase().includes(q)));
+
+            loading.classList.add('hidden');
+            if (filtered.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            for (const cmd of filtered) {
+                const el = document.createElement('div');
+                el.className = 'bg-gray-700/50 rounded p-3 text-sm flex items-center justify-between gap-3';
+                const triggers = cmd.triggers.map(t => `!${escapeHtml(t)}`).join(', ');
+                const authBadge = cmd.requires_auth ? '<span class="text-xs bg-yellow-900/50 text-yellow-400 px-1.5 py-0.5 rounded ml-2">auth</span>' : '';
+                el.innerHTML = `
+                    <div class="min-w-0">
+                        <div class="flex items-center flex-wrap gap-1">
+                            <span class="font-mono font-medium text-gray-100">${triggers}</span>${authBadge}
+                        </div>
+                        <div class="text-gray-400 text-xs mt-0.5">${escapeHtml(cmd.description)}</div>
+                    </div>
+                    <label class="relative inline-block w-9 h-5 shrink-0 cursor-pointer select-none">
+                        <input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="toggleCommand('${escapeAttr(cmd.name)}', this.checked)" class="peer sr-only" />
+                        <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
+                        <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                    </label>
+                `;
+                list.appendChild(el);
+            }
+        }
+
+        function filterCommands() {
+            renderCommands();
+        }
+
+        async function toggleCommand(name, enabled) {
+            try {
+                const resp = await fetch('/dashboard/api/commands/toggle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, enabled}),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    const cmd = commandsData.find(c => c.name === name);
+                    if (cmd) cmd.enabled = enabled;
+                    const enabledCount = commandsData.filter(c => c.enabled).length;
+                    const disabledCount = commandsData.length - enabledCount;
+                    let countText = `${commandsData.length} commands`;
+                    if (disabledCount > 0) countText += ` — ${disabledCount} disabled`;
+                    document.getElementById('commands-count').textContent = countText;
+                    showToast(`${name} ${enabled ? 'enabled' : 'disabled'}`, true);
+                } else {
+                    showToast(result.error || 'Toggle failed', false);
+                    loadCommands();
+                }
+            } catch (e) {
+                showToast('Toggle failed: ' + e.message, false);
+                loadCommands();
+            }
+        }
+
+        async function loadCommandUsage() {
+            const loading = document.getElementById('cmd-usage-loading');
+            const empty = document.getElementById('cmd-usage-empty');
+            const list = document.getElementById('cmd-usage-list');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/commands/usage');
+                if (!resp.ok) throw new Error(await resp.text());
+                let usage = await resp.json();
+
+                loading.classList.add('hidden');
+                if (!usage || usage.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                usage.sort((a, b) => b.count - a.count);
+                usage = usage.slice(0, 25);
+
+                for (const u of usage) {
+                    const el = document.createElement('div');
+                    el.className = 'flex items-center justify-between text-sm';
+                    el.innerHTML = `
+                        <span class="font-mono text-gray-300 truncate">${escapeHtml(u.name)}</span>
+                        <span class="text-gray-400 shrink-0 ml-2">${u.count.toLocaleString()}</span>
+                    `;
+                    list.appendChild(el);
+                }
+            } catch (e) {
+                loading.classList.add('hidden');
+                empty.textContent = 'Failed to load';
+                empty.classList.remove('hidden');
+            }
         }
 
         loadStats();

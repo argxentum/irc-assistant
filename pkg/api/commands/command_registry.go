@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
+	"assistant/pkg/models"
 )
 
 var registry CommandRegistry
@@ -12,6 +13,7 @@ type CommandRegistry interface {
 	Command(name string) Command
 	Commands() map[string]Command
 	CommandsSortedForProcessing() []Command
+	CommandInfoList() []*models.CommandInfo
 	RegisterCommands()
 }
 
@@ -67,6 +69,23 @@ func (cr *commandRegistry) CommandsSortedForProcessing() []Command {
 	}
 	orderedCommands = append(orderedCommands, nonTriggered...)
 	return orderedCommands
+}
+
+func (cr *commandRegistry) CommandInfoList() []*models.CommandInfo {
+	result := make([]*models.CommandInfo, 0, len(cr.commands))
+	for _, cmd := range cr.commands {
+		if len(cmd.Triggers()) == 0 {
+			continue
+		}
+		requiresAuth := len(cmd.Authorizer().RequiredRole()) > 0 || len(cmd.Authorizer().RequiredChannelStatus()) > 0
+		result = append(result, &models.CommandInfo{
+			Name:         cmd.Name(),
+			Description:  cmd.Description(),
+			Triggers:     cmd.Triggers(),
+			RequiresAuth: requiresAuth,
+		})
+	}
+	return result
 }
 
 func (cr *commandRegistry) RegisterCommands() {

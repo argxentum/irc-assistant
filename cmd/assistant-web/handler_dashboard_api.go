@@ -1060,34 +1060,6 @@ func (s *server) dashboardBannedWordAddHandler(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
 
-func (s *server) dashboardBannedWordUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	session := s.validateDashboardSession(r)
-	if session == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	var req struct {
-		OldWord string `json:"old_word"`
-		NewWord string `json:"new_word"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OldWord == "" || req.NewWord == "" {
-		http.Error(w, "Both old_word and new_word are required", http.StatusBadRequest)
-		return
-	}
-
-	if err := firestore.Get().UpdateBannedWord(session.Channel, req.OldWord, req.NewWord); err != nil {
-		log.Logger().Errorf(nil, "dashboard update banned word failed: %s", err)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
-		return
-	}
-
-	log.Logger().Infof(nil, "dashboard: updated banned word in %s", session.Channel)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"success": true})
-}
-
 func (s *server) dashboardBannedWordRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {
@@ -1140,4 +1112,151 @@ func (s *server) dashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+func (s *server) dashboardCommandsHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  models.DashboardActionListCommands,
+		Channel: session.Channel,
+	})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard commands request failed: %s", err)
+		http.Error(w, "Request failed", http.StatusGatewayTimeout)
+		return
+	}
+
+	if !resp.Success {
+		http.Error(w, resp.Error, http.StatusInternalServerError)
+		return
+	}
+
+	// the response data comes back as []any after JSON round-trip; re-marshal to decode properly
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		http.Error(w, "Failed to process commands", http.StatusInternalServerError)
+		return
+	}
+	var commands []models.CommandInfo
+	if err := json.Unmarshal(raw, &commands); err != nil {
+		http.Error(w, "Failed to decode commands", http.StatusInternalServerError)
+		return
+	}
+
+	ch, err := firestore.Get().Channel(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "error getting channel: %s", err)
+		http.Error(w, "Failed to get channel", http.StatusInternalServerError)
+		return
+	}
+
+	disabled := make(map[string]bool)
+	if ch != nil {
+		for _, d := range ch.DisabledCommands {
+			disabled[d] = true
+		}
+	}
+
+	type commandResponse struct {
+		Name         string   `json:"name"`
+		Description  string   `json:"description"`
+		Triggers     []string `json:"triggers"`
+		RequiresAuth bool     `json:"requires_auth"`
+		Enabled      bool     `json:"enabled"`
+	}
+
+	result := make([]commandResponse, 0, len(commands))
+	for _, cmd := range commands {
+		result = append(result, commandResponse{
+			Name:         cmd.Name,
+			Description:  cmd.Description,
+			Triggers:     cmd.Triggers,
+			RequiresAuth: cmd.RequiresAuth,
+			Enabled:      !disabled[cmd.Name],
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardCommandToggleHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	fs := firestore.Get()
+	ch, err := fs.Channel(session.Channel)
+	if err != nil || ch == nil {
+		http.Error(w, "Failed to get channel", http.StatusInternalServerError)
+		return
+	}
+
+	if req.Enabled {
+		// remove from disabled list
+		filtered := make([]string, 0)
+		for _, d := range ch.DisabledCommands {
+			if d != req.Name {
+				filtered = append(filtered, d)
+			}
+		}
+		ch.DisabledCommands = filtered
+	} else {
+		// add to disabled list if not already there
+		found := false
+		for _, d := range ch.DisabledCommands {
+			if d == req.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ch.DisabledCommands = append(ch.DisabledCommands, req.Name)
+		}
+	}
+
+	if err := fs.UpdateChannel(session.Channel, map[string]any{"disabled_commands": ch.DisabledCommands, "updated_at": time.Now()}); err != nil {
+		log.Logger().Errorf(nil, "error updating channel disabled commands: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: toggled command %s to enabled=%v in %s", req.Name, req.Enabled, session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardCommandUsageHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	usage, err := firestore.Get().ListCommandUsage(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "error listing command usage: %s", err)
+		http.Error(w, "Failed to list command usage", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(usage)
 }

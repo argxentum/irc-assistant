@@ -2,6 +2,7 @@ package main
 
 import (
 	"assistant/pkg/api/actions"
+	"assistant/pkg/api/commands"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/repository"
@@ -57,6 +58,8 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardExpireBan(ircs, data)
 			case models.DashboardActionExpireMute:
 				resp = handleDashboardExpireMute(ircs, data)
+			case models.DashboardActionListCommands:
+				resp = handleDashboardListCommands(ctx, cfg, ircs, data)
 			default:
 				resp = models.NewDashboardResponseTask(data.RequestID, data.Action, false, "unknown action", nil)
 			}
@@ -298,4 +301,9 @@ func handleDashboardListBans(ircs irc.IRC, data models.DashboardRequestTaskData)
 	}
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", dashBans)
+}
+
+func handleDashboardListCommands(ctx context.Context, cfg *config.Config, ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	reg := commands.LoadCommandRegistry(ctx, cfg, ircs)
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", reg.CommandInfoList())
 }

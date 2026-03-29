@@ -71,8 +71,10 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/api/sources/unknown", s.dashboardUnknownSourcesHandler)
 	http.HandleFunc("/dashboard/api/bannedwords", s.dashboardBannedWordsHandler)
 	http.HandleFunc("POST /dashboard/api/bannedwords/add", s.dashboardBannedWordAddHandler)
-	http.HandleFunc("POST /dashboard/api/bannedwords/update", s.dashboardBannedWordUpdateHandler)
 	http.HandleFunc("POST /dashboard/api/bannedwords/remove", s.dashboardBannedWordRemoveHandler)
+	http.HandleFunc("/dashboard/api/commands", s.dashboardCommandsHandler)
+	http.HandleFunc("POST /dashboard/api/commands/toggle", s.dashboardCommandToggleHandler)
+	http.HandleFunc("/dashboard/api/commands/usage", s.dashboardCommandUsageHandler)
 	http.HandleFunc("/dashboard/api/penalties", s.dashboardPenaltiesHandler)
 	http.HandleFunc("POST /dashboard/api/penalties/expire", s.dashboardExpirePenaltyHandler)
 

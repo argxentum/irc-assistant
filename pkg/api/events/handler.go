@@ -201,6 +201,14 @@ func (eh *handler) Handle(e *irc.Event) {
 					return
 				}
 
+				if !isPrivate {
+					go func() {
+						if err := firestore.Get().IncrementCommandUsage(e.ReplyTarget(), f.Name()); err != nil {
+							logger.Errorf(e, "error incrementing command usage: %s", err)
+						}
+					}()
+				}
+
 				go f.Execute(e)
 			})
 		} else if !isPrivate && len(e.Message()) > 0 {

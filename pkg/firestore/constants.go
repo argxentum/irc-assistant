@@ -12,6 +12,7 @@ const (
 	pathSources               = "sources"
 	pathDisinformationSources = "disinformation-sources"
 	pathUnknownSources        = "unknown-sources"
+	pathCommandUsage          = "command-usage"
 	pathShortcuts             = "shortcuts"
 	pathLLMResponses          = "llm-responses"
 	pathAuthTokens            = "auth-tokens"
