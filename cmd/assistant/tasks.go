@@ -564,18 +564,19 @@ func processProxyLLMResponse(cfg *config.Config, ircs irc.IRC, task *models.Task
 	}
 
 	// use only the first two non-empty lines
-	lines := strings.SplitN(content, "\n", 3)
+	allLines := strings.Split(content, "\n")
 	ircLines := make([]string, 0, 2)
-	for _, line := range lines {
+	truncated := false
+	for _, line := range allLines {
 		if trimmed := strings.TrimSpace(line); len(trimmed) > 0 {
-			ircLines = append(ircLines, trimmed)
-			if len(ircLines) == 2 {
+			if len(ircLines) < 2 {
+				ircLines = append(ircLines, trimmed)
+			} else {
+				truncated = true
 				break
 			}
 		}
 	}
-
-	truncated := len(lines) > len(ircLines)
 
 	for i, line := range ircLines {
 		if len(line) > maxLLMResponseLength {
