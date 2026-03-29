@@ -1264,3 +1264,88 @@ func (s *server) dashboardCommandUsageHandler(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(usage)
 }
+
+func (s *server) dashboardDisinfoSourcesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sources, err := firestore.Get().DisinformationSources(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "error listing disinfo sources: %s", err)
+		http.Error(w, "Failed to list sources", http.StatusInternalServerError)
+		return
+	}
+
+	type disinfoResponse struct {
+		Source    string `json:"source"`
+		CreatedAt string `json:"created_at"`
+	}
+
+	result := make([]disinfoResponse, 0, len(sources))
+	for _, src := range sources {
+		result = append(result, disinfoResponse{
+			Source:    src.Source,
+			CreatedAt: src.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardDisinfoSourceAddHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Source string `json:"source"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Source == "" {
+		http.Error(w, "Source is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().AddDisinformationSource(session.Channel, req.Source); err != nil {
+		log.Logger().Errorf(nil, "dashboard add disinfo source failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "add failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: added disinfo source %s in %s", req.Source, session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardDisinfoSourceRemoveHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Source string `json:"source"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Source == "" {
+		http.Error(w, "Source is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().DeleteDisinformationSource(session.Channel, req.Source); err != nil {
+		log.Logger().Errorf(nil, "dashboard remove disinfo source failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "remove failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: removed disinfo source %s from %s", req.Source, session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
