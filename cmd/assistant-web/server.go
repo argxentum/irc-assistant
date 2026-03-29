@@ -75,6 +75,8 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/api/disinfo", s.dashboardDisinfoSourcesHandler)
 	http.HandleFunc("POST /dashboard/api/disinfo/add", s.dashboardDisinfoSourceAddHandler)
 	http.HandleFunc("POST /dashboard/api/disinfo/remove", s.dashboardDisinfoSourceRemoveHandler)
+	http.HandleFunc("/dashboard/api/communitynotes", s.dashboardCommunityNotesHandler)
+	http.HandleFunc("POST /dashboard/api/communitynotes/delete", s.dashboardCommunityNoteDeleteHandler)
 	http.HandleFunc("/dashboard/api/commands", s.dashboardCommandsHandler)
 	http.HandleFunc("POST /dashboard/api/commands/toggle", s.dashboardCommandToggleHandler)
 	http.HandleFunc("/dashboard/api/commands/usage", s.dashboardCommandUsageHandler)

@@ -291,7 +291,7 @@
                             <div id="sources-count" class="text-sm text-gray-400"></div>
                         </div>
                         <div class="flex items-center justify-between md:justify-end gap-3">
-                            <button onclick="loadSources(); loadTopSources(); loadUnknownSources(); loadDisinfoSources()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                            <button onclick="loadSources(); loadTopSources(); loadUnknownSources(); loadCommunityNotes(); loadDisinfoSources()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                             <button onclick="showSourcePanel()" class="text-sm bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Source</button>
                         </div>
                     </div>
@@ -339,6 +339,21 @@
                     <div id="unknown-sources-loading" class="text-sm text-gray-400">Loading...</div>
                     <div id="unknown-sources-empty" class="text-sm text-gray-500 hidden">No unknown sources</div>
                     <div id="unknown-sources-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Community Notes</h2>
+                        <span id="community-notes-count" class="text-sm text-gray-400"></span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">User-submitted context notes on shared sources</p>
+                    <div class="relative mb-3">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="community-notes-search" type="text" placeholder="Filter..." oninput="filterCommunityNotes()" class="w-full pl-8 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="community-notes-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="community-notes-empty" class="text-sm text-gray-500 hidden">No community notes</div>
+                    <div id="community-notes-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
 
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
@@ -435,6 +450,42 @@
                 <div class="flex gap-2">
                     <button onclick="closeBannedWordPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
                     <button id="bw-submit" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="community-note-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeCommunityNotePanel()"></div>
+        <div id="community-note-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-md hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Community Note</h2>
+                <button onclick="closeCommunityNotePanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Content</label>
+                    <p id="cn-detail-content" class="text-sm text-gray-100 bg-gray-700/50 rounded p-3"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Author</label>
+                    <p id="cn-detail-author" class="text-sm text-gray-100"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Sources</label>
+                    <div id="cn-detail-sources" class="text-sm text-gray-100 font-mono space-y-1"></div>
+                </div>
+                <div id="cn-detail-counter-section">
+                    <label class="block text-xs text-gray-400 mb-1">Counter Sources</label>
+                    <div id="cn-detail-counter-sources" class="text-sm text-gray-100 font-mono space-y-1"></div>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Noted</label>
+                    <p id="cn-detail-date" class="text-sm text-gray-400"></p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeCommunityNotePanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                    <button onclick="deleteCommunityNote()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600">Delete</button>
                 </div>
             </div>
         </div>
@@ -581,7 +632,7 @@
                     btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200';
                 }
             });
-            if (tab === 'sources' && !sourcesLoaded) { loadSources(); loadTopSources(); loadUnknownSources(); loadDisinfoSources(); }
+            if (tab === 'sources' && !sourcesLoaded) { loadSources(); loadTopSources(); loadUnknownSources(); loadCommunityNotes(); loadDisinfoSources(); }
             if (tab === 'commands' && !commandsLoaded) { loadCommands(); loadCommandUsage(); }
             if (tab === 'banned-words' && !bannedWordsLoaded) { loadBannedWords(); }
             lucide.createIcons();
@@ -1084,7 +1135,7 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); closeSourcePanel(); closeBannedWordPanel(); closeDisinfoPanel(); }
+            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); closeSourcePanel(); closeBannedWordPanel(); closeDisinfoPanel(); closeCommunityNotePanel(); }
         });
 
         async function loadVoiceRequests() {
@@ -1915,6 +1966,112 @@
 
         // ── Disinformation Sources ──
 
+        // ── Community Notes ──
+
+        let communityNotesData = [];
+        let communityNotePanelId = '';
+
+        async function loadCommunityNotes() {
+            const loading = document.getElementById('community-notes-loading');
+            const empty = document.getElementById('community-notes-empty');
+            const list = document.getElementById('community-notes-list');
+            const count = document.getElementById('community-notes-count');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+            count.textContent = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/communitynotes');
+                if (!resp.ok) throw new Error(await resp.text());
+                communityNotesData = await resp.json() || [];
+
+                loading.classList.add('hidden');
+                if (communityNotesData.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                count.textContent = communityNotesData.length;
+
+                for (const note of communityNotesData) {
+                    const el = document.createElement('div');
+                    el.className = 'bg-gray-700/50 rounded p-2 text-sm text-gray-100 truncate cursor-pointer hover:bg-gray-600/50';
+                    el.textContent = note.content;
+                    el.onclick = () => showCommunityNoteDetail(note.id);
+                    list.appendChild(el);
+                }
+            } catch (e) {
+                loading.classList.add('hidden');
+                empty.textContent = 'Failed to load';
+                empty.classList.remove('hidden');
+            }
+        }
+
+        function filterCommunityNotes() {
+            const q = document.getElementById('community-notes-search').value.toLowerCase();
+            for (const el of document.querySelectorAll('#community-notes-list > div')) {
+                el.classList.toggle('hidden', q && !el.textContent.toLowerCase().includes(q));
+            }
+        }
+
+        function showCommunityNoteDetail(id) {
+            const note = communityNotesData.find(n => n.id === id);
+            if (!note) return;
+            communityNotePanelId = id;
+
+            document.getElementById('cn-detail-content').textContent = note.content;
+            document.getElementById('cn-detail-author').textContent = note.author || 'Unknown';
+
+            const sourcesEl = document.getElementById('cn-detail-sources');
+            sourcesEl.innerHTML = (note.sources || []).map(s => `<div class="break-all">${escapeHtml(s)}</div>`).join('');
+
+            const counterSection = document.getElementById('cn-detail-counter-section');
+            const counterEl = document.getElementById('cn-detail-counter-sources');
+            if (note.counter_sources && note.counter_sources.length > 0) {
+                counterSection.classList.remove('hidden');
+                counterEl.innerHTML = note.counter_sources.map(s => `<div class="break-all">${escapeHtml(s)}</div>`).join('');
+            } else {
+                counterSection.classList.add('hidden');
+            }
+
+            const d = new Date(note.noted_at);
+            document.getElementById('cn-detail-date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+
+            document.getElementById('community-note-overlay').classList.remove('hidden');
+            document.getElementById('community-note-panel').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeCommunityNotePanel() {
+            document.getElementById('community-note-panel').classList.add('hidden');
+            document.getElementById('community-note-overlay').classList.add('hidden');
+        }
+
+        async function deleteCommunityNote() {
+            const id = communityNotePanelId;
+            closeCommunityNotePanel();
+            try {
+                const resp = await fetch('/dashboard/api/communitynotes/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id}),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast('Community note deleted', true);
+                    loadCommunityNotes();
+                } else {
+                    showToast(result.error || 'Delete failed', false);
+                }
+            } catch (e) {
+                showToast('Delete failed: ' + e.message, false);
+            }
+        }
+
+        // ── Disinformation Sources ──
+
         async function loadDisinfoSources() {
             const loading = document.getElementById('disinfo-loading');
             const empty = document.getElementById('disinfo-empty');
@@ -1935,7 +2092,7 @@
                     return;
                 }
 
-                sources.sort((a, b) => a.source.localeCompare(b.source));
+                sources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
                 for (const src of sources) {
                     const el = document.createElement('div');

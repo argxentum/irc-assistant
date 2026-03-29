@@ -1349,3 +1349,69 @@ func (s *server) dashboardDisinfoSourceRemoveHandler(w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
 }
+
+func (s *server) dashboardCommunityNotesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	notes, err := firestore.Get().CommunityNotes(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "error listing community notes: %s", err)
+		http.Error(w, "Failed to list notes", http.StatusInternalServerError)
+		return
+	}
+
+	type noteResponse struct {
+		ID             string   `json:"id"`
+		Content        string   `json:"content"`
+		Author         string   `json:"author"`
+		Sources        []string `json:"sources"`
+		CounterSources []string `json:"counter_sources"`
+		NotedAt        string   `json:"noted_at"`
+	}
+
+	result := make([]noteResponse, 0, len(notes))
+	for _, n := range notes {
+		result = append(result, noteResponse{
+			ID:             n.ID,
+			Content:        n.Content,
+			Author:         n.Author,
+			Sources:        n.Sources,
+			CounterSources: n.CounterSources,
+			NotedAt:        n.NotedAt.Format(time.RFC3339),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardCommunityNoteDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().DeleteCommunityNote(session.Channel, req.ID); err != nil {
+		log.Logger().Errorf(nil, "dashboard delete community note failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "delete failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: deleted community note %s from %s", req.ID, session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
