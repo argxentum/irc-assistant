@@ -29,6 +29,7 @@ const (
 	TaskTypeProxyRedditSearchResponse        = "proxy_reddit_search_response"
 	TaskTypeDashboardRequest                 = "dashboard_request"
 	TaskTypeDashboardResponse                = "dashboard_response"
+	TaskTypePersistentChannelStats           = "persistent_channel_stats"
 )
 
 const (
@@ -140,6 +141,10 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypeDashboardResponse:
 		if task.Data, err = deserializeTaskData[DashboardResponseTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypePersistentChannelStats:
+		if task.Data, err = deserializeTaskData[PersistentTaskData](d); err != nil {
 			return nil, err
 		}
 	}

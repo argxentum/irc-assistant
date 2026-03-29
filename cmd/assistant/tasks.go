@@ -59,6 +59,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypePersistentChannel:
 				isScheduledTask = false
 				err = processPersistentChannel(ctx, cfg, irc, task)
+			case models.TaskTypePersistentChannelStats:
+				isScheduledTask = false
+				err = processChannelStats(irc, task)
 			case models.TaskTypeDisinformationMutePenaltyRemoval:
 				err = processDisinformationMutePenaltyRemoval(ctx, cfg, irc, task)
 			case models.TaskTypeDisinformationBanPenaltyRemoval:
@@ -115,6 +118,15 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				task.DueAt = time.Now().Add(duration)
 				err = fs.SetTask(task)
 				if err != nil {
+					logger.Errorf(nil, "error updating %s, %s", task.ID, err)
+				}
+
+				if _, err := cloudtasks.Get().CreateTask(task); err != nil {
+					logger.Errorf(nil, "error rescheduling cloud task %s: %s", task.ID, err)
+				}
+			} else if task.Type == models.TaskTypePersistentChannelStats {
+				task.DueAt = time.Now().Add(models.ChannelStatsInterval)
+				if err := fs.SetTask(task); err != nil {
 					logger.Errorf(nil, "error updating %s, %s", task.ID, err)
 				}
 
@@ -689,5 +701,40 @@ func processProxyRedditSearchResponse(cfg *config.Config, ircs irc.IRC, task *mo
 	}
 
 	ircs.SendMessages(data.Channel, content)
+	return nil
+}
+
+func processChannelStats(ircs irc.IRC, task *models.Task) error {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	channelName := task.Data.(models.PersistentTaskData).Channel
+
+	done := make(chan []*irc.User, 1)
+	ircs.ListUsers(channelName, func(users []*irc.User) {
+		done <- users
+	})
+	users := <-done
+
+	total := len(users)
+	voiced := 0
+	for _, u := range users {
+		if u.Status == irc.ChannelStatusVoice || u.Status == irc.ChannelStatusOperator || u.Status == irc.ChannelStatusHalfOperator {
+			voiced++
+		}
+	}
+
+	stats := &models.ChannelStats{
+		TotalUsers:  total,
+		VoicedUsers: voiced,
+		Timestamp:   time.Now(),
+	}
+
+	if err := fs.AddChannelStats(channelName, stats); err != nil {
+		logger.Errorf(nil, "error adding channel stats for %s: %s", channelName, err)
+		return err
+	}
+
+	logger.Debugf(nil, "channel stats for %s: %d total, %d voiced", channelName, total, voiced)
 	return nil
 }

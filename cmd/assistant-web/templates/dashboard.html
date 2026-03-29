@@ -6,6 +6,8 @@
     <title>Dashboard - {{.channel}}</title>
     <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <div class="max-w-7xl mx-auto p-4 md:p-6">
@@ -125,6 +127,21 @@
             <div id="host-cards" class="space-y-2 hidden"></div>
         </div>
 
+        <div class="bg-gray-800 rounded-lg p-4 md:p-6 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold">Channel Activity</h2>
+                <select id="stats-range" onchange="loadStats()" class="text-sm bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:border-blue-500 cursor-pointer">
+                    <option value="24">Last 24 hours</option>
+                    <option value="48">Last 48 hours</option>
+                    <option value="72">Last 3 days</option>
+                    <option value="168">Last 7 days</option>
+                </select>
+            </div>
+            <div class="relative h-48 md:h-56">
+                <canvas id="stats-chart"></canvas>
+            </div>
+        </div>
+
         <div class="md:flex md:gap-6">
             <div class="md:w-3/4 bg-gray-800 rounded-lg p-4 md:p-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
@@ -141,7 +158,7 @@
                             </span>
                             Show offline
                         </label>
-                        <button onclick="loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                        <button onclick="loadStats(); loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                     </div>
                 </div>
                 <div class="relative mb-4">
@@ -936,6 +953,97 @@
             });
         }
 
+        let statsChart = null;
+
+        async function loadStats() {
+            const hours = document.getElementById('stats-range').value;
+            try {
+                const resp = await fetch(`/dashboard/api/stats?hours=${hours}`);
+                if (!resp.ok) return;
+                const stats = await resp.json();
+
+                const labels = (stats || []).map(s => new Date(s.timestamp));
+                const totalData = (stats || []).map(s => s.total_users);
+                const voicedData = (stats || []).map(s => s.voiced_users);
+
+                if (statsChart) {
+                    statsChart.data.labels = labels;
+                    statsChart.data.datasets[0].data = totalData;
+                    statsChart.data.datasets[1].data = voicedData;
+                    statsChart.update();
+                    return;
+                }
+
+                const ctx = document.getElementById('stats-chart').getContext('2d');
+                statsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Total Users',
+                                data: totalData,
+                                borderColor: 'rgb(96, 165, 250)',
+                                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                pointHitRadius: 10,
+                                borderWidth: 2,
+                            },
+                            {
+                                label: 'Voiced Users',
+                                data: voicedData,
+                                borderColor: 'rgb(74, 222, 128)',
+                                backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 0,
+                                pointHitRadius: 10,
+                                borderWidth: 2,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                labels: { color: '#9ca3af', boxWidth: 12, padding: 16 }
+                            },
+                            tooltip: {
+                                backgroundColor: '#1f2937',
+                                titleColor: '#f3f4f6',
+                                bodyColor: '#d1d5db',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    tooltipFormat: 'MMM d, h:mm a',
+                                    displayFormats: { hour: 'ha', day: 'MMM d' }
+                                },
+                                ticks: { color: '#6b7280', maxTicksLimit: 8 },
+                                grid: { color: 'rgba(75, 85, 99, 0.3)' },
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { color: '#6b7280', stepSize: 1 },
+                                grid: { color: 'rgba(75, 85, 99, 0.3)' },
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        loadStats();
         loadUsers();
         loadBans();
         loadPenalties();

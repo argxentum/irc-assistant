@@ -35,7 +35,7 @@ func (fs *Firestore) TaskPath(task *models.Task) string {
 	case models.TaskTypeNotifyVoiceRequests:
 		data := task.Data.(models.NotifyVoiceRequestsTaskData)
 		return fmt.Sprintf("%s/%s", fs.tasksPath("", data.Channel, task.Type), task.ID)
-	case models.TaskTypePersistentChannel:
+	case models.TaskTypePersistentChannel, models.TaskTypePersistentChannelStats:
 		data := task.Data.(models.PersistentTaskData)
 		return fs.PersistentChannelTaskPath(data.Channel, task.ID)
 	case models.TaskTypeDisinformationMutePenaltyRemoval:

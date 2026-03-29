@@ -6,7 +6,9 @@ import (
 	"assistant/pkg/models"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 func (s *server) dashboardUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -531,4 +533,31 @@ func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	hours := 24
+	if h := r.URL.Query().Get("hours"); h != "" {
+		if parsed, err := strconv.Atoi(h); err == nil && parsed > 0 && parsed <= 168 {
+			hours = parsed
+		}
+	}
+
+	since := time.Now().Add(-time.Duration(hours) * time.Hour)
+	fs := firestore.Get()
+	stats, err := fs.GetChannelStats(session.Channel, since)
+	if err != nil {
+		log.Logger().Errorf(nil, "error getting channel stats: %s", err)
+		http.Error(w, "Failed to get stats", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
 }

@@ -164,6 +164,26 @@ func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, cha
 			logger.Errorf(nil, "error scheduling cloud task for channel %s inactivity: %s", channel, err)
 		}
 	}
+
+	// initialize channel stats persistent task
+	statsPath := fs.PersistentChannelTaskPath(channel, models.ChannelStatsTaskID)
+	statsTask, err := fs.Task(statsPath)
+	if err != nil {
+		logger.Errorf(nil, "error retrieving channel stats task: %s", err)
+	}
+
+	if statsTask == nil {
+		statsTask = models.NewPersistentTask(models.ChannelStatsTaskID, channel, models.TaskTypePersistentChannelStats, time.Now().Add(models.ChannelStatsInterval))
+		if err := fs.SetTask(statsTask); err != nil {
+			logger.Errorf(nil, "error creating channel stats task: %s", err)
+		}
+		logger.Debugf(nil, "channel %s stats persistent task created", channel)
+	}
+
+	statsTask.Data = models.PersistentTaskData{Channel: channel}
+	if _, err := cloudtasks.Get().CreateTask(statsTask); err != nil {
+		logger.Errorf(nil, "error scheduling cloud task for channel %s stats: %s", channel, err)
+	}
 }
 
 func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel string, mask *irc.Mask) {
