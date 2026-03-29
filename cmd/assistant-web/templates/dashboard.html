@@ -302,7 +302,7 @@
                     <div id="sources-loading" class="text-sm text-gray-400">Loading...</div>
                     <div id="sources-error" class="text-red-400 hidden"></div>
                     <div id="sources-empty" class="text-sm text-gray-500 hidden">No sources found</div>
-                    <div class="max-h-[40vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
+                    <div class="overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
                         <table id="sources-table" class="w-full hidden">
                             <thead class="sticky top-0 bg-gray-800">
                                 <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
@@ -317,19 +317,6 @@
                         </table>
                         <div id="sources-cards" class="space-y-2 hidden"></div>
                     </div>
-                </div>
-
-                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-                        <div>
-                            <h2 class="text-lg font-semibold">Disinformation Sources</h2>
-                            <p class="text-xs text-gray-500">Domains flagged as disinformation — URLs matching these prefixes trigger penalties</p>
-                        </div>
-                        <button onclick="showAddDisinfoSource()" class="text-sm bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add</button>
-                    </div>
-                    <div id="disinfo-loading" class="text-sm text-gray-400">Loading...</div>
-                    <div id="disinfo-empty" class="text-sm text-gray-500 hidden">No disinformation sources</div>
-                    <div id="disinfo-list" class="space-y-2 max-h-[30vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
             </div>
 
@@ -352,6 +339,21 @@
                     <div id="unknown-sources-loading" class="text-sm text-gray-400">Loading...</div>
                     <div id="unknown-sources-empty" class="text-sm text-gray-500 hidden">No unknown sources</div>
                     <div id="unknown-sources-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Disinformation Sources</h2>
+                        <button onclick="showAddDisinfoSource()" class="px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Add</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">URLs matching these prefixes trigger penalties</p>
+                    <div class="relative mb-3">
+                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input id="disinfo-search" type="text" placeholder="Filter..." oninput="filterDisinfoSources()" class="w-full pl-8 pr-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div id="disinfo-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="disinfo-empty" class="text-sm text-gray-500 hidden">No disinformation sources</div>
+                    <div id="disinfo-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
             </div>
         </div>
@@ -1926,18 +1928,24 @@
 
                 for (const src of sources) {
                     const el = document.createElement('div');
-                    el.className = 'bg-gray-700/50 rounded p-3 text-sm flex items-center justify-between gap-2';
+                    el.className = 'bg-gray-700/50 rounded p-2 text-sm flex items-center justify-between gap-2';
                     el.innerHTML = `
                         <span class="font-mono text-gray-100 truncate">${escapeHtml(src.source)}</span>
-                        <button onclick="removeDisinfoSource('${escapeAttr(src.source)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 flex items-center gap-1 shrink-0"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove</button>
+                        <button onclick="removeDisinfoSource('${escapeAttr(src.source)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 shrink-0">Remove</button>
                     `;
                     list.appendChild(el);
                 }
-                lucide.createIcons();
             } catch (e) {
                 loading.classList.add('hidden');
                 empty.textContent = 'Failed to load';
                 empty.classList.remove('hidden');
+            }
+        }
+
+        function filterDisinfoSources() {
+            const q = document.getElementById('disinfo-search').value.toLowerCase();
+            for (const el of document.querySelectorAll('#disinfo-list > div')) {
+                el.classList.toggle('hidden', q && !el.textContent.toLowerCase().includes(q));
             }
         }
 
