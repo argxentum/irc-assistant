@@ -7,6 +7,7 @@ import (
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
+	"assistant/pkg/penalty"
 	"fmt"
 )
 
@@ -72,19 +73,19 @@ func (c *UserPenalties) Execute(e *irc.Event) {
 		return
 	}
 
-	mutePct := float32(user.Penalty) / float32(c.cfg.DisinfoPenalty.TempMuteThreshold)
-	mutePctStr := fmt.Sprintf("%.0f%%", mutePct*100)
-	if mutePct >= 0.75 {
+	status := penalty.Calculate(user.Penalty, user.ExtendedPenalty, c.cfg.DisinfoPenalty)
+
+	mutePctStr := fmt.Sprintf("%.0f%%", status.MutePercent)
+	if status.MutePercent >= 75 {
 		mutePctStr = style.ColorForeground(mutePctStr, style.ColorRed)
-	} else if mutePct >= 0.5 {
+	} else if status.MutePercent >= 50 {
 		mutePctStr = style.ColorForeground(mutePctStr, style.ColorYellow)
 	}
 
-	banPct := float32(user.ExtendedPenalty) / float32(c.cfg.DisinfoPenalty.TempBanThreshold)
-	banPctStr := fmt.Sprintf("%.0f%%", banPct*100)
-	if banPct >= 0.75 {
+	banPctStr := fmt.Sprintf("%.0f%%", status.BanPercent)
+	if status.BanPercent >= 75 {
 		banPctStr = style.ColorForeground(banPctStr, style.ColorRed)
-	} else if banPct >= 0.5 {
+	} else if status.BanPercent >= 50 {
 		banPctStr = style.ColorForeground(banPctStr, style.ColorYellow)
 	}
 

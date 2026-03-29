@@ -4,6 +4,7 @@ import (
 	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"assistant/pkg/penalty"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -52,11 +53,11 @@ func (s *server) dashboardAllUsersHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	type allUser struct {
-		Nick        string  `json:"nick"`
-		Host        string  `json:"host"`
+		Nick         string `json:"nick"`
+		Host         string `json:"host"`
 		IsAutoVoiced bool   `json:"is_auto_voiced"`
-		Karma       int     `json:"karma"`
-		UpdatedAt   int64   `json:"updated_at"`
+		Karma        int    `json:"karma"`
+		UpdatedAt    int64  `json:"updated_at"`
 	}
 
 	result := make([]allUser, 0, len(users))
@@ -203,18 +204,19 @@ func (s *server) dashboardUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := map[string]any{
-		"nick":            user.Nick,
-		"user_id":         user.UserID,
-		"host":            user.Host,
-		"karma":           user.Karma,
-		"penalty":         user.Penalty,
+		"nick":             user.Nick,
+		"user_id":          user.UserID,
+		"host":             user.Host,
+		"karma":            user.Karma,
+		"penalty":          user.Penalty,
 		"extended_penalty": user.ExtendedPenalty,
-		"location":        user.Location,
-		"is_auto_voiced":  user.IsAutoVoiced,
-		"credibility":     credibilityScore(user),
-		"recent_messages": messages,
-		"created_at":      user.CreatedAt.Unix(),
-		"updated_at":      user.UpdatedAt.Unix(),
+		"penalty_status":   penalty.Calculate(user.Penalty, user.ExtendedPenalty, s.cfg.DisinfoPenalty),
+		"location":         user.Location,
+		"is_auto_voiced":   user.IsAutoVoiced,
+		"credibility":      credibilityScore(user),
+		"recent_messages":  messages,
+		"created_at":       user.CreatedAt.Unix(),
+		"updated_at":       user.UpdatedAt.Unix(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -460,12 +462,12 @@ func (s *server) dashboardPenaltiesHandler(w http.ResponseWriter, r *http.Reques
 	fs := firestore.Get()
 
 	type penalty struct {
-		ID     string `json:"id"`
-		Type   string `json:"type"`
-		Nick   string `json:"nick,omitempty"`
-		Mask   string `json:"mask,omitempty"`
-		Host   string `json:"host,omitempty"`
-		DueAt  int64  `json:"due_at"`
+		ID    string `json:"id"`
+		Type  string `json:"type"`
+		Nick  string `json:"nick,omitempty"`
+		Mask  string `json:"mask,omitempty"`
+		Host  string `json:"host,omitempty"`
+		DueAt int64  `json:"due_at"`
 	}
 
 	var penalties []penalty
@@ -477,9 +479,9 @@ func (s *server) dashboardPenaltiesHandler(w http.ResponseWriter, r *http.Reques
 		for _, t := range bans {
 			data := t.Data.(models.BanRemovalTaskData)
 			penalties = append(penalties, penalty{
-				ID:   t.ID,
-				Type: "ban",
-				Mask: data.Mask,
+				ID:    t.ID,
+				Type:  "ban",
+				Mask:  data.Mask,
 				DueAt: t.DueAt.Unix(),
 			})
 		}
@@ -492,10 +494,10 @@ func (s *server) dashboardPenaltiesHandler(w http.ResponseWriter, r *http.Reques
 		for _, t := range mutes {
 			data := t.Data.(models.MuteRemovalTaskData)
 			penalties = append(penalties, penalty{
-				ID:   t.ID,
-				Type: "mute",
-				Nick: data.Nick,
-				Host: data.Host,
+				ID:    t.ID,
+				Type:  "mute",
+				Nick:  data.Nick,
+				Host:  data.Host,
 				DueAt: t.DueAt.Unix(),
 			})
 		}

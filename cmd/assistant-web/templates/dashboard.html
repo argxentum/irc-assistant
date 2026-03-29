@@ -52,8 +52,8 @@
                         </label>
                     </div>
                     <div class="text-gray-400 relative group"><span class="border-b border-dashed border-gray-400 cursor-help">Credibility</span><div class="absolute left-0 bottom-full mb-1 px-2 py-1 bg-gray-900 text-gray-300 text-xs rounded shadow-lg whitespace-nowrap hidden group-hover:block">Calculated from the sources shared by the user.</div></div><div id="user-credibility"></div>
-                    <div class="text-gray-400">Penalty</div><div id="user-penalty"></div>
-                    <div class="text-gray-400">Extended Penalty</div><div id="user-extended-penalty"></div>
+                    <div class="text-gray-400 relative group"><span class="border-b border-dashed border-gray-400 cursor-help">Auto-mute Risk</span><div class="absolute left-0 bottom-full mb-1 px-2 py-1 bg-gray-900 text-gray-300 text-xs rounded shadow-lg whitespace-nowrap hidden group-hover:block">Based on disinformation penalties</div></div><div id="user-mute-risk"></div>
+                    <div class="text-gray-400 relative group"><span class="border-b border-dashed border-gray-400 cursor-help">Auto-ban Risk</span><div class="absolute left-0 bottom-full mb-1 px-2 py-1 bg-gray-900 text-gray-300 text-xs rounded shadow-lg whitespace-nowrap hidden group-hover:block">Extended penalty points vs. ban threshold. Points decay over a longer period.</div></div><div id="user-ban-risk"></div>
                     <div class="text-gray-400">Location</div><div id="user-location"></div>
                     <div class="text-gray-400">Karma</div><div id="user-karma"></div>
                     <div class="text-gray-400">First seen</div><div id="user-created"></div>
@@ -745,8 +745,15 @@
                     ? `<a href="#" onclick="closeModal(); loadHostUsers('${escapeAttr(user.host)}'); return false;" class="font-mono text-blue-400 hover:text-blue-300 hover:underline">${escapeHtml(user.host)}</a>`
                     : '-';
                 document.getElementById('user-karma').textContent = user.karma;
-                document.getElementById('user-penalty').textContent = user.penalty || '0';
-                document.getElementById('user-extended-penalty').textContent = user.extended_penalty || '0';
+                const ps = user.penalty_status || {};
+                const mutePct = Math.round(ps.MutePercent || 0);
+                const banPct = Math.round(ps.BanPercent || 0);
+                const muteEl = document.getElementById('user-mute-risk');
+                muteEl.textContent = mutePct + '%';
+                muteEl.className = mutePct >= 75 ? 'text-red-400' : mutePct >= 50 ? 'text-yellow-400' : '';
+                const banEl = document.getElementById('user-ban-risk');
+                banEl.textContent = banPct + '%';
+                banEl.className = banPct >= 75 ? 'text-red-400' : banPct >= 50 ? 'text-yellow-400' : '';
                 document.getElementById('user-location').textContent = user.location || '-';
                 if (user.credibility != null) {
                     const el = document.getElementById('user-credibility');
