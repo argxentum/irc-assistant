@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
@@ -65,14 +66,14 @@ func (ct *CloudTasks) CreateTask(task *models.Task) (string, error) {
 	handlerURL := ct.cfg.Web.ExternalRootURL + "/tasks/execute"
 
 	// Cloud Tasks requires globally unique names and retains names for ~1 hour
-	// after completion. Append a timestamp suffix to avoid collisions on
+	// after completion. Use current time in nanos to guarantee uniqueness across
 	// rescheduled tasks (e.g., persistent inactivity tasks reuse the same ID).
 	taskID := task.ID
-	if task.Type == models.TaskTypePersistentChannel {
+	if task.Type == models.TaskTypePersistentChannel || task.Type == models.TaskTypePersistentChannelStats {
 		channel := task.Data.(models.PersistentTaskData).Channel
 		taskID = fmt.Sprintf("%s-%s", taskID, strings.ReplaceAll(channel, "#", ""))
 	}
-	taskName := fmt.Sprintf("%s/tasks/%s-%d", ct.queue, taskID, task.DueAt.UnixMilli())
+	taskName := fmt.Sprintf("%s/tasks/%s-%d", ct.queue, taskID, time.Now().UnixNano())
 
 	req := &taskspb.CreateTaskRequest{
 		Parent: ct.queue,
