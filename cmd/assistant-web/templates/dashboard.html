@@ -480,13 +480,13 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Sources <span class="text-gray-500">(one per line)</span></label>
+                    <p class="text-xs text-gray-500 mb-1">Original URL(s) being noted</p>
                     <textarea id="cn-sources" rows="2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 font-mono placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="https://example.com/article"></textarea>
-                    <div id="cn-sources-links" class="mt-1 space-y-0.5"></div>
                 </div>
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Counter Sources <span class="text-gray-500">(one per line)</span></label>
+                    <p class="text-xs text-gray-500 mb-1">URL(s) containing the correction that supports the note content</p>
                     <textarea id="cn-counter-sources" rows="2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 font-mono placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="https://example.com/rebuttal"></textarea>
-                    <div id="cn-counter-sources-links" class="mt-1 space-y-0.5"></div>
                 </div>
                 <div id="cn-date-section" class="hidden">
                     <label class="block text-xs text-gray-400 mb-1">Noted</label>
@@ -2025,13 +2025,6 @@
             }
         }
 
-        function renderUrlLinks(urls, containerId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = urls.filter(Boolean).map(u => {
-                const href = u.startsWith('http') ? u : 'https://' + u;
-                return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener" class="block text-xs text-blue-400 hover:text-blue-300 truncate">${escapeHtml(u)}</a>`;
-            }).join('');
-        }
 
         function showCommunityNoteForm(id) {
             const isEdit = !!id;
@@ -2047,8 +2040,6 @@
                 document.getElementById('cn-author').value = note.author || '';
                 document.getElementById('cn-sources').value = (note.sources || []).join('\n');
                 document.getElementById('cn-counter-sources').value = (note.counter_sources || []).join('\n');
-                renderUrlLinks(note.sources || [], 'cn-sources-links');
-                renderUrlLinks(note.counter_sources || [], 'cn-counter-sources-links');
                 const d = new Date(note.noted_at);
                 document.getElementById('cn-date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
             } else {
@@ -2057,8 +2048,6 @@
                 document.getElementById('cn-author').value = '';
                 document.getElementById('cn-sources').value = '';
                 document.getElementById('cn-counter-sources').value = '';
-                document.getElementById('cn-sources-links').innerHTML = '';
-                document.getElementById('cn-counter-sources-links').innerHTML = '';
             }
 
             document.getElementById('community-note-overlay').classList.remove('hidden');
