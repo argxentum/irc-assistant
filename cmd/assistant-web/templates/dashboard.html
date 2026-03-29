@@ -353,15 +353,37 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Bias</label>
-                        <input id="source-bias" type="text" placeholder="e.g. left-center" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <input id="source-bias" type="text" list="bias-options" placeholder="e.g. left-center" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <datalist id="bias-options">
+                            <option value="extreme left">
+                            <option value="left">
+                            <option value="left-center">
+                            <option value="least biased">
+                            <option value="right-center">
+                            <option value="right">
+                            <option value="extreme right">
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Credibility</label>
-                        <input id="source-credibility" type="text" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <input id="source-credibility" type="text" list="credibility-options" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <datalist id="credibility-options">
+                            <option value="high">
+                            <option value="medium">
+                            <option value="low">
+                        </datalist>
                     </div>
                     <div>
                         <label class="block text-sm text-gray-400 mb-1">Factuality</label>
-                        <input id="source-factuality" type="text" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <input id="source-factuality" type="text" list="factuality-options" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                        <datalist id="factuality-options">
+                            <option value="very high">
+                            <option value="high">
+                            <option value="mostly factual">
+                            <option value="mixed">
+                            <option value="low">
+                            <option value="very low">
+                        </datalist>
                     </div>
                 </div>
                 <div>
