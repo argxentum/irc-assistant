@@ -255,6 +255,86 @@ func (s *server) dashboardBansHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp.Data)
 }
 
+func (s *server) dashboardVoiceRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	fs := firestore.Get()
+	ch, err := fs.Channel(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard voice requests: error getting channel: %s", err)
+		http.Error(w, "Failed to get channel", http.StatusInternalServerError)
+		return
+	}
+
+	type voiceRequest struct {
+		Nick        string `json:"nick"`
+		Username    string `json:"username"`
+		Host        string `json:"host"`
+		RequestedAt int64  `json:"requested_at"`
+	}
+
+	result := make([]voiceRequest, 0)
+	if ch != nil {
+		for _, vr := range ch.VoiceRequests {
+			result = append(result, voiceRequest{
+				Nick:        vr.Nick,
+				Username:    vr.Username,
+				Host:        vr.Host,
+				RequestedAt: vr.RequestedAt.Unix(),
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardVoiceRequestActionHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	action := r.PathValue("action")
+	if action != "approve" && action != "deny" {
+		http.Error(w, "Invalid action", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Nick string `json:"nick"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Nick == "" {
+		http.Error(w, "Nick is required", http.StatusBadRequest)
+		return
+	}
+
+	dashAction := models.DashboardActionApproveVR
+	if action == "deny" {
+		dashAction = models.DashboardActionDenyVR
+	}
+
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  dashAction,
+		Channel: session.Channel,
+		Nick:    req.Nick,
+	})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard voice request %s failed: %s", action, err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "action failed"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": resp.Success, "error": resp.Error})
+}
+
 func (s *server) dashboardGetTopicHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {

@@ -15,6 +15,8 @@ const (
 	DashboardActionListBans   = "list_bans"
 	DashboardActionGetTopic   = "get_topic"
 	DashboardActionSetTopic   = "set_topic"
+	DashboardActionApproveVR  = "approve_vr"
+	DashboardActionDenyVR     = "deny_vr"
 )
 
 type DashboardRequestTaskData struct {

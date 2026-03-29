@@ -4,7 +4,10 @@ import (
 	"assistant/pkg/api/actions"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/repository"
+	"assistant/pkg/api/style"
 	"assistant/pkg/config"
+	"assistant/pkg/firestore"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
 	"assistant/pkg/queue"
@@ -44,6 +47,10 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardGetTopic(ircs, data)
 			case models.DashboardActionSetTopic:
 				resp = handleDashboardSetTopic(ircs, data)
+			case models.DashboardActionApproveVR:
+				resp = handleDashboardApproveVoiceRequest(ircs, data)
+			case models.DashboardActionDenyVR:
+				resp = handleDashboardDenyVoiceRequest(ircs, data)
 			case models.DashboardActionListBans:
 				resp = handleDashboardListBans(ircs, data)
 			case models.DashboardActionExpireBan:
@@ -159,6 +166,89 @@ func handleDashboardSetTopic(ircs irc.IRC, data models.DashboardRequestTaskData)
 	ircs.SetTopic(data.Channel, data.Topic)
 	logger.Infof(nil, "dashboard: set topic in %s", data.Channel)
 
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardApproveVoiceRequest(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	if data.Nick == "" {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "nick is required", nil)
+	}
+
+	fs := firestore.Get()
+	ch, err := fs.Channel(data.Channel)
+	if err != nil || ch == nil {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "channel not found", nil)
+	}
+
+	// find and remove the voice request
+	found := false
+	for _, vr := range ch.VoiceRequests {
+		if vr.Nick == data.Nick {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "voice request not found", nil)
+	}
+
+	repository.RemoveChannelVoiceRequest(nil, ch, data.Nick, "")
+	if err = repository.UpdateChannelVoiceRequests(nil, ch); err != nil {
+		logger.Errorf(nil, "dashboard: error updating voice requests: %s", err)
+	}
+
+	// voice the user and set auto-voice
+	ircs.Voice(data.Channel, data.Nick)
+
+	u, err := repository.GetUserByNick(nil, data.Channel, data.Nick, true)
+	if err != nil {
+		logger.Errorf(nil, "dashboard: error getting user for auto-voice: %s", err)
+	} else if u != nil {
+		u.IsAutoVoiced = true
+		if err = repository.UpdateUserIsAutoVoiced(nil, data.Channel, u); err != nil {
+			logger.Errorf(nil, "dashboard: error updating auto-voice: %s", err)
+		}
+	}
+
+	// send welcome message
+	ircs.SendMessage(data.Nick, fmt.Sprintf("🎉 Your voice request in %s has been approved. Welcome! We'd love it if you'd take a moment to say hello and introduce yourself.", style.Bold(data.Channel)))
+
+	logger.Infof(nil, "dashboard: approved voice request for %s in %s", data.Nick, data.Channel)
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardDenyVoiceRequest(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	if data.Nick == "" {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "nick is required", nil)
+	}
+
+	fs := firestore.Get()
+	ch, err := fs.Channel(data.Channel)
+	if err != nil || ch == nil {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "channel not found", nil)
+	}
+
+	found := false
+	for _, vr := range ch.VoiceRequests {
+		if vr.Nick == data.Nick {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "voice request not found", nil)
+	}
+
+	repository.RemoveChannelVoiceRequest(nil, ch, data.Nick, "")
+	if err = repository.UpdateChannelVoiceRequests(nil, ch); err != nil {
+		logger.Errorf(nil, "dashboard: error updating voice requests: %s", err)
+	}
+
+	logger.Infof(nil, "dashboard: denied voice request for %s in %s", data.Nick, data.Channel)
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
 }
 

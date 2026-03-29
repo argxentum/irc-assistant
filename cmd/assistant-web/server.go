@@ -55,6 +55,8 @@ func (s *server) start() {
 	http.HandleFunc("/dashboard/api/users/mask/{mask...}", s.dashboardUsersByMaskHandler)
 	http.HandleFunc("/dashboard/api/user/{nick}", s.dashboardUserHandler)
 	http.HandleFunc("POST /dashboard/api/action/{action}", s.dashboardActionHandler)
+	http.HandleFunc("/dashboard/api/voicerequests", s.dashboardVoiceRequestsHandler)
+	http.HandleFunc("POST /dashboard/api/voicerequests/{action}", s.dashboardVoiceRequestActionHandler)
 	http.HandleFunc("/dashboard/api/topic", s.dashboardGetTopicHandler)
 	http.HandleFunc("POST /dashboard/api/topic", s.dashboardSetTopicHandler)
 	http.HandleFunc("/dashboard/api/bans", s.dashboardBansHandler)

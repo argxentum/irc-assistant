@@ -190,7 +190,7 @@
                             </span>
                             Show offline
                         </label>
-                        <button onclick="loadStats(); loadUsers(); loadBans(); loadPenalties()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                        <button onclick="loadStats(); loadUsers(); loadBans(); loadPenalties(); loadVoiceRequests()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                     </div>
                 </div>
                 <div class="relative mb-4">
@@ -216,6 +216,16 @@
             </div>
 
             <div class="md:w-1/4 space-y-6 mt-6 md:mt-0">
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Voice Requests</h2>
+                        <span id="vr-count" class="text-sm text-gray-400"></span>
+                    </div>
+                    <div id="vr-loading" class="text-sm text-gray-400 mt-2">Loading...</div>
+                    <div id="vr-empty" class="text-sm text-gray-500 hidden mt-2">No pending requests</div>
+                    <div id="vr-list" class="space-y-2 mt-2 max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
                     <div class="flex items-center justify-between mb-1">
                         <h2 class="text-lg font-semibold">Temporary Mutes</h2>
@@ -607,6 +617,12 @@
             return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
         }
 
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
         function renderHostUsers() {
             const body = document.getElementById('host-body');
             const cardsEl = document.getElementById('host-cards');
@@ -754,8 +770,66 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeActionPanel(); closeConfirmPanel(); }
+            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); }
         });
+
+        async function loadVoiceRequests() {
+            const loading = document.getElementById('vr-loading');
+            const empty = document.getElementById('vr-empty');
+            const list = document.getElementById('vr-list');
+            const count = document.getElementById('vr-count');
+            try {
+                const resp = await fetch('/dashboard/api/voicerequests');
+                const vrs = await resp.json();
+                loading.classList.add('hidden');
+                list.innerHTML = '';
+                count.textContent = vrs.length > 0 ? vrs.length : '';
+                if (vrs.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+                vrs.forEach(vr => {
+                    const ago = formatDate(vr.requested_at);
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-700/50 rounded p-2';
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="min-w-0">
+                                <div class="font-medium text-sm truncate">${esc(vr.nick)}</div>
+                                <div class="text-xs text-gray-400 font-mono truncate">${esc(vr.username)}@${esc(vr.host)}</div>
+                                <div class="text-xs text-gray-500">${ago}</div>
+                            </div>
+                            <div class="flex gap-1 shrink-0 ml-2">
+                                <button onclick="vrAction('approve','${esc(vr.nick)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-green-700 hover:bg-green-600" title="Approve">✓</button>
+                                <button onclick="vrAction('deny','${esc(vr.nick)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600" title="Deny">✕</button>
+                            </div>
+                        </div>`;
+                    list.appendChild(card);
+                });
+            } catch (e) {
+                loading.textContent = 'Failed to load';
+            }
+        }
+
+        async function vrAction(action, nick) {
+            try {
+                const resp = await fetch(`/dashboard/api/voicerequests/${action}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nick})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`${action === 'approve' ? 'Approved' : 'Denied'}: ${nick}`, true);
+                    loadVoiceRequests();
+                } else {
+                    showToast(data.error || `Failed to ${action}`, false);
+                }
+            } catch (e) {
+                showToast(e.message, false);
+            }
+        }
 
         async function loadPenalties() {
             try {
@@ -1193,6 +1267,7 @@
         loadUsers();
         loadBans();
         loadPenalties();
+        loadVoiceRequests();
         lucide.createIcons();
     </script>
 </body>
