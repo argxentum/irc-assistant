@@ -141,6 +141,9 @@ func (t *TriviaMode) OnEnd() {
 	if cooldown > 0 {
 		msg += fmt.Sprintf(" Next trivia available %s.", elapse.FutureTimeDescription(time.Now().Add(cooldown)))
 	}
+
+	// send the ending message after results with a short delay
+	time.Sleep(1 * time.Second)
 	t.ircs.SendMessages(t.channel, []string{msg})
 }
 
@@ -162,15 +165,23 @@ func (t *TriviaMode) HandleEvent(e *irc.Event) {
 	}
 
 	msg := strings.TrimSpace(e.Message())
-	num, err := strconv.Atoi(msg)
-	if err != nil || num < 1 || num > len(t.questions[t.currentIndex].Answers) {
+	if len(msg) == 0 {
 		return
 	}
+
+	// treat any message starting with a digit as an answer attempt
+	numStr := strings.Fields(msg)[0]
+	num, err := strconv.Atoi(numStr)
+	isAnswer := err == nil && num >= 1 && num <= len(t.questions[t.currentIndex].Answers)
 
 	if t.firstAnswerOnly && t.responded[e.From] {
 		return
 	}
-	t.responded[e.From] = true
+	if isAnswer {
+		t.responded[e.From] = true
+	} else {
+		return
+	}
 
 	q := t.questions[t.currentIndex]
 	if num == q.CorrectIndex {
@@ -265,6 +276,7 @@ func (t *TriviaMode) showResultsAndEnd() {
 	t.mu.Unlock()
 
 	t.sendResults()
+	time.Sleep(1 * time.Second)
 
 	GetManager().Deactivate(t.channel)
 }
