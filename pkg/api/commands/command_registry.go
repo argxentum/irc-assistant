@@ -6,6 +6,7 @@ import (
 	"assistant/pkg/config"
 	"assistant/pkg/models"
 	"fmt"
+	"strings"
 )
 
 var registry CommandRegistry
@@ -82,7 +83,11 @@ func (cr *commandRegistry) CommandInfoList() []*models.CommandInfo {
 			trigger = cr.cfg.Commands.Prefix + cmd.Triggers()[0]
 		}
 		for _, u := range cmd.Usages() {
-			usages = append(usages, fmt.Sprintf(u, trigger))
+			if strings.Contains(u, "%s") {
+				usages = append(usages, fmt.Sprintf(u, trigger))
+			} else {
+				usages = append(usages, u)
+			}
 		}
 		result = append(result, &models.CommandInfo{
 			Name:         cmd.Name(),
