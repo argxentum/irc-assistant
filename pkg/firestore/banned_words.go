@@ -20,6 +20,29 @@ func (fs *Firestore) AddBannedWord(channel, word string) error {
 	return create(fs.ctx, fs.client, path, &models.BannedWord{ID: id, Word: strings.ToLower(word)})
 }
 
+func (fs *Firestore) UpdateBannedWord(channel, oldWord, newWord string) error {
+	logger := log.Logger()
+	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords)
+
+	criteria := QueryCriteria{
+		Path:   path,
+		Filter: createPropertyFilter("word", Equal, strings.ToLower(oldWord)),
+	}
+
+	bannedWords, err := query[models.BannedWord](fs.ctx, fs.client, criteria)
+	if err != nil {
+		return err
+	}
+
+	if len(bannedWords) == 0 {
+		return fmt.Errorf("banned word not found")
+	}
+
+	docPath := fmt.Sprintf("%s/%s", path, bannedWords[0].ID)
+	logger.Debugf(nil, "updating banned word %s to %s", oldWord, newWord)
+	return update(fs.ctx, fs.client, docPath, map[string]any{"word": strings.ToLower(newWord)})
+}
+
 func (fs *Firestore) IsBannedWord(channel, word string) (bool, error) {
 	path := fmt.Sprintf("%s/%s/%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathChannels, channel, pathBannedWords)
 

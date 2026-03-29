@@ -1006,6 +1006,115 @@ func (s *server) dashboardUnknownSourcesHandler(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(result)
 }
 
+func (s *server) dashboardBannedWordsHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	words, err := firestore.Get().BannedWords(session.Channel)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard banned words query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type bannedWord struct {
+		Word string `json:"word"`
+	}
+
+	result := make([]bannedWord, 0, len(words))
+	for _, bw := range words {
+		result = append(result, bannedWord{Word: bw.Word})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardBannedWordAddHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Word string `json:"word"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Word == "" {
+		http.Error(w, "Word is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().AddBannedWord(session.Channel, req.Word); err != nil {
+		log.Logger().Errorf(nil, "dashboard add banned word failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "add failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: added banned word in %s", session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardBannedWordUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		OldWord string `json:"old_word"`
+		NewWord string `json:"new_word"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OldWord == "" || req.NewWord == "" {
+		http.Error(w, "Both old_word and new_word are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().UpdateBannedWord(session.Channel, req.OldWord, req.NewWord); err != nil {
+		log.Logger().Errorf(nil, "dashboard update banned word failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: updated banned word in %s", session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardBannedWordRemoveHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Word string `json:"word"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Word == "" {
+		http.Error(w, "Word is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().RemoveBannedWord(session.Channel, req.Word); err != nil {
+		log.Logger().Errorf(nil, "dashboard remove banned word failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "remove failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: removed banned word in %s", session.Channel)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 func (s *server) dashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {
