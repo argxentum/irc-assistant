@@ -2015,7 +2015,7 @@
                 commandsData = await resp.json();
                 commandsLoaded = true;
 
-                commandsData.sort((a, b) => a.name.localeCompare(b.name));
+                commandsData.sort((a, b) => (a.triggers[0] || '').localeCompare(b.triggers[0] || ''));
 
                 const enabled = commandsData.filter(c => c.enabled).length;
                 const disabled = commandsData.length - enabled;
