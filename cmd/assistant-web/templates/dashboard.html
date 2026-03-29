@@ -344,7 +344,10 @@
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
                     <div class="flex items-center justify-between mb-1">
                         <h2 class="text-lg font-semibold">Community Notes</h2>
-                        <span id="community-notes-count" class="text-sm text-gray-400"></span>
+                        <div class="flex items-center gap-2">
+                            <span id="community-notes-count" class="text-sm text-gray-400"></span>
+                            <button onclick="showCommunityNoteForm()" class="px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Add</button>
+                        </div>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">User-submitted context notes on shared sources</p>
                     <div class="relative mb-3">
@@ -359,7 +362,10 @@
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
                     <div class="flex items-center justify-between mb-1">
                         <h2 class="text-lg font-semibold">Disinformation Sources</h2>
-                        <button onclick="showAddDisinfoSource()" class="px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Add</button>
+                        <div class="flex items-center gap-2">
+                            <span id="disinfo-count" class="text-sm text-gray-400"></span>
+                            <button onclick="showAddDisinfoSource()" class="px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Add</button>
+                        </div>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">URLs matching these prefixes trigger penalties</p>
                     <div class="relative mb-3">
@@ -455,37 +461,41 @@
         </div>
 
         <div id="community-note-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeCommunityNotePanel()"></div>
-        <div id="community-note-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-md hidden shadow-2xl">
+        <div id="community-note-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-md md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Community Note</h2>
+                <h2 id="cn-panel-title" class="text-lg font-semibold">Community Note</h2>
                 <button onclick="closeCommunityNotePanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="space-y-4">
+            <input type="hidden" id="cn-id" />
+            <div class="space-y-3">
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Content</label>
-                    <p id="cn-detail-content" class="text-sm text-gray-100 bg-gray-700/50 rounded p-3"></p>
+                    <textarea id="cn-content" rows="3" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="Note content..."></textarea>
                 </div>
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Author</label>
-                    <p id="cn-detail-author" class="text-sm text-gray-100"></p>
+                    <input id="cn-author" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="Author nick" />
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1">Sources</label>
-                    <div id="cn-detail-sources" class="text-sm text-gray-100 font-mono space-y-1"></div>
-                </div>
-                <div id="cn-detail-counter-section">
-                    <label class="block text-xs text-gray-400 mb-1">Counter Sources</label>
-                    <div id="cn-detail-counter-sources" class="text-sm text-gray-100 font-mono space-y-1"></div>
+                    <label class="block text-xs text-gray-400 mb-1">Sources <span class="text-gray-500">(one per line)</span></label>
+                    <textarea id="cn-sources" rows="2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 font-mono placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="https://example.com/article"></textarea>
+                    <div id="cn-sources-links" class="mt-1 space-y-0.5"></div>
                 </div>
                 <div>
+                    <label class="block text-xs text-gray-400 mb-1">Counter Sources <span class="text-gray-500">(one per line)</span></label>
+                    <textarea id="cn-counter-sources" rows="2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 font-mono placeholder-gray-400 focus:outline-none focus:border-blue-500" placeholder="https://example.com/rebuttal"></textarea>
+                    <div id="cn-counter-sources-links" class="mt-1 space-y-0.5"></div>
+                </div>
+                <div id="cn-date-section" class="hidden">
                     <label class="block text-xs text-gray-400 mb-1">Noted</label>
-                    <p id="cn-detail-date" class="text-sm text-gray-400"></p>
+                    <p id="cn-date" class="text-sm text-gray-400"></p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 pt-1">
                     <button onclick="closeCommunityNotePanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
-                    <button onclick="deleteCommunityNote()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600">Delete</button>
+                    <button id="cn-delete-btn" onclick="deleteCommunityNote()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600 hidden">Delete</button>
+                    <button onclick="saveCommunityNote()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Save</button>
                 </div>
             </div>
         </div>
@@ -511,7 +521,7 @@
             <div id="disinfo-detail-view" class="space-y-4 hidden">
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Source prefix</label>
-                    <p id="disinfo-detail-source" class="font-mono text-sm text-gray-100 bg-gray-700/50 rounded p-3 break-all"></p>
+                    <div id="disinfo-detail-source" class="font-mono text-sm text-gray-100 bg-gray-700/50 rounded p-3 break-all"></div>
                 </div>
                 <p class="text-xs text-gray-500">Any URL starting with this prefix will be flagged as disinformation and the user penalized.</p>
                 <div class="flex gap-2">
@@ -1969,7 +1979,6 @@
         // ── Community Notes ──
 
         let communityNotesData = [];
-        let communityNotePanelId = '';
 
         async function loadCommunityNotes() {
             const loading = document.getElementById('community-notes-loading');
@@ -1999,7 +2008,7 @@
                     const el = document.createElement('div');
                     el.className = 'bg-gray-700/50 rounded p-2 text-sm text-gray-100 truncate cursor-pointer hover:bg-gray-600/50';
                     el.textContent = note.content;
-                    el.onclick = () => showCommunityNoteDetail(note.id);
+                    el.onclick = () => showCommunityNoteForm(note.id);
                     list.appendChild(el);
                 }
             } catch (e) {
@@ -2016,32 +2025,46 @@
             }
         }
 
-        function showCommunityNoteDetail(id) {
-            const note = communityNotesData.find(n => n.id === id);
-            if (!note) return;
-            communityNotePanelId = id;
+        function renderUrlLinks(urls, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = urls.filter(Boolean).map(u => {
+                const href = u.startsWith('http') ? u : 'https://' + u;
+                return `<a href="${escapeAttr(href)}" target="_blank" rel="noopener" class="block text-xs text-blue-400 hover:text-blue-300 truncate">${escapeHtml(u)}</a>`;
+            }).join('');
+        }
 
-            document.getElementById('cn-detail-content').textContent = note.content;
-            document.getElementById('cn-detail-author').textContent = note.author || 'Unknown';
+        function showCommunityNoteForm(id) {
+            const isEdit = !!id;
+            document.getElementById('cn-panel-title').textContent = isEdit ? 'Edit Community Note' : 'Add Community Note';
+            document.getElementById('cn-delete-btn').classList.toggle('hidden', !isEdit);
+            document.getElementById('cn-date-section').classList.toggle('hidden', !isEdit);
 
-            const sourcesEl = document.getElementById('cn-detail-sources');
-            sourcesEl.innerHTML = (note.sources || []).map(s => `<div class="break-all">${escapeHtml(s)}</div>`).join('');
-
-            const counterSection = document.getElementById('cn-detail-counter-section');
-            const counterEl = document.getElementById('cn-detail-counter-sources');
-            if (note.counter_sources && note.counter_sources.length > 0) {
-                counterSection.classList.remove('hidden');
-                counterEl.innerHTML = note.counter_sources.map(s => `<div class="break-all">${escapeHtml(s)}</div>`).join('');
+            if (isEdit) {
+                const note = communityNotesData.find(n => n.id === id);
+                if (!note) return;
+                document.getElementById('cn-id').value = id;
+                document.getElementById('cn-content').value = note.content || '';
+                document.getElementById('cn-author').value = note.author || '';
+                document.getElementById('cn-sources').value = (note.sources || []).join('\n');
+                document.getElementById('cn-counter-sources').value = (note.counter_sources || []).join('\n');
+                renderUrlLinks(note.sources || [], 'cn-sources-links');
+                renderUrlLinks(note.counter_sources || [], 'cn-counter-sources-links');
+                const d = new Date(note.noted_at);
+                document.getElementById('cn-date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
             } else {
-                counterSection.classList.add('hidden');
+                document.getElementById('cn-id').value = '';
+                document.getElementById('cn-content').value = '';
+                document.getElementById('cn-author').value = '';
+                document.getElementById('cn-sources').value = '';
+                document.getElementById('cn-counter-sources').value = '';
+                document.getElementById('cn-sources-links').innerHTML = '';
+                document.getElementById('cn-counter-sources-links').innerHTML = '';
             }
-
-            const d = new Date(note.noted_at);
-            document.getElementById('cn-detail-date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
 
             document.getElementById('community-note-overlay').classList.remove('hidden');
             document.getElementById('community-note-panel').classList.remove('hidden');
             lucide.createIcons();
+            document.getElementById('cn-content').focus();
         }
 
         function closeCommunityNotePanel() {
@@ -2049,8 +2072,35 @@
             document.getElementById('community-note-overlay').classList.add('hidden');
         }
 
+        async function saveCommunityNote() {
+            const content = document.getElementById('cn-content').value.trim();
+            if (!content) return;
+            const id = document.getElementById('cn-id').value;
+            const author = document.getElementById('cn-author').value.trim();
+            const sources = document.getElementById('cn-sources').value.split('\n').map(s => s.trim()).filter(Boolean);
+            const counter_sources = document.getElementById('cn-counter-sources').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+            closeCommunityNotePanel();
+            try {
+                const resp = await fetch('/dashboard/api/communitynotes/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, content, author, sources, counter_sources}),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast(id ? 'Community note updated' : 'Community note added', true);
+                    loadCommunityNotes();
+                } else {
+                    showToast(result.error || 'Save failed', false);
+                }
+            } catch (e) {
+                showToast('Save failed: ' + e.message, false);
+            }
+        }
+
         async function deleteCommunityNote() {
-            const id = communityNotePanelId;
+            const id = document.getElementById('cn-id').value;
             closeCommunityNotePanel();
             try {
                 const resp = await fetch('/dashboard/api/communitynotes/delete', {
@@ -2076,10 +2126,12 @@
             const loading = document.getElementById('disinfo-loading');
             const empty = document.getElementById('disinfo-empty');
             const list = document.getElementById('disinfo-list');
+            const count = document.getElementById('disinfo-count');
 
             loading.classList.remove('hidden');
             empty.classList.add('hidden');
             list.innerHTML = '';
+            count.textContent = '';
 
             try {
                 const resp = await fetch('/dashboard/api/disinfo');
@@ -2092,6 +2144,7 @@
                     return;
                 }
 
+                count.textContent = sources.length;
                 sources.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
                 for (const src of sources) {
@@ -2135,7 +2188,13 @@
         function showDisinfoDetail(source) {
             disinfoPanelSource = source;
             document.getElementById('disinfo-panel-title').textContent = 'Disinformation Source';
-            document.getElementById('disinfo-detail-source').textContent = source;
+            const el = document.getElementById('disinfo-detail-source');
+            if (source.includes('.')) {
+                const url = source.startsWith('http') ? source : 'https://' + source;
+                el.innerHTML = `<a href="${escapeAttr(url)}" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300">${escapeHtml(source)}</a>`;
+            } else {
+                el.textContent = source;
+            }
             openDisinfoPanel('detail');
         }
 

@@ -1389,6 +1389,60 @@ func (s *server) dashboardCommunityNotesHandler(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(result)
 }
 
+func (s *server) dashboardCommunityNoteSaveHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		ID             string   `json:"id"`
+		Content        string   `json:"content"`
+		Author         string   `json:"author"`
+		Sources        []string `json:"sources"`
+		CounterSources []string `json:"counter_sources"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Content == "" {
+		http.Error(w, "Content is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.ID == "" {
+		note := models.NewCommunityNote(req.Content, "", req.Author)
+		note.Sources = req.Sources
+		note.CounterSources = req.CounterSources
+		if err := firestore.Get().CreateCommunityNote(session.Channel, note); err != nil {
+			log.Logger().Errorf(nil, "dashboard create community note failed: %s", err)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "create failed"})
+			return
+		}
+		log.Logger().Infof(nil, "dashboard: created community note in %s", session.Channel)
+	} else {
+		existing, err := firestore.Get().CommunityNote(session.Channel, req.ID)
+		if err != nil || existing == nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "note not found"})
+			return
+		}
+		existing.Content = req.Content
+		existing.Author = req.Author
+		existing.Sources = req.Sources
+		existing.CounterSources = req.CounterSources
+		if err := firestore.Get().SetCommunityNote(session.Channel, existing); err != nil {
+			log.Logger().Errorf(nil, "dashboard update community note failed: %s", err)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
+			return
+		}
+		log.Logger().Infof(nil, "dashboard: updated community note %s in %s", req.ID, session.Channel)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 func (s *server) dashboardCommunityNoteDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {
