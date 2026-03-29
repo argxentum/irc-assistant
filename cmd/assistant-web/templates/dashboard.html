@@ -204,7 +204,7 @@
                     <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input id="users-search" type="text" placeholder="Filter..." oninput="filterUsers()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
                 </div>
-                <div class="max-h-[60vh] md:max-h-none overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                <div class="max-h-[60vh] md:max-h-none overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
                     <div id="users-loading" class="text-gray-400">Loading...</div>
                     <div id="users-error" class="text-red-400 hidden"></div>
                     <table id="users-table" class="w-full hidden">
