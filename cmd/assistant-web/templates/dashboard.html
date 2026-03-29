@@ -223,7 +223,7 @@
                     </div>
                     <div id="vr-loading" class="text-sm text-gray-400 mt-2">Loading...</div>
                     <div id="vr-empty" class="text-sm text-gray-500 hidden mt-2">No pending requests</div>
-                    <div id="vr-list" class="space-y-2 mt-2 max-h-64 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                    <div id="vr-list" class="space-y-2 mt-2 max-h-48 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
                 </div>
 
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6">
@@ -793,16 +793,17 @@
                     const ago = formatDate(vr.requested_at);
                     const card = document.createElement('div');
                     card.className = 'bg-gray-700/50 rounded p-2';
+                    const nickAttr = escapeAttr(vr.nick);
                     card.innerHTML = `
                         <div class="flex items-center justify-between">
-                            <div class="min-w-0">
-                                <div class="font-medium text-sm truncate">${esc(vr.nick)}</div>
-                                <div class="text-xs text-gray-400 font-mono truncate">${esc(vr.username)}@${esc(vr.host)}</div>
+                            <div class="min-w-0 cursor-pointer" onclick="loadUser('${nickAttr}')">
+                                <div class="font-medium text-sm truncate text-blue-400 hover:text-blue-300">${escapeHtml(vr.nick)}</div>
+                                <div class="text-xs text-gray-400 font-mono truncate">${escapeHtml(vr.username)}@${escapeHtml(vr.host)}</div>
                                 <div class="text-xs text-gray-500">${ago}</div>
                             </div>
                             <div class="flex gap-1 shrink-0 ml-2">
-                                <button onclick="vrAction('approve','${esc(vr.nick)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-green-700 hover:bg-green-600" title="Approve">✓</button>
-                                <button onclick="vrAction('deny','${esc(vr.nick)}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600" title="Deny">✕</button>
+                                <button onclick="vrAction('approve','${nickAttr}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-green-700 hover:bg-green-600" title="Approve">✓</button>
+                                <button onclick="vrAction('deny','${nickAttr}')" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600" title="Deny">✕</button>
                             </div>
                         </div>`;
                     list.appendChild(card);
