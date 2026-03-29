@@ -19,10 +19,10 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-1 mb-6 border-b border-gray-700">
-            <button onclick="switchTab('users-activity')" id="tab-btn-users-activity" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-blue-500 text-blue-400"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview</button>
-            <button onclick="switchTab('sources')" id="tab-btn-sources" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="globe" class="w-4 h-4"></i> Sources</button>
-            <button onclick="switchTab('banned-words')" id="tab-btn-banned-words" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="shield-ban" class="w-4 h-4"></i> Banned Words</button>
+        <div class="flex items-center gap-1 mb-6 border-b border-gray-700 overflow-x-auto [&::-webkit-scrollbar]:h-0">
+            <button onclick="switchTab('users-activity')" id="tab-btn-users-activity" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-blue-500 text-blue-400"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview</button>
+            <button onclick="switchTab('sources')" id="tab-btn-sources" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="globe" class="w-4 h-4"></i> Sources</button>
+            <button onclick="switchTab('banned-words')" id="tab-btn-banned-words" class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer whitespace-nowrap border-b-2 border-transparent text-gray-400 hover:text-gray-200"><i data-lucide="shield-ban" class="w-4 h-4"></i> Banned Words</button>
         </div>
 
         <div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded text-sm hidden z-50"></div>
