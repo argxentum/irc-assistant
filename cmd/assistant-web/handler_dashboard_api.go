@@ -208,6 +208,7 @@ func (s *server) dashboardUserHandler(w http.ResponseWriter, r *http.Request) {
 		"host":            user.Host,
 		"karma":           user.Karma,
 		"penalty":         user.Penalty,
+		"extended_penalty": user.ExtendedPenalty,
 		"location":        user.Location,
 		"is_auto_voiced":  user.IsAutoVoiced,
 		"credibility":     credibilityScore(user),
