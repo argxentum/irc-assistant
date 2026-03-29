@@ -38,6 +38,8 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 				resp = handleDashboardUserAction(ircs, data)
 			case models.DashboardActionUnmute:
 				resp = handleDashboardUserAction(ircs, data)
+			case models.DashboardActionAddBan:
+				resp = handleDashboardAddBan(ircs, data)
 			case models.DashboardActionListBans:
 				resp = handleDashboardListBans(ircs, data)
 			case models.DashboardActionExpireBan:
@@ -120,6 +122,19 @@ func handleDashboardUserAction(ircs irc.IRC, data models.DashboardRequestTaskDat
 		ircs.Voice(data.Channel, data.Nick)
 		logger.Infof(nil, "dashboard: unmuted %s in %s", data.Nick, data.Channel)
 	}
+
+	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
+}
+
+func handleDashboardAddBan(ircs irc.IRC, data models.DashboardRequestTaskData) *models.Task {
+	logger := log.Logger()
+
+	if data.Mask == "" {
+		return models.NewDashboardResponseTask(data.RequestID, data.Action, false, "mask is required", nil)
+	}
+
+	ircs.Ban(data.Channel, data.Mask)
+	logger.Infof(nil, "dashboard: added ban %s in %s", data.Mask, data.Channel)
 
 	return models.NewDashboardResponseTask(data.RequestID, data.Action, true, "", nil)
 }

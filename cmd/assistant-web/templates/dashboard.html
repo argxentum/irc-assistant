@@ -57,6 +57,21 @@
             </div>
         </div>
 
+        <div id="addban-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeAddBanPanel()"></div>
+        <div id="addban-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Add Ban Mask</h2>
+                <button onclick="closeAddBanPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <input id="addban-mask" type="text" placeholder="*!*@hostname" class="w-full px-3 py-2 mb-4 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" onkeydown="if(event.key==='Enter')submitAddBan()" />
+            <div class="flex gap-2">
+                <button onclick="closeAddBanPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                <button onclick="submitAddBan()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600">Ban</button>
+            </div>
+        </div>
+
         <div id="confirm-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeConfirmPanel()"></div>
         <div id="confirm-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -212,8 +227,13 @@
 
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
                     <div class="flex items-center justify-between mb-1">
-                        <h2 class="text-lg font-semibold">Channel Bans</h2>
-                        <span id="channel-bans-count" class="text-sm text-gray-400"></span>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-lg font-semibold">Channel Bans</h2>
+                            <span id="channel-bans-count" class="text-sm text-gray-400"></span>
+                        </div>
+                        <button onclick="showAddBanPanel()" class="text-gray-400 hover:text-green-400 cursor-pointer" title="Add ban mask">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
                     </div>
                     <div class="relative mb-3 mt-2">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -937,6 +957,41 @@
             document.querySelectorAll('.ban-card').forEach(c => {
                 c.classList.toggle('hidden', q && !c.dataset.filter.includes(q));
             });
+        }
+
+        function showAddBanPanel() {
+            document.getElementById('addban-mask').value = '';
+            document.getElementById('addban-overlay').classList.remove('hidden');
+            document.getElementById('addban-panel').classList.remove('hidden');
+            document.getElementById('addban-mask').focus();
+            lucide.createIcons();
+        }
+
+        function closeAddBanPanel() {
+            document.getElementById('addban-panel').classList.add('hidden');
+            document.getElementById('addban-overlay').classList.add('hidden');
+        }
+
+        async function submitAddBan() {
+            const mask = document.getElementById('addban-mask').value.trim();
+            if (!mask) return;
+            closeAddBanPanel();
+            try {
+                const resp = await fetch('/dashboard/api/bans/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mask})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`Banned: ${mask}`, true);
+                    loadBans();
+                } else {
+                    showToast(data.error || 'Failed to add ban', false);
+                }
+            } catch (e) {
+                showToast(e.message, false);
+            }
         }
 
         function filterTempBans() {

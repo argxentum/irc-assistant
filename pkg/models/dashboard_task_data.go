@@ -11,6 +11,7 @@ const (
 	DashboardActionUnmute     = "unmute"
 	DashboardActionExpireBan  = "expire_ban"
 	DashboardActionExpireMute = "expire_mute"
+	DashboardActionAddBan     = "add_ban"
 	DashboardActionListBans   = "list_bans"
 )
 

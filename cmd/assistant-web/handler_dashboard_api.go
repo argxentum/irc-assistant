@@ -255,6 +255,37 @@ func (s *server) dashboardBansHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp.Data)
 }
 
+func (s *server) dashboardAddBanHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		Mask string `json:"mask"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Mask == "" {
+		http.Error(w, "Mask is required", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+		Action:  models.DashboardActionAddBan,
+		Channel: session.Channel,
+		Mask:    req.Mask,
+	})
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard add ban failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "action failed"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": resp.Success, "error": resp.Error})
+}
+
 func (s *server) dashboardRemoveBanHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {
