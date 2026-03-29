@@ -98,7 +98,7 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 				if err != nil {
 					logger.Errorf(nil, "error completing %s, %s", task.ID, err)
 				}
-			} else if task.Type == models.TaskTypePersistentChannel {
+			} else if task.Type == models.TaskTypePersistentChannel && err != errStaleTask {
 				channel, err := fs.Channel(task.Data.(models.PersistentTaskData).Channel)
 				if err != nil {
 					logger.Errorf(nil, "error getting channel for %s, %s", task.ID, err)
@@ -256,6 +256,8 @@ func processNotifyVoiceRequests(irc irc.IRC, task *models.Task) error {
 	return nil
 }
 
+var errStaleTask = fmt.Errorf("stale task")
+
 const inactivityPostsBuffer = 3
 const shortcutURLPattern = "%s/s/"
 
@@ -278,7 +280,7 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 		if _, err := cloudtasks.Get().CreateTask(current); err != nil {
 			logger.Errorf(nil, "error rescheduling stale cloud task %s: %s", task.ID, err)
 		}
-		return nil
+		return errStaleTask
 	}
 
 	logger.Debugf(nil, "processing persistent channel task for %s using model %s", task.ID, cfg.IRC.Inactivity.Model)

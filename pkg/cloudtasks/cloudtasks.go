@@ -12,6 +12,8 @@ import (
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -65,15 +67,21 @@ func (ct *CloudTasks) CreateTask(task *models.Task) (string, error) {
 
 	handlerURL := ct.cfg.Web.ExternalRootURL + "/tasks/execute"
 
-	// Cloud Tasks requires globally unique names and retains names for ~1 hour
-	// after completion. Use current time in nanos to guarantee uniqueness across
-	// rescheduled tasks (e.g., persistent inactivity tasks reuse the same ID).
+	// Build task name. Persistent tasks use DueAt-based suffix for natural
+	// deduplication (multiple stale tasks rescheduling to the same due time
+	// will get AlreadyExists). Other tasks use current nanos for uniqueness.
 	taskID := task.ID
-	if task.Type == models.TaskTypePersistentChannel || task.Type == models.TaskTypePersistentChannelStats {
+	isPersistent := task.Type == models.TaskTypePersistentChannel || task.Type == models.TaskTypePersistentChannelStats
+	if isPersistent {
 		channel := task.Data.(models.PersistentTaskData).Channel
 		taskID = fmt.Sprintf("%s-%s", taskID, strings.ReplaceAll(channel, "#", ""))
 	}
-	taskName := fmt.Sprintf("%s/tasks/%s-%d", ct.queue, taskID, time.Now().UnixNano())
+	var taskName string
+	if isPersistent {
+		taskName = fmt.Sprintf("%s/tasks/%s-%d", ct.queue, taskID, task.DueAt.UnixMilli())
+	} else {
+		taskName = fmt.Sprintf("%s/tasks/%s-%d", ct.queue, taskID, time.Now().UnixNano())
+	}
 
 	req := &taskspb.CreateTaskRequest{
 		Parent: ct.queue,
@@ -96,6 +104,10 @@ func (ct *CloudTasks) CreateTask(task *models.Task) (string, error) {
 
 	created, err := ct.client.CreateTask(ct.ctx, req)
 	if err != nil {
+		if isPersistent && status.Code(err) == codes.AlreadyExists {
+			logger.Debugf(nil, "cloud task already exists (dedup): %s", taskName)
+			return taskName, nil
+		}
 		return "", fmt.Errorf("error creating cloud task %s: %w", task.ID, err)
 	}
 
