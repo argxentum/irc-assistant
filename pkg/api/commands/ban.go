@@ -1,17 +1,15 @@
 package commands
 
 import (
+	"assistant/pkg/api/actions"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
 	"fmt"
 	"strings"
-	"time"
 )
 
 const BanCommandName = "ban"
@@ -115,43 +113,5 @@ func (c *BanCommand) ban(e *irc.Event, channel, mask, duration, reason string) {
 		logger.Debugf(e, "resolved %s to %s", nick, mask)
 	}
 
-	if len(duration) > 0 {
-		if len(reason) == 0 {
-			reason = fmt.Sprintf("temporarily banned for %s", elapse.ParseDurationDescription(duration))
-		} else {
-			reason = fmt.Sprintf("%s - temporarily banned for %s", reason, elapse.ParseDurationDescription(duration))
-		}
-	}
-
-	c.authorizer.ListUsersByMask(channel, mask, func(users []*irc.User) {
-		time.Sleep(250 * time.Millisecond)
-		for _, user := range users {
-			c.irc.Kick(channel, user.Mask.Nick, reason)
-			logger.Infof(e, "kicked %s from %s: %s", mask, channel, reason)
-			time.Sleep(25 * time.Millisecond)
-		}
-	})
-
-	c.irc.Ban(channel, mask)
-
-	if len(duration) > 0 {
-		go func() {
-			seconds, err := elapse.ParseDuration(duration)
-			if err != nil {
-				logger.Errorf(e, "error parsing duration, %s", err)
-				c.Replyf(e, "invalid duration, see %s for help", style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, c.Triggers()[0])))
-				return
-			}
-
-			m := irc.ParseMask(mask)
-			task := models.NewBanRemovalTask(time.Now().Add(seconds), m.String(), channel)
-			err = firestore.Get().AddTask(task)
-			if err != nil {
-				logger.Errorf(e, "error adding task, %s", err)
-				return
-			}
-		}()
-	}
-
-	logger.Infof(e, "banned %s in %s", mask, channel)
+	actions.Ban(c.irc, channel, mask, duration, reason)
 }

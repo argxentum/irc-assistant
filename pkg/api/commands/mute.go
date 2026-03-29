@@ -1,18 +1,14 @@
 package commands
 
 import (
+	"assistant/pkg/api/actions"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
-	"assistant/pkg/api/repository"
 	"assistant/pkg/api/style"
 	"assistant/pkg/config"
-	"assistant/pkg/firestore"
 	"assistant/pkg/log"
-	"assistant/pkg/models"
-	"fmt"
 	"strings"
-	"time"
 )
 
 const MuteCommandName = "mute"
@@ -118,102 +114,8 @@ func (c *MuteCommand) mute(e *irc.Event, channel, nick, duration, reason string,
 			return
 		}
 
-		ch, err := repository.GetChannel(e, channel)
-		if err != nil {
-			logger.Errorf(e, "error retrieving channel, %s", err)
-			return
-		}
-
-		if ch == nil {
-			logger.Errorf(e, "channel %s not found", channel)
-			return
-		}
-
-		// get requested user by nick
-		user, err := repository.GetUserByNick(e, channel, nick, true)
-		if err != nil {
-			logger.Errorf(e, "error retrieving user by nick, %s", err)
-			return
-		}
-
-		if user == nil {
-			logger.Errorf(e, "user %s not found by nick", nick)
-			return
-		}
-
-		users := make([]*models.User, 0)
-		users = append(users, user)
-
-		// get all users with the same host
-		if len(user.Host) > 0 {
-			hus, err := repository.GetUsersByHost(e, channel, iu.Mask.Host)
-			if err != nil {
-				logger.Errorf(e, "error getting users by host: %v", err)
-				return
-			}
-
-			for _, hu := range hus {
-				if hu.Nick != user.Nick {
-					users = append(users, hu)
-				}
-			}
-		}
-
-		var msg string
-		if len(duration) > 0 {
-			msg = fmt.Sprintf("\U0001F507 Temporarily muting %s for %s", style.Bold(nick), style.Bold(elapse.ParseDurationDescription(duration)))
-		} else {
-			msg = fmt.Sprintf("\U0001F507 Muting %s", style.Bold(nick))
-		}
-		if len(reason) > 0 {
-			msg += ": " + reason
-		}
-
 		go func() {
-			c.SendMessage(e, e.ReplyTarget(), msg)
-			isAutoVoiced := repository.IsChannelAutoVoicedUser(e, ch, nick) || user.IsAutoVoiced
-
-			// mute and remove auto-voice from all users
-			for _, u := range users {
-				c.irc.Mute(channel, u.Nick)
-
-				if len(duration) > 0 {
-					logger.Infof(e, "temporarily muted %s in %s for %s", nick, channel, duration)
-				} else {
-					logger.Infof(e, "muted %s in %s", nick, channel)
-				}
-
-				repository.RemoveChannelAutoVoicedUser(e, ch, u.Nick)
-				if err = repository.UpdateChannelAutoVoiced(e, ch); err != nil {
-					logger.Errorf(e, "error updating channel, %s", err)
-					return
-				}
-				logger.Debugf(e, "removed channel auto-voice from user %s", u.Nick)
-
-				u.IsAutoVoiced = false
-				if err = repository.UpdateUserIsAutoVoiced(e, channel, u); err != nil {
-					logger.Errorf(e, "error updating user isAutoVoiced, %s", err)
-				}
-				logger.Debugf(e, "removed auto-voice from user %s", u.Nick)
-			}
-
-			if len(duration) > 0 {
-				seconds, err := elapse.ParseDuration(duration)
-				if err != nil {
-					logger.Errorf(e, "error parsing duration, %s", err)
-					c.Replyf(e, "invalid duration, see %s for help", style.Italics(fmt.Sprintf("%s%s", c.cfg.Commands.Prefix, c.Triggers()[0])))
-					return
-				}
-
-				// only need to add a single task for unmuting, since it will unmute all users with a matching host
-				logger.Debugf(e, "adding task to unmute from %s in %s in %s", nick, channel, duration)
-				task := models.NewMuteRemovalTask(time.Now().Add(seconds), channel, nick, iu.Mask.Host, isAutoVoiced)
-				err = firestore.Get().AddTask(task)
-				if err != nil {
-					logger.Errorf(e, "error adding task, %s", err)
-					return
-				}
-			}
+			actions.Mute(c.irc, channel, nick, iu.Mask.Host, duration, reason)
 		}()
 	})
 }

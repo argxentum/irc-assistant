@@ -79,7 +79,7 @@
                 </button>
             </div>
             <div class="space-y-4">
-                <div>
+                <div id="action-temp-section">
                     <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none mb-2">
                         <span class="relative inline-block w-9 h-5">
                             <input id="action-temp" type="checkbox" onchange="document.getElementById('action-duration').classList.toggle('hidden', !this.checked)" class="peer sr-only" />
@@ -292,7 +292,7 @@
                 user.status === '+'
                     ? actionButton('Mute', 'bg-yellow-800 hover:bg-yellow-700', `showActionPanel('mute','${nick}')`)
                     : actionButton('Voice', 'bg-green-800 hover:bg-green-700', `doAction('unmute','${nick}',{label:'Voice',description:'The user will be granted voice temporarily. It will not persist if they rejoin the channel.'})`),
-                actionButton('Kick', 'bg-orange-800 hover:bg-orange-700', `doAction('kick','${nick}')`),
+                actionButton('Kick', 'bg-orange-800 hover:bg-orange-700', `showActionPanel('kick','${nick}')`),
                 actionButton('Ban', 'bg-red-800 hover:bg-red-700', `showActionPanel('ban','${nick}')`),
             ].filter(Boolean).join(' ');
         }
@@ -309,9 +309,11 @@
             document.getElementById('action-duration').value = '';
             document.getElementById('action-duration').classList.add('hidden');
             document.getElementById('action-reason').value = '';
+            document.getElementById('action-temp-section').classList.toggle('hidden', action === 'kick');
+            const btnColors = {'ban': 'bg-red-700 hover:bg-red-600', 'kick': 'bg-orange-700 hover:bg-orange-600', 'mute': 'bg-yellow-700 hover:bg-yellow-600'};
             const btn = document.getElementById('action-submit');
             btn.textContent = label;
-            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${action === 'ban' ? 'bg-red-700 hover:bg-red-600' : 'bg-yellow-700 hover:bg-yellow-600'}`;
+            btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${btnColors[action] || 'bg-blue-700 hover:bg-blue-600'}`;
             btn.onclick = submitAction;
             document.getElementById('action-overlay').classList.remove('hidden');
             document.getElementById('action-panel').classList.remove('hidden');
