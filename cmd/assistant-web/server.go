@@ -46,6 +46,10 @@ func (s *server) start() {
 	http.HandleFunc("/chat/{id}", s.llmSessionHandler)
 	http.HandleFunc("/chat/{id}/poll", s.llmSessionPollHandler)
 
+	// trivia routes
+	http.HandleFunc("/trivia/{channel}", s.triviaSetupHandler)
+	http.HandleFunc("POST /trivia/start", s.triviaStartHandler)
+
 	// dashboard routes
 	http.HandleFunc("/auth/{token}", s.dashboardAuthHandler)
 	http.HandleFunc("/dashboard", s.dashboardHandler)

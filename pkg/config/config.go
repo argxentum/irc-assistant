@@ -29,6 +29,7 @@ type Config struct {
 	Summary        SummaryConfig
 	Proxy          ProxyConfig
 	CloudTasks     CloudTasksConfig `yaml:"cloud_tasks"`
+	Trivia         TriviaConfig
 }
 
 type IRCConfig struct {
@@ -198,6 +199,14 @@ type SummaryConfig struct {
 	AvoidanceDomains      map[string]string `yaml:"avoidance_domains"`
 	TranslatedDomains     map[string]string `yaml:"translated_domains"`
 	ProxiedDomains        []string          `yaml:"proxied_domains"`
+}
+
+type TriviaConfig struct {
+	Cooldown        string `yaml:"cooldown"`
+	QuestionTimeout string `yaml:"question_timeout"`
+	GameTimeout     string `yaml:"game_timeout"`
+	MaxQuestions    int    `yaml:"max_questions"`
+	DefaultCount    int    `yaml:"default_count"`
 }
 
 func ReadConfig(filename string) (*Config, error) {

@@ -30,6 +30,7 @@ const (
 	TaskTypeDashboardRequest                 = "dashboard_request"
 	TaskTypeDashboardResponse                = "dashboard_response"
 	TaskTypePersistentChannelStats           = "persistent_channel_stats"
+	TaskTypeTriviaStart                      = "trivia_start"
 )
 
 const (
@@ -145,6 +146,10 @@ func DeserializeTask(data []byte) (*Task, error) {
 		}
 	case TaskTypePersistentChannelStats:
 		if task.Data, err = deserializeTaskData[PersistentTaskData](d); err != nil {
+			return nil, err
+		}
+	case TaskTypeTriviaStart:
+		if task.Data, err = deserializeTaskData[TriviaStartTaskData](d); err != nil {
 			return nil, err
 		}
 	}

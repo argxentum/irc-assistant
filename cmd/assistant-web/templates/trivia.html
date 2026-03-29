@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trivia Setup</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center">🎯 Trivia Setup</h1>
+        <p class="text-gray-400 text-sm mb-4 text-center">Setting up trivia for <span class="font-semibold text-white">{{.channel}}</span></p>
+
+        <form action="/trivia/start" method="POST" class="space-y-4">
+            <input type="hidden" name="channel" value="{{.channel}}" />
+            <input type="hidden" name="started_by" value="{{.nick}}" />
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Category</label>
+                <select name="category" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
+                    <option value="any">Any Category</option>
+                    {{range $id, $name := .categories}}
+                    <option value="{{$id}}">{{$name}}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Difficulty</label>
+                <select name="difficulty" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
+                    <option value="any">Any Difficulty</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Number of Questions</label>
+                <input type="number" name="count" min="1" max="{{.maxQuestions}}" value="{{.defaultCount}}" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white" />
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="hidden" name="first_answer_only" value="false" />
+                <input type="checkbox" name="first_answer_only" value="true" id="firstAnswerOnly" checked class="w-4 h-4 rounded bg-gray-700 border-gray-600" />
+                <label for="firstAnswerOnly" class="text-sm text-gray-300">First answer only (one guess per player per question)</label>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition">
+                Start Trivia
+            </button>
+        </form>
+    </div>
+</body>
+</html>

@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/modes"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/stats"
 	"assistant/pkg/api/style"
@@ -163,6 +164,27 @@ func (eh *handler) Handle(e *irc.Event) {
 	case irc.CodePrivateMessage:
 		tokens := commands.Tokens(e.Message())
 
+		if !isPrivate {
+			if mode := modes.GetManager().ActiveMode(e.ReplyTarget()); mode != nil {
+				// bypass checking auth on messages that don't start with "!"
+				if strings.HasPrefix(e.Message(), eh.cfg.Commands.Prefix) {
+					if f := eh.findModeBypassCommand(e, mode); f != nil {
+						f.IsAuthorized(e, e.ReplyTarget(), func(authorized bool) {
+							if !authorized {
+								logger.Warningf(e, "unauthorized attempt by %s to use %s during mode", e.From, tokens[0])
+								f.Replyf(e, "You are not authorized to perform that command.")
+								return
+							}
+							go f.Execute(e)
+						})
+						return
+					}
+				}
+				go mode.HandleEvent(e)
+				return
+			}
+		}
+
 		if eh.isTemporarilyIgnoredUser(e) {
 			logger.Debugf(e, "ignoring message from temporarily ignored user %s", e.Source)
 			return
@@ -222,6 +244,15 @@ func (eh *handler) Handle(e *irc.Event) {
 			}
 		}
 	}
+}
+
+func (eh *handler) findModeBypassCommand(e *irc.Event, mode modes.ChannelMode) commands.Command {
+	for _, f := range eh.registry.CommandsSortedForProcessing() {
+		if f.CanExecute(e) && mode.AllowCommand(f.Name()) {
+			return f
+		}
+	}
+	return nil
 }
 
 var messageHistory = make(map[string]time.Time)

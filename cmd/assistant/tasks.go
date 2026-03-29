@@ -6,11 +6,13 @@ import (
 	"assistant/pkg/api/drudge"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
+	"assistant/pkg/api/modes"
 	"assistant/pkg/api/reddit"
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/stats"
 	"assistant/pkg/api/style"
 	"assistant/pkg/api/summary"
+	"assistant/pkg/api/trivia"
 	"assistant/pkg/cloudtasks"
 	"assistant/pkg/config"
 	"assistant/pkg/firestore"
@@ -79,6 +81,9 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 			case models.TaskTypeProxyRedditSearchResponse:
 				isScheduledTask = false
 				err = processProxyRedditSearchResponse(cfg, irc, task)
+			case models.TaskTypeTriviaStart:
+				isScheduledTask = false
+				err = processTriviaStart(cfg, irc, task)
 			}
 
 			task.Runs++
@@ -705,6 +710,40 @@ func processProxyRedditSearchResponse(cfg *config.Config, ircs irc.IRC, task *mo
 	}
 
 	ircs.SendMessages(data.Channel, content)
+	return nil
+}
+
+func processTriviaStart(cfg *config.Config, ircs irc.IRC, task *models.Task) error {
+	data := task.Data.(models.TriviaStartTaskData)
+	logger := log.Logger()
+	logger.Debugf(nil, "processing trivia start for %s in %s", data.StartedBy, data.Channel)
+
+	questions := make([]trivia.Question, 0, len(data.Questions))
+	for _, q := range data.Questions {
+		questions = append(questions, trivia.Question{
+			Question:     q.Question,
+			Answers:      q.Answers,
+			CorrectIndex: q.CorrectIndex,
+			Category:     q.Category,
+			Difficulty:   q.Difficulty,
+		})
+	}
+
+	mode := modes.NewTriviaMode(data.Channel, ircs, cfg, questions, data.StartedBy)
+	mode.SetFirstAnswerOnly(data.FirstAnswerOnly)
+
+	var cooldown time.Duration
+	if cfg.Trivia.Cooldown != "" {
+		if d, err := time.ParseDuration(cfg.Trivia.Cooldown); err == nil {
+			cooldown = d
+		}
+	}
+
+	if err := modes.GetManager().Activate(mode, cooldown); err != nil {
+		ircs.SendMessage(data.Channel, fmt.Sprintf("Cannot start trivia: %s", err))
+		return err
+	}
+
 	return nil
 }
 
