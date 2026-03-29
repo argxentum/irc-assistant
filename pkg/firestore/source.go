@@ -7,6 +7,10 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
+func (fs *Firestore) ListSources() ([]*models.Source, error) {
+	return list[models.Source](fs.ctx, fs.client, fs.pathToSources())
+}
+
 func (fs *Firestore) GetSource(id string) (*models.Source, error) {
 	return get[models.Source](fs.ctx, fs.client, fs.pathToSource(id))
 }

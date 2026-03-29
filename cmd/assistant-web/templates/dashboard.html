@@ -12,9 +12,9 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen">
     <div class="max-w-7xl mx-auto p-4 md:p-6">
         <div class="flex items-center justify-between mb-6 md:mb-8">
-            <h1 class="text-xl md:text-2xl font-bold">Channel Dashboard</h1>
+            <h1 class="text-xl md:text-2xl font-bold">{{.channel}}</h1>
             <div class="flex items-center gap-3 text-sm text-gray-400">
-                <span>{{.nick}} &middot; {{.channel}}</span>
+                <span class="flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> {{.nick}}</span>
                 <button onclick="showTopicPanel()" class="bg-gray-700 hover:bg-gray-600 px-2 py-0.5 rounded cursor-pointer text-gray-300 flex items-center gap-1"><i data-lucide="message-square-text" class="w-3 h-3"></i> Topic</button>
             </div>
         </div>
@@ -281,7 +281,96 @@
 
         <div id="tab-sources" class="hidden">
             <div class="bg-gray-800 rounded-lg p-4 md:p-6">
-                <p class="text-gray-400 text-sm">Sources content coming soon.</p>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold">Sources</h2>
+                        <div id="sources-count" class="text-sm text-gray-400"></div>
+                    </div>
+                    <div class="flex items-center justify-between md:justify-end gap-3">
+                        <button onclick="loadSources()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                        <button onclick="showSourcePanel()" class="text-sm bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Source</button>
+                    </div>
+                </div>
+                <div class="relative mb-4">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input id="sources-search" type="text" placeholder="Filter..." oninput="filterSources()" class="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div id="sources-loading" class="text-sm text-gray-400">Loading...</div>
+                <div id="sources-error" class="text-red-400 hidden"></div>
+                <div id="sources-empty" class="text-sm text-gray-500 hidden">No sources found</div>
+                <div class="max-h-[60vh] md:max-h-none overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
+                    <table id="sources-table" class="w-full hidden">
+                        <thead class="sticky top-0 bg-gray-800">
+                            <tr class="text-left text-gray-400 text-sm border-b border-gray-700">
+                                <th class="pb-2">Title</th>
+                                <th class="pb-2">Bias</th>
+                                <th class="pb-2">Credibility</th>
+                                <th class="pb-2">Factuality</th>
+                                <th class="pb-2 text-center">Paywall</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sources-body"></tbody>
+                    </table>
+                    <div id="sources-cards" class="space-y-2 hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="source-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeSourcePanel()"></div>
+        <div id="source-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="source-panel-title" class="text-lg font-semibold">Add Source</h2>
+                <button onclick="closeSourcePanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <input type="hidden" id="source-id" />
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Title</label>
+                    <input id="source-title" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Bias</label>
+                        <input id="source-bias" type="text" placeholder="e.g. left-center" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Credibility</label>
+                        <input id="source-credibility" type="text" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Factuality</label>
+                        <input id="source-factuality" type="text" placeholder="e.g. high" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">URLs <span class="text-gray-500">(one per line)</span></label>
+                    <textarea id="source-urls" rows="3" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Keywords <span class="text-gray-500">(comma-separated)</span></label>
+                    <input id="source-keywords" type="text" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Reviews <span class="text-gray-500">(one URL per line)</span></label>
+                    <textarea id="source-reviews" rows="2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer select-none">
+                        <span class="relative inline-block w-9 h-5">
+                            <input id="source-paywall" type="checkbox" class="peer sr-only" />
+                            <span class="block w-full h-full bg-gray-600 rounded-full peer-checked:bg-blue-600 transition-colors"></span>
+                            <span class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
+                        </span>
+                        Paywall
+                    </label>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeSourcePanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                    <button id="source-delete-btn" onclick="deleteSource()" class="py-2 px-4 rounded text-sm font-medium cursor-pointer bg-red-700 hover:bg-red-600 hidden">Delete</button>
+                    <button onclick="saveSource()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -294,6 +383,8 @@
         let hostUsersData = [];
         let hostSortField = 'updated_at';
         let hostSortAsc = false;
+        let sourcesData = [];
+        let sourcesLoaded = false;
 
         function switchTab(tab) {
             const tabs = ['users-activity', 'sources'];
@@ -306,6 +397,7 @@
                     btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-transparent text-gray-400 hover:text-gray-200';
                 }
             });
+            if (tab === 'sources' && !sourcesLoaded) loadSources();
             lucide.createIcons();
         }
 
@@ -799,7 +891,7 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); }
+            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); closeSourcePanel(); }
         });
 
         async function loadVoiceRequests() {
@@ -1291,6 +1383,229 @@
             } catch (e) {
                 console.error('Failed to load stats:', e);
             }
+        }
+
+        function sourceRatingColor(value) {
+            if (!value) return 'text-gray-500';
+            const v = value.toLowerCase();
+            if (v.includes('high') || v === 'least biased' || v === 'pro-science') return 'text-green-400';
+            if (v.includes('low') || v.includes('extreme') || v.includes('conspiracy') || v.includes('propaganda') || v.includes('questionable')) return 'text-red-400';
+            if (v.includes('mixed') || v.includes('medium') || v === 'left' || v === 'right') return 'text-yellow-400';
+            if (v.includes('satire')) return 'text-blue-400';
+            return 'text-gray-300';
+        }
+
+        async function loadSources() {
+            const loading = document.getElementById('sources-loading');
+            const error = document.getElementById('sources-error');
+            const empty = document.getElementById('sources-empty');
+            const table = document.getElementById('sources-table');
+            const body = document.getElementById('sources-body');
+            const cards = document.getElementById('sources-cards');
+
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            empty.classList.add('hidden');
+            table.classList.add('hidden');
+            cards.classList.add('hidden');
+
+            try {
+                const resp = await fetch('/dashboard/api/sources');
+                if (!resp.ok) throw new Error(await resp.text());
+                sourcesData = await resp.json();
+                sourcesLoaded = true;
+
+                sourcesData.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+
+                document.getElementById('sources-count').textContent = sourcesData.length + ' sources';
+
+                renderSources();
+            } catch (e) {
+                loading.classList.add('hidden');
+                error.textContent = e.message;
+                error.classList.remove('hidden');
+            }
+        }
+
+        function renderSources() {
+            const loading = document.getElementById('sources-loading');
+            const empty = document.getElementById('sources-empty');
+            const table = document.getElementById('sources-table');
+            const body = document.getElementById('sources-body');
+            const cards = document.getElementById('sources-cards');
+
+            body.innerHTML = '';
+            cards.innerHTML = '';
+
+            const q = document.getElementById('sources-search').value.toLowerCase();
+            const filtered = sourcesData.filter(s => !q || s.title.toLowerCase().includes(q) || (s.urls || []).some(u => u.toLowerCase().includes(q)) || (s.keywords || []).some(k => k.toLowerCase().includes(q)));
+
+            if (filtered.length === 0) {
+                loading.classList.add('hidden');
+                empty.classList.remove('hidden');
+                table.classList.add('hidden');
+                cards.classList.add('hidden');
+                return;
+            }
+
+            for (const src of filtered) {
+                const biasColor = sourceRatingColor(src.bias);
+                const credColor = sourceRatingColor(src.credibility);
+                const factColor = sourceRatingColor(src.factuality);
+                const titleAttr = esc(src.title);
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-700/50 text-sm cursor-pointer hover:bg-gray-700/30';
+                tr.onclick = () => showSourcePanel(src.id);
+                tr.innerHTML = `
+                    <td class="py-2"><span class="text-blue-400 hover:text-blue-300">${esc(src.title)}</span></td>
+                    <td class="py-2 ${biasColor}">${esc(src.bias || '-')}</td>
+                    <td class="py-2 ${credColor}">${esc(src.credibility || '-')}</td>
+                    <td class="py-2 ${factColor}">${esc(src.factuality || '-')}</td>
+                    <td class="py-2 text-center">${src.paywall ? '<i data-lucide="lock" class="w-3.5 h-3.5 inline text-yellow-400"></i>' : ''}</td>
+                `;
+                body.appendChild(tr);
+
+                const card = document.createElement('div');
+                card.className = 'bg-gray-700/50 rounded-lg p-3 text-sm cursor-pointer active:bg-gray-700';
+                card.onclick = () => showSourcePanel(src.id);
+                card.innerHTML = `
+                    <div class="font-medium text-blue-400 mb-1">${esc(src.title)}</div>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                        <span class="text-gray-400">Bias: <span class="${biasColor}">${esc(src.bias || '-')}</span></span>
+                        <span class="text-gray-400">Cred: <span class="${credColor}">${esc(src.credibility || '-')}</span></span>
+                        <span class="text-gray-400">Fact: <span class="${factColor}">${esc(src.factuality || '-')}</span></span>
+                        ${src.paywall ? '<span class="text-yellow-400">Paywall</span>' : ''}
+                    </div>
+                `;
+                cards.appendChild(card);
+            }
+
+            loading.classList.add('hidden');
+            empty.classList.add('hidden');
+            const isMobile = window.innerWidth < 768;
+            table.classList.toggle('hidden', isMobile);
+            cards.classList.toggle('hidden', !isMobile);
+            lucide.createIcons();
+        }
+
+        function filterSources() {
+            renderSources();
+        }
+
+        function showSourcePanel(id) {
+            const panel = document.getElementById('source-panel');
+            const overlay = document.getElementById('source-overlay');
+            const title = document.getElementById('source-panel-title');
+            const deleteBtn = document.getElementById('source-delete-btn');
+
+            document.getElementById('source-id').value = '';
+            document.getElementById('source-title').value = '';
+            document.getElementById('source-bias').value = '';
+            document.getElementById('source-credibility').value = '';
+            document.getElementById('source-factuality').value = '';
+            document.getElementById('source-urls').value = '';
+            document.getElementById('source-keywords').value = '';
+            document.getElementById('source-reviews').value = '';
+            document.getElementById('source-paywall').checked = false;
+
+            if (id) {
+                const src = sourcesData.find(s => s.id === id);
+                if (src) {
+                    title.textContent = 'Edit Source';
+                    deleteBtn.classList.remove('hidden');
+                    document.getElementById('source-id').value = src.id;
+                    document.getElementById('source-title').value = src.title;
+                    document.getElementById('source-bias').value = src.bias || '';
+                    document.getElementById('source-credibility').value = src.credibility || '';
+                    document.getElementById('source-factuality').value = src.factuality || '';
+                    document.getElementById('source-urls').value = (src.urls || []).join('\n');
+                    document.getElementById('source-keywords').value = (src.keywords || []).join(', ');
+                    document.getElementById('source-reviews').value = (src.reviews || []).join('\n');
+                    document.getElementById('source-paywall').checked = src.paywall;
+                }
+            } else {
+                title.textContent = 'Add Source';
+                deleteBtn.classList.add('hidden');
+            }
+
+            overlay.classList.remove('hidden');
+            panel.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeSourcePanel() {
+            document.getElementById('source-panel').classList.add('hidden');
+            document.getElementById('source-overlay').classList.add('hidden');
+        }
+
+        async function saveSource() {
+            const id = document.getElementById('source-id').value;
+            const title = document.getElementById('source-title').value.trim();
+            if (!title) { showToast('Title is required', false); return; }
+
+            const urlsRaw = document.getElementById('source-urls').value.trim();
+            const urls = urlsRaw ? urlsRaw.split('\n').map(u => u.trim()).filter(u => u) : [];
+            const kwRaw = document.getElementById('source-keywords').value.trim();
+            const keywords = kwRaw ? kwRaw.split(',').map(k => k.trim()).filter(k => k) : [];
+            const reviewsRaw = document.getElementById('source-reviews').value.trim();
+            const reviews = reviewsRaw ? reviewsRaw.split('\n').map(r => r.trim()).filter(r => r) : [];
+
+            const body = {
+                id: id || undefined,
+                title,
+                bias: document.getElementById('source-bias').value.trim(),
+                credibility: document.getElementById('source-credibility').value.trim(),
+                factuality: document.getElementById('source-factuality').value.trim(),
+                urls,
+                keywords,
+                reviews,
+                paywall: document.getElementById('source-paywall').checked,
+            };
+
+            try {
+                const resp = await fetch('/dashboard/api/sources/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showToast(id ? 'Source updated' : 'Source created', true);
+                    closeSourcePanel();
+                    loadSources();
+                } else {
+                    showToast(result.error || 'Save failed', false);
+                }
+            } catch (e) {
+                showToast('Save failed: ' + e.message, false);
+            }
+        }
+
+        async function deleteSource() {
+            const id = document.getElementById('source-id').value;
+            if (!id) return;
+            const title = document.getElementById('source-title').value;
+
+            showConfirm('Delete source "' + title + '"?', 'Delete', 'bg-red-700 hover:bg-red-600', async () => {
+                try {
+                    const resp = await fetch('/dashboard/api/sources/delete', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({id}),
+                    });
+                    const result = await resp.json();
+                    if (result.success) {
+                        showToast('Source deleted', true);
+                        closeSourcePanel();
+                        loadSources();
+                    } else {
+                        showToast(result.error || 'Delete failed', false);
+                    }
+                } catch (e) {
+                    showToast('Delete failed: ' + e.message, false);
+                }
+            });
         }
 
         loadStats();

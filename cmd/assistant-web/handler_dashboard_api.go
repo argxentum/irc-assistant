@@ -699,6 +699,215 @@ func (s *server) dashboardUsersByHostHandler(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(result)
 }
 
+func (s *server) dashboardSourcesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sources, err := firestore.Get().ListSources()
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard sources query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type sourceItem struct {
+		ID          string   `json:"id"`
+		Title       string   `json:"title"`
+		Bias        string   `json:"bias"`
+		Factuality  string   `json:"factuality"`
+		Credibility string   `json:"credibility"`
+		Reviews     []string `json:"reviews"`
+		URLs        []string `json:"urls"`
+		Paywall     bool     `json:"paywall"`
+		Keywords    []string `json:"keywords"`
+		CreatedAt   int64    `json:"created_at"`
+		UpdatedAt   int64    `json:"updated_at"`
+	}
+
+	result := make([]sourceItem, 0, len(sources))
+	for _, src := range sources {
+		result = append(result, sourceItem{
+			ID:          src.ID,
+			Title:       src.Title,
+			Bias:        src.Bias,
+			Factuality:  src.Factuality,
+			Credibility: src.Credibility,
+			Reviews:     src.Reviews,
+			URLs:        src.URLs,
+			Paywall:     src.Paywall,
+			Keywords:    src.Keywords,
+			CreatedAt:   src.CreatedAt.Unix(),
+			UpdatedAt:   src.UpdatedAt.Unix(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardSourceHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	source, err := firestore.Get().GetSource(id)
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard source query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	if source == nil {
+		http.Error(w, "Source not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(source)
+}
+
+func (s *server) dashboardSourceSaveHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		ID          string   `json:"id"`
+		Title       string   `json:"title"`
+		Bias        string   `json:"bias"`
+		Factuality  string   `json:"factuality"`
+		Credibility string   `json:"credibility"`
+		Reviews     []string `json:"reviews"`
+		URLs        []string `json:"urls"`
+		Paywall     bool     `json:"paywall"`
+		Keywords    []string `json:"keywords"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+
+	fs := firestore.Get()
+
+	if req.ID == "" {
+		// create new source
+		source := models.NewEmptySource()
+		source.Title = req.Title
+		source.Bias = req.Bias
+		source.Factuality = req.Factuality
+		source.Credibility = req.Credibility
+		source.Reviews = req.Reviews
+		source.URLs = req.URLs
+		source.Paywall = req.Paywall
+		source.Keywords = req.Keywords
+
+		if source.Reviews == nil {
+			source.Reviews = make([]string, 0)
+		}
+		if source.URLs == nil {
+			source.URLs = make([]string, 0)
+		}
+		if source.Keywords == nil {
+			source.Keywords = make([]string, 0)
+		}
+
+		if err := fs.CreateSource(source); err != nil {
+			log.Logger().Errorf(nil, "dashboard create source failed: %s", err)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "create failed"})
+			return
+		}
+
+		log.Logger().Infof(nil, "dashboard: created source %s (%s)", source.ID, source.Title)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": true, "id": source.ID})
+		return
+	}
+
+	// update existing source
+	existing, err := fs.GetSource(req.ID)
+	if err != nil || existing == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "source not found"})
+		return
+	}
+
+	existing.Title = req.Title
+	existing.Bias = req.Bias
+	existing.Factuality = req.Factuality
+	existing.Credibility = req.Credibility
+	existing.Reviews = req.Reviews
+	existing.URLs = req.URLs
+	existing.Paywall = req.Paywall
+	existing.Keywords = req.Keywords
+
+	if existing.Reviews == nil {
+		existing.Reviews = make([]string, 0)
+	}
+	if existing.URLs == nil {
+		existing.URLs = make([]string, 0)
+	}
+	if existing.Keywords == nil {
+		existing.Keywords = make([]string, 0)
+	}
+
+	if err := fs.SetSource(existing); err != nil {
+		log.Logger().Errorf(nil, "dashboard update source failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: updated source %s (%s)", existing.ID, existing.Title)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardSourceDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+		http.Error(w, "ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := firestore.Get().DeleteSource(req.ID); err != nil {
+		log.Logger().Errorf(nil, "dashboard delete source failed: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "delete failed"})
+		return
+	}
+
+	log.Logger().Infof(nil, "dashboard: deleted source %s", req.ID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
 func (s *server) dashboardStatsHandler(w http.ResponseWriter, r *http.Request) {
 	session := s.validateDashboardSession(r)
 	if session == nil {

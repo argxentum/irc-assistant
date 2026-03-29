@@ -63,6 +63,10 @@ func (s *server) start() {
 	http.HandleFunc("POST /dashboard/api/bans/add", s.dashboardAddBanHandler)
 	http.HandleFunc("POST /dashboard/api/bans/remove", s.dashboardRemoveBanHandler)
 	http.HandleFunc("/dashboard/api/stats", s.dashboardStatsHandler)
+	http.HandleFunc("/dashboard/api/sources", s.dashboardSourcesHandler)
+	http.HandleFunc("/dashboard/api/source/{id}", s.dashboardSourceHandler)
+	http.HandleFunc("POST /dashboard/api/sources/save", s.dashboardSourceSaveHandler)
+	http.HandleFunc("POST /dashboard/api/sources/delete", s.dashboardSourceDeleteHandler)
 	http.HandleFunc("/dashboard/api/penalties", s.dashboardPenaltiesHandler)
 	http.HandleFunc("POST /dashboard/api/penalties/expire", s.dashboardExpirePenaltyHandler)
 
