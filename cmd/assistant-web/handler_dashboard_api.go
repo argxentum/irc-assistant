@@ -1166,7 +1166,9 @@ func (s *server) dashboardCommandsHandler(w http.ResponseWriter, r *http.Request
 		Name         string   `json:"name"`
 		Description  string   `json:"description"`
 		Triggers     []string `json:"triggers"`
+		Usages       []string `json:"usages"`
 		RequiresAuth bool     `json:"requires_auth"`
+		AllowDM      bool     `json:"allow_dm"`
 		Enabled      bool     `json:"enabled"`
 	}
 
@@ -1176,7 +1178,9 @@ func (s *server) dashboardCommandsHandler(w http.ResponseWriter, r *http.Request
 			Name:         cmd.Name,
 			Description:  cmd.Description,
 			Triggers:     cmd.Triggers,
+			Usages:       cmd.Usages,
 			RequiresAuth: cmd.RequiresAuth,
+			AllowDM:      cmd.AllowDM,
 			Enabled:      !disabled[cmd.Name],
 		})
 	}
