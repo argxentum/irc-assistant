@@ -26,7 +26,7 @@ func (c *ArchiveCommand) Name() string {
 }
 
 func (c *ArchiveCommand) Description() string {
-	return "Submits a URL to archive.today."
+	return "Submits a URL to archive.is/archive.today."
 }
 
 func (c *ArchiveCommand) Triggers() []string {

@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/irc"
 	"assistant/pkg/config"
 	"assistant/pkg/models"
+	"fmt"
 )
 
 var registry CommandRegistry
@@ -75,11 +76,21 @@ func (cr *commandRegistry) CommandInfoList() []*models.CommandInfo {
 	result := make([]*models.CommandInfo, 0, len(cr.commands))
 	for _, cmd := range cr.commands {
 		requiresAuth := len(cmd.Authorizer().RequiredRole()) > 0 || len(cmd.Authorizer().RequiredChannelStatus()) > 0
+		usages := make([]string, 0, len(cmd.Usages()))
+		trigger := cmd.Name()
+		if len(cmd.Triggers()) > 0 {
+			trigger = cr.cfg.Commands.Prefix + cmd.Triggers()[0]
+		}
+		for _, u := range cmd.Usages() {
+			usages = append(usages, fmt.Sprintf(u, trigger))
+		}
 		result = append(result, &models.CommandInfo{
 			Name:         cmd.Name(),
 			Description:  cmd.Description(),
 			Triggers:     cmd.Triggers(),
+			Usages:       usages,
 			RequiresAuth: requiresAuth,
+			AllowDM:      cmd.AllowedInPrivateMessages(),
 		})
 	}
 	return result

@@ -2052,12 +2052,15 @@
                 el.className = 'bg-gray-700/50 rounded p-3 text-sm flex items-center justify-between gap-3';
                 const triggers = cmd.triggers && cmd.triggers.length > 0 ? cmd.triggers.map(t => `!${escapeHtml(t)}`).join(', ') : escapeHtml(cmd.name);
                 const authBadge = cmd.requires_auth ? '<span class="text-xs bg-yellow-900/50 text-yellow-400 px-1.5 py-0.5 rounded ml-2">auth</span>' : '';
+                const dmBadge = cmd.allow_dm ? '<span class="text-xs bg-blue-900/50 text-blue-400 px-1.5 py-0.5 rounded ml-1">dm</span>' : '';
+                const usages = cmd.usages && cmd.usages.length > 0 ? `<div class="text-gray-500 text-xs mt-0.5 font-mono">${cmd.usages.map(u => escapeHtml(u)).join(', ')}</div>` : '';
                 el.innerHTML = `
                     <div class="min-w-0">
                         <div class="flex items-center flex-wrap gap-1">
-                            <span class="font-mono font-medium text-gray-100">${triggers}</span>${authBadge}
+                            <span class="font-mono font-medium text-gray-100">${triggers}</span>${authBadge}${dmBadge}
                         </div>
                         <div class="text-gray-400 text-xs mt-0.5">${escapeHtml(cmd.description)}</div>
+                        ${usages}
                     </div>
                     <label class="relative inline-block w-9 h-5 shrink-0 cursor-pointer select-none">
                         <input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="toggleCommand('${escapeAttr(cmd.name)}', this.checked)" class="peer sr-only" />
