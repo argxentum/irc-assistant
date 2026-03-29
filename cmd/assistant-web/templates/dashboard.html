@@ -966,10 +966,14 @@
                 const totalData = (stats || []).map(s => s.total_users);
                 const voicedData = (stats || []).map(s => s.voiced_users);
 
+                const rangeMin = new Date(Date.now() - hours * 60 * 60 * 1000);
+
                 if (statsChart) {
                     statsChart.data.labels = labels;
                     statsChart.data.datasets[0].data = totalData;
                     statsChart.data.datasets[1].data = voicedData;
+                    statsChart.options.scales.x.min = rangeMin;
+                    statsChart.options.scales.x.max = new Date();
                     statsChart.update();
                     return;
                 }
@@ -1023,6 +1027,8 @@
                         scales: {
                             x: {
                                 type: 'time',
+                                min: rangeMin,
+                                max: new Date(),
                                 time: {
                                     tooltipFormat: 'MMM d, h:mm a',
                                     displayFormats: { hour: 'ha', day: 'MMM d' }
