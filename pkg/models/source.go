@@ -16,8 +16,15 @@ type Source struct {
 	URLs        []string  `firestore:"urls"`
 	Paywall     bool      `firestore:"paywall"`
 	Keywords    []string  `firestore:"keywords"`
+	Citations   int       `firestore:"citations"`
 	CreatedAt   time.Time `firestore:"created_at"`
 	UpdatedAt   time.Time `firestore:"updated_at"`
+}
+
+type UnknownSource struct {
+	Domain    string    `firestore:"domain"`
+	Citations int       `firestore:"citations"`
+	UpdatedAt time.Time `firestore:"updated_at"`
 }
 
 func NewEmptySource() *Source {

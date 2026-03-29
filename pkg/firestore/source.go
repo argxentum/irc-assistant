@@ -34,6 +34,7 @@ func (fs *Firestore) ListSources() ([]*models.Source, error) {
 			URLs:        stringSliceVal(data, "urls"),
 			Paywall:     boolVal(data, "paywall"),
 			Keywords:    stringSliceVal(data, "keywords"),
+			Citations:   intVal(data, "citations"),
 			CreatedAt:   timeVal(data, "created_at"),
 			UpdatedAt:   timeVal(data, "updated_at"),
 		}
@@ -48,6 +49,19 @@ func stringVal(data map[string]any, key string) string {
 		return v
 	}
 	return ""
+}
+
+func intVal(data map[string]any, key string) int {
+	switch v := data[key].(type) {
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	case int:
+		return v
+	default:
+		return 0
+	}
 }
 
 func boolVal(data map[string]any, key string) bool {
@@ -103,6 +117,40 @@ func (fs *Firestore) CreateSource(source *models.Source) error {
 
 func (fs *Firestore) DeleteSource(id string) error {
 	return remove(fs.ctx, fs.client, fs.pathToSource(id))
+}
+
+func (fs *Firestore) IncrementSourceCitations(id string) error {
+	return update(fs.ctx, fs.client, fs.pathToSource(id), map[string]any{
+		"citations":  firestore.Increment(1),
+		"updated_at": time.Now(),
+	})
+}
+
+func (fs *Firestore) IncrementUnknownSource(domain string) error {
+	path := fs.pathToUnknownSource(domain)
+	doc := fs.client.Doc(path)
+	_, err := doc.Set(fs.ctx, map[string]any{
+		"domain":     domain,
+		"citations":  firestore.Increment(1),
+		"updated_at": time.Now(),
+	}, firestore.MergeAll)
+	return err
+}
+
+func (fs *Firestore) ListUnknownSources() ([]*models.UnknownSource, error) {
+	return list[models.UnknownSource](fs.ctx, fs.client, fs.pathToUnknownSources())
+}
+
+func (fs *Firestore) DeleteUnknownSource(domain string) error {
+	return remove(fs.ctx, fs.client, fs.pathToUnknownSource(domain))
+}
+
+func (fs *Firestore) pathToUnknownSources() string {
+	return fmt.Sprintf("%s/%s/%s", pathAssistants, fs.cfg.IRC.Nick, pathUnknownSources)
+}
+
+func (fs *Firestore) pathToUnknownSource(domain string) string {
+	return fmt.Sprintf("%s/%s", fs.pathToUnknownSources(), domain)
 }
 
 func (fs *Firestore) FindSourcesByDomain(input string) ([]*models.Source, error) {

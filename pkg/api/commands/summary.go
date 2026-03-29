@@ -404,6 +404,7 @@ func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub
 
 	if !e.IsPrivateMessage() {
 		c.updateUserCredibility(e, target, source, dis)
+		c.updateSourceCitations(e, ub.url, source)
 	}
 
 	c.SendMessages(e, target, unescapedMessages)
@@ -453,6 +454,29 @@ func (c *SummaryCommand) updateUserCredibility(e *irc.Event, channel string, sou
 	fs := firestore.Get()
 	if err := fs.UpdateUser(channel, u, fields); err != nil {
 		logger.Errorf(e, "error updating user credibility: %v", err)
+	}
+}
+
+func (c *SummaryCommand) updateSourceCitations(e *irc.Event, url string, source *models.Source) {
+	logger := log.Logger()
+	fs := firestore.Get()
+
+	if source != nil {
+		if err := fs.IncrementSourceCitations(source.ID); err != nil {
+			logger.Errorf(e, "error incrementing source citations: %v", err)
+		}
+		return
+	}
+
+	// extract domain for unknown source tracking
+	m := regexp.MustCompile(`^https?://(?:www\.)?(.*?)(/|$)`).FindStringSubmatch(url)
+	if len(m) < 2 || m[1] == "" {
+		return
+	}
+	domain := m[1]
+
+	if err := fs.IncrementUnknownSource(domain); err != nil {
+		logger.Errorf(e, "error incrementing unknown source citations for %s: %v", domain, err)
 	}
 }
 

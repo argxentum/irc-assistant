@@ -11,6 +11,7 @@ const (
 	pathTasks                 = "tasks"
 	pathSources               = "sources"
 	pathDisinformationSources = "disinformation-sources"
+	pathUnknownSources        = "unknown-sources"
 	pathShortcuts             = "shortcuts"
 	pathLLMResponses          = "llm-responses"
 	pathAuthTokens            = "auth-tokens"

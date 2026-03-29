@@ -723,6 +723,7 @@ func (s *server) dashboardSourcesHandler(w http.ResponseWriter, r *http.Request)
 		URLs        []string `json:"urls"`
 		Paywall     bool     `json:"paywall"`
 		Keywords    []string `json:"keywords"`
+		Citations   int      `json:"citations"`
 		CreatedAt   int64    `json:"created_at"`
 		UpdatedAt   int64    `json:"updated_at"`
 	}
@@ -739,6 +740,7 @@ func (s *server) dashboardSourcesHandler(w http.ResponseWriter, r *http.Request)
 			URLs:        src.URLs,
 			Paywall:     src.Paywall,
 			Keywords:    src.Keywords,
+			Citations:   src.Citations,
 			CreatedAt:   src.CreatedAt.Unix(),
 			UpdatedAt:   src.UpdatedAt.Unix(),
 		})
@@ -836,6 +838,13 @@ func (s *server) dashboardSourceSaveHandler(w http.ResponseWriter, r *http.Reque
 			return
 		}
 
+		// remove any unknown source records matching the new source's URLs
+		for _, u := range source.URLs {
+			if err := fs.DeleteUnknownSource(u); err != nil {
+				log.Logger().Debugf(nil, "no unknown source to clean up for %s", u)
+			}
+		}
+
 		log.Logger().Infof(nil, "dashboard: created source %s (%s)", source.ID, source.Title)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{"success": true, "id": source.ID})
@@ -906,6 +915,93 @@ func (s *server) dashboardSourceDeleteHandler(w http.ResponseWriter, r *http.Req
 	log.Logger().Infof(nil, "dashboard: deleted source %s", req.ID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})
+}
+
+func (s *server) dashboardTopSourcesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sources, err := firestore.Get().ListSources()
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard top sources query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type topSource struct {
+		ID          string `json:"id"`
+		Title       string `json:"title"`
+		Credibility string `json:"credibility"`
+		Citations   int    `json:"citations"`
+	}
+
+	// filter to sources with citations and sort desc
+	result := make([]topSource, 0)
+	for _, src := range sources {
+		if src.Citations > 0 {
+			result = append(result, topSource{
+				ID:          src.ID,
+				Title:       src.Title,
+				Credibility: src.Credibility,
+				Citations:   src.Citations,
+			})
+		}
+	}
+
+	// sort by citations desc
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j].Citations > result[i].Citations {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (s *server) dashboardUnknownSourcesHandler(w http.ResponseWriter, r *http.Request) {
+	session := s.validateDashboardSession(r)
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	unmatched, err := firestore.Get().ListUnknownSources()
+	if err != nil {
+		log.Logger().Errorf(nil, "dashboard unknown sources query failed: %s", err)
+		http.Error(w, "Query failed", http.StatusInternalServerError)
+		return
+	}
+
+	type unknownItem struct {
+		Domain    string `json:"domain"`
+		Citations int    `json:"citations"`
+	}
+
+	result := make([]unknownItem, 0, len(unmatched))
+	for _, u := range unmatched {
+		result = append(result, unknownItem{
+			Domain:    u.Domain,
+			Citations: u.Citations,
+		})
+	}
+
+	// sort by citations desc
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j].Citations > result[i].Citations {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *server) dashboardStatsHandler(w http.ResponseWriter, r *http.Request) {

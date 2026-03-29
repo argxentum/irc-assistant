@@ -280,14 +280,15 @@
         </div>
 
         <div id="tab-sources" class="hidden">
-            <div class="bg-gray-800 rounded-lg p-4 md:p-6">
+        <div class="md:flex md:gap-6">
+            <div class="md:w-3/4 bg-gray-800 rounded-lg p-4 md:p-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
                     <div>
                         <h2 class="text-lg font-semibold">Sources</h2>
                         <div id="sources-count" class="text-sm text-gray-400"></div>
                     </div>
                     <div class="flex items-center justify-between md:justify-end gap-3">
-                        <button onclick="loadSources()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+                        <button onclick="loadSources(); loadTopSources(); loadUnknownSources()" class="text-sm bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
                         <button onclick="showSourcePanel()" class="text-sm bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded cursor-pointer flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Source</button>
                     </div>
                 </div>
@@ -314,6 +315,25 @@
                     <div id="sources-cards" class="space-y-2 hidden"></div>
                 </div>
             </div>
+
+            <div class="md:w-1/4 mt-6 md:mt-0 space-y-6">
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
+                    <h2 class="text-lg font-semibold mb-1">Top Sources</h2>
+                    <p class="text-xs text-gray-500 mb-3">Most referenced sources by citation count</p>
+                    <div id="top-sources-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="top-sources-empty" class="text-sm text-gray-500 hidden">No citations yet</div>
+                    <div id="top-sources-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+
+                <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
+                    <h2 class="text-lg font-semibold mb-1">Unknown Sources</h2>
+                    <p class="text-xs text-gray-500 mb-3">Frequently shared domains not yet classified</p>
+                    <div id="unknown-sources-loading" class="text-sm text-gray-400">Loading...</div>
+                    <div id="unknown-sources-empty" class="text-sm text-gray-500 hidden">No unknown sources</div>
+                    <div id="unknown-sources-list" class="space-y-2 flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent"></div>
+                </div>
+            </div>
+        </div>
         </div>
 
         <div id="source-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeSourcePanel()"></div>
@@ -400,7 +420,7 @@
                     btn.className = 'flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t cursor-pointer border-b-2 border-transparent text-gray-400 hover:text-gray-200';
                 }
             });
-            if (tab === 'sources' && !sourcesLoaded) loadSources();
+            if (tab === 'sources' && !sourcesLoaded) { loadSources(); loadTopSources(); loadUnknownSources(); }
             lucide.createIcons();
         }
 
@@ -1609,6 +1629,94 @@
                     showToast('Delete failed: ' + e.message, false);
                 }
             });
+        }
+
+        async function loadTopSources() {
+            const loading = document.getElementById('top-sources-loading');
+            const empty = document.getElementById('top-sources-empty');
+            const list = document.getElementById('top-sources-list');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/sources/top');
+                if (!resp.ok) throw new Error(await resp.text());
+                const sources = await resp.json();
+
+                loading.classList.add('hidden');
+                if (!sources || sources.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                for (const src of sources) {
+                    const credColor = sourceRatingColor(src.credibility);
+                    const el = document.createElement('div');
+                    el.className = 'bg-gray-700/50 rounded p-2 text-sm cursor-pointer hover:bg-gray-700/70';
+                    el.onclick = () => showSourcePanel(src.id);
+                    el.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-400 truncate mr-2">${esc(src.title)}</span>
+                            <span class="text-gray-400 text-xs whitespace-nowrap">${src.citations}</span>
+                        </div>
+                        <div class="text-xs ${credColor} mt-0.5">${esc(src.credibility || '-')}</div>
+                    `;
+                    list.appendChild(el);
+                }
+                lucide.createIcons();
+            } catch (e) {
+                loading.classList.add('hidden');
+                loading.textContent = e.message;
+                loading.classList.remove('hidden');
+            }
+        }
+
+        async function loadUnknownSources() {
+            const loading = document.getElementById('unknown-sources-loading');
+            const empty = document.getElementById('unknown-sources-empty');
+            const list = document.getElementById('unknown-sources-list');
+
+            loading.classList.remove('hidden');
+            empty.classList.add('hidden');
+            list.innerHTML = '';
+
+            try {
+                const resp = await fetch('/dashboard/api/sources/unknown');
+                if (!resp.ok) throw new Error(await resp.text());
+                const unmatched = await resp.json();
+
+                loading.classList.add('hidden');
+                if (!unmatched || unmatched.length === 0) {
+                    empty.classList.remove('hidden');
+                    return;
+                }
+
+                for (const u of unmatched) {
+                    const el = document.createElement('div');
+                    el.className = 'bg-gray-700/50 rounded p-2 text-sm flex items-center justify-between gap-2';
+                    el.innerHTML = `
+                        <div class="flex-1 min-w-0">
+                            <div class="text-gray-200 font-mono text-xs truncate">${esc(u.domain)}</div>
+                            <div class="text-gray-500 text-xs">${u.citations} citations</div>
+                        </div>
+                        <button onclick="createSourceFromDomain('${esc(u.domain)}')" class="shrink-0 px-2 py-1 rounded text-xs font-medium cursor-pointer bg-blue-700 hover:bg-blue-600 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Add</button>
+                    `;
+                    list.appendChild(el);
+                }
+                lucide.createIcons();
+            } catch (e) {
+                loading.classList.add('hidden');
+                loading.textContent = e.message;
+                loading.classList.remove('hidden');
+            }
+        }
+
+        function createSourceFromDomain(domain) {
+            showSourcePanel();
+            document.getElementById('source-title').value = domain;
+            document.getElementById('source-urls').value = domain;
         }
 
         loadStats();
