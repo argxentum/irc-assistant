@@ -61,7 +61,7 @@ func (s *server) triviaStartHandler(w http.ResponseWriter, r *http.Request) {
 	difficulty := r.FormValue("difficulty")
 	countStr := r.FormValue("count")
 	startedBy := r.FormValue("started_by")
-	firstAnswerOnly := r.FormValue("first_answer_only") != "false"
+	firstAnswerOnly := r.FormValue("first_answer_only") == "true"
 
 	if channel == "" {
 		http.Error(w, "channel is required", http.StatusBadRequest)
