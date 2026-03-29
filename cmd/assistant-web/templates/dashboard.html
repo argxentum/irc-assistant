@@ -364,6 +364,25 @@
             </div>
         </div>
 
+        <div id="bw-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeBannedWordPanel()"></div>
+        <div id="bw-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="bw-panel-title" class="text-lg font-semibold">Add Banned Word</h2>
+                <button onclick="closeBannedWordPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <input id="bw-input" type="text" placeholder="Enter word" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500" />
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeBannedWordPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
+                    <button id="bw-submit" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600">Save</button>
+                </div>
+            </div>
+        </div>
+
         <div id="source-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeSourcePanel()"></div>
         <div id="source-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-2xl md:max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent hidden shadow-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -975,7 +994,7 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); closeSourcePanel(); }
+            if (e.key === 'Escape') { closeModal(); closeHostPanel(); closeActionPanel(); closeConfirmPanel(); closeAddBanPanel(); closeTopicPanel(); closeSourcePanel(); closeBannedWordPanel(); }
         });
 
         async function loadVoiceRequests() {
@@ -1861,7 +1880,7 @@
                 const masked = maskWord(item.word);
                 el.innerHTML = `
                     <span class="bw-label font-mono cursor-pointer select-none" onclick="toggleBannedWord(this)" title="Click to reveal">${esc(masked)}</span>
-                    <div class="flex gap-1 shrink-0">
+                    <div class="flex gap-2 shrink-0">
                         <button onclick="editBannedWord(this.closest('[data-word]').dataset.word)" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-gray-600 hover:bg-gray-500 flex items-center gap-1"><i data-lucide="pencil" class="w-3 h-3"></i> Edit</button>
                         <button onclick="removeBannedWord(this.closest('[data-word]').dataset.word)" class="px-2 py-1 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600 flex items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Remove</button>
                     </div>
@@ -1882,35 +1901,66 @@
             renderBannedWords();
         }
 
-        function showAddBannedWord() {
-            const word = prompt('Enter word to ban:');
-            if (!word || !word.trim()) return;
-            addBannedWord(word.trim());
-        }
+        let bwEditingOldWord = '';
 
-        async function addBannedWord(word) {
-            try {
-                const resp = await fetch('/dashboard/api/bannedwords/add', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({word}),
-                });
-                const result = await resp.json();
-                if (result.success) {
-                    showToast('Banned word added', true);
-                    loadBannedWords();
-                } else {
-                    showToast(result.error || 'Add failed', false);
-                }
-            } catch (e) {
-                showToast('Add failed: ' + e.message, false);
-            }
+        function showAddBannedWord() {
+            bwEditingOldWord = '';
+            document.getElementById('bw-panel-title').textContent = 'Add Banned Word';
+            document.getElementById('bw-input').value = '';
+            const btn = document.getElementById('bw-submit');
+            btn.textContent = 'Add';
+            btn.className = 'flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600';
+            btn.onclick = submitBannedWord;
+            document.getElementById('bw-overlay').classList.remove('hidden');
+            document.getElementById('bw-panel').classList.remove('hidden');
+            lucide.createIcons();
+            document.getElementById('bw-input').focus();
         }
 
         function editBannedWord(oldWord) {
-            const newWord = prompt('Edit banned word:', oldWord);
-            if (!newWord || !newWord.trim() || newWord.trim() === oldWord) return;
-            updateBannedWord(oldWord, newWord.trim());
+            bwEditingOldWord = oldWord;
+            document.getElementById('bw-panel-title').textContent = 'Edit Banned Word';
+            document.getElementById('bw-input').value = oldWord;
+            const btn = document.getElementById('bw-submit');
+            btn.textContent = 'Save';
+            btn.className = 'flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-blue-700 hover:bg-blue-600';
+            btn.onclick = submitBannedWord;
+            document.getElementById('bw-overlay').classList.remove('hidden');
+            document.getElementById('bw-panel').classList.remove('hidden');
+            lucide.createIcons();
+            document.getElementById('bw-input').focus();
+        }
+
+        function closeBannedWordPanel() {
+            document.getElementById('bw-panel').classList.add('hidden');
+            document.getElementById('bw-overlay').classList.add('hidden');
+        }
+
+        async function submitBannedWord() {
+            const word = document.getElementById('bw-input').value.trim();
+            if (!word) return;
+            closeBannedWordPanel();
+            if (bwEditingOldWord) {
+                if (word === bwEditingOldWord) return;
+                updateBannedWord(bwEditingOldWord, word);
+            } else {
+                try {
+                    const resp = await fetch('/dashboard/api/bannedwords/add', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({word}),
+                    });
+                    const result = await resp.json();
+                    if (result.success) {
+                        showToast('Banned word added', true);
+                        loadBannedWords();
+                    } else {
+                        showToast(result.error || 'Add failed', false);
+                    }
+                } catch (e) {
+                    showToast('Add failed: ' + e.message, false);
+                }
+            }
         }
 
         async function updateBannedWord(oldWord, newWord) {
