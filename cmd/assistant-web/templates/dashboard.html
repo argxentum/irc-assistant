@@ -227,13 +227,11 @@
 
                 <div class="bg-gray-800 rounded-lg p-4 md:p-6 flex flex-col max-h-[32rem] md:max-h-[48rem]">
                     <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-semibold">Channel Bans</h2>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-lg font-semibold">Channel Bans</h2>
+                            <button onclick="showAddBanPanel()" class="px-2 py-0.5 rounded text-xs font-medium cursor-pointer bg-red-700 hover:bg-red-600">Add</button>
                             <span id="channel-bans-count" class="text-sm text-gray-400"></span>
                         </div>
-                        <button onclick="showAddBanPanel()" class="text-gray-400 hover:text-green-400 cursor-pointer" title="Add ban mask">
-                            <i data-lucide="plus" class="w-5 h-5"></i>
-                        </button>
                     </div>
                     <div class="relative mb-3 mt-2">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
