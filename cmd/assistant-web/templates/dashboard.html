@@ -98,7 +98,7 @@
         </div>
 
         <div id="confirm-overlay" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="closeConfirmPanel()"></div>
-        <div id="confirm-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-2xl">
+        <div id="confirm-panel" class="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-gray-800 md:rounded-lg p-6 z-50 w-full md:max-w-sm hidden shadow-[0_25px_60px_-10px_rgba(0,0,0,0.7)] ring-1 ring-gray-700">
             <div class="flex items-center justify-between mb-4">
                 <h2 id="confirm-title" class="text-lg font-semibold"></h2>
                 <button onclick="closeConfirmPanel()" class="text-gray-400 hover:text-gray-200 p-1 cursor-pointer">
@@ -715,7 +715,7 @@
 
         function doAutoVoice(nick, host) {
             const checkboxHtml = host
-                ? `<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 rounded bg-gray-700 border-gray-600" /> Also auto-voice all users with host <span class="font-mono text-gray-400">${escapeHtml(host)}</span></label>`
+                ? `<label class="flex items-start gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 mt-0.5 rounded bg-gray-700 border-gray-600 shrink-0" /><span>Also auto-voice all users with host<br/><span class="font-mono text-gray-400 break-all">${escapeHtml(host)}</span></span></label>`
                 : '';
             showConfirm(`Auto-voice ${nick}?`, 'Auto-voice', 'bg-blue-700 hover:bg-blue-600', async () => {
                 const includeHost = document.getElementById('confirm-av-host')?.checked || false;
@@ -936,7 +936,7 @@
                 ? 'The user will automatically be voiced each time they join the channel.'
                 : 'The user will no longer be automatically voiced when they join.';
             const checkboxHtml = currentUserHost
-                ? `<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 rounded bg-gray-700 border-gray-600" /> Also ${enabled ? 'auto-voice' : 'remove auto-voice for'} all users with host <span class="font-mono text-gray-400">${escapeHtml(currentUserHost)}</span></label>`
+                ? `<label class="flex items-start gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 mt-0.5 rounded bg-gray-700 border-gray-600 shrink-0" /><span>Also ${enabled ? 'auto-voice' : 'remove auto-voice for'} all users with host<br/><span class="font-mono text-gray-400 break-all">${escapeHtml(currentUserHost)}</span></span></label>`
                 : '';
 
             showConfirm(title, btnLabel, btnClass, async () => {
