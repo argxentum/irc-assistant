@@ -678,7 +678,18 @@
             const btn = document.getElementById('confirm-submit');
             btn.textContent = btnLabel;
             btn.className = `flex-1 py-2 rounded text-sm font-medium cursor-pointer ${btnClass}`;
-            btn.onclick = () => { closeConfirmPanel(); onConfirm(); };
+            btn.onclick = async () => {
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+                btn.classList.add('opacity-60', 'cursor-not-allowed');
+                try {
+                    await onConfirm();
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                    closeConfirmPanel();
+                }
+            };
             document.getElementById('confirm-overlay').classList.remove('hidden');
             document.getElementById('confirm-panel').classList.remove('hidden');
             lucide.createIcons();
