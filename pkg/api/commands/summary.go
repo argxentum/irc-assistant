@@ -244,7 +244,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 
 	doc, err := c.docRetriever.RetrieveDocument(e, retriever.DefaultParams(ub.url))
 	if err != nil {
-		logger.Debugf(e, "error retrieving document for %s: %v", ub.url, err)
+		logger.Debugf(e, "error retrieving document for %s, falling back to proxy: %v", ub.url, err)
+		task := models.NewProxySummaryRequestTask(e.ReplyTarget(), e.From, ub.url)
+		if err := queue.GetProxy().Publish(task); err != nil {
+			logger.Errorf(e, "error publishing proxy summary request for %s: %s", ub.url, err)
+		}
 		return
 	}
 
