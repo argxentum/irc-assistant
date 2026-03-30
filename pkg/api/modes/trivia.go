@@ -132,6 +132,7 @@ func (t *TriviaMode) OnEnd() {
 	t.mu.Unlock()
 
 	if showResults && len(t.scores) > 0 {
+		time.Sleep(500 * time.Millisecond)
 		t.sendResults()
 	}
 
@@ -274,6 +275,7 @@ func (t *TriviaMode) showResultsAndEnd() {
 	t.state = triviaStateShowingResults
 	t.mu.Unlock()
 
+	time.Sleep(500 * time.Millisecond)
 	t.sendResults()
 	time.Sleep(1 * time.Second)
 
