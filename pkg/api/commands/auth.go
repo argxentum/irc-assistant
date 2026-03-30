@@ -70,6 +70,13 @@ func (c *AuthCommand) Execute(e *irc.Event) {
 		return
 	}
 
+	fs := firestore.Get()
+	ch, err := fs.Channel(channel)
+	if err != nil || ch == nil {
+		c.Replyf(e, "I'm not in %s.", channel)
+		return
+	}
+
 	nick, _ := e.Sender()
 	logger.Infof(e, "⚡ %s [%s] channel: %s", c.Name(), nick, channel)
 
@@ -80,7 +87,6 @@ func (c *AuthCommand) Execute(e *irc.Event) {
 		return
 	}
 
-	fs := firestore.Get()
 	if err := fs.CreateAuthToken(token); err != nil {
 		logger.Errorf(e, "error storing auth token: %s", err)
 		c.Replyf(e, "Error generating auth token.")

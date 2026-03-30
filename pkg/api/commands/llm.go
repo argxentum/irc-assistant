@@ -35,7 +35,7 @@ func (c *LLMCommand) Triggers() []string {
 }
 
 func (c *LLMCommand) Usages() []string {
-	return []string{"%s <prompt>"}
+	return []string{"%s <prompt>", "can be initiated by mentioning the bot"}
 }
 
 func (c *LLMCommand) AllowedInPrivateMessages() bool {
