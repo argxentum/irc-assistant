@@ -76,9 +76,10 @@ func (s *server) dashboardAllUsersHandler(w http.ResponseWriter, r *http.Request
 }
 
 type dashboardActionRequest struct {
-	Nick     string `json:"nick"`
-	Duration string `json:"duration,omitempty"`
-	Reason   string `json:"reason,omitempty"`
+	Nick        string `json:"nick"`
+	Duration    string `json:"duration,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+	IncludeHost bool   `json:"include_host,omitempty"`
 }
 
 func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,12 +103,12 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if action == "autovoice" {
-		s.handleAutoVoiceAction(w, session.Channel, req.Nick, true)
+		s.handleAutoVoiceAction(w, session.Channel, req.Nick, true, req.IncludeHost)
 		return
 	}
 
 	if action == "removeautovoice" {
-		s.handleAutoVoiceAction(w, session.Channel, req.Nick, false)
+		s.handleAutoVoiceAction(w, session.Channel, req.Nick, false, req.IncludeHost)
 		return
 	}
 
@@ -128,8 +129,10 @@ func (s *server) dashboardActionHandler(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick string, enable bool) {
+func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick string, enable, includeHost bool) {
+	logger := log.Logger()
 	fs := firestore.Get()
+
 	user, err := fs.GetUserByNick(channel, nick)
 	if err != nil || user == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -139,7 +142,7 @@ func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick stri
 
 	err = fs.UpdateUser(channel, user, map[string]any{"is_auto_voiced": enable})
 	if err != nil {
-		log.Logger().Errorf(nil, "dashboard auto-voice failed: %s", err)
+		logger.Errorf(nil, "dashboard auto-voice failed: %s", err)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{"success": false, "error": "update failed"})
 		return
@@ -153,13 +156,44 @@ func (s *server) handleAutoVoiceAction(w http.ResponseWriter, channel, nick stri
 			Nick:    nick,
 		})
 		if err != nil {
-			log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
+			logger.Warningf(nil, "dashboard auto-voice unmute failed: %s", err)
 		} else if !resp.Success {
-			log.Logger().Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
+			logger.Warningf(nil, "dashboard auto-voice unmute failed: %s", resp.Error)
 		}
 	}
 
-	log.Logger().Infof(nil, "dashboard: set auto-voice %v for %s in %s", enable, nick, channel)
+	// apply to all users with the same host if requested
+	if includeHost && user.Host != "" {
+		hostUsers, err := fs.GetUsersByHost(channel, user.Host)
+		if err != nil {
+			logger.Warningf(nil, "dashboard auto-voice host lookup failed: %s", err)
+		} else {
+			for _, hu := range hostUsers {
+				if hu.Nick == nick {
+					continue
+				}
+				if err := fs.UpdateUser(channel, hu, map[string]any{"is_auto_voiced": enable}); err != nil {
+					logger.Warningf(nil, "dashboard auto-voice host update failed for %s: %s", hu.Nick, err)
+					continue
+				}
+				if enable {
+					resp, err := s.dashboardRequest(models.DashboardRequestTaskData{
+						Action:  models.DashboardActionUnmute,
+						Channel: channel,
+						Nick:    hu.Nick,
+					})
+					if err != nil {
+						logger.Warningf(nil, "dashboard auto-voice unmute failed for %s: %s", hu.Nick, err)
+					} else if !resp.Success {
+						logger.Warningf(nil, "dashboard auto-voice unmute failed for %s: %s", hu.Nick, resp.Error)
+					}
+				}
+				logger.Infof(nil, "dashboard: set auto-voice %v for %s (host match) in %s", enable, hu.Nick, channel)
+			}
+		}
+	}
+
+	logger.Infof(nil, "dashboard: set auto-voice %v for %s in %s", enable, nick, channel)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"success": true})

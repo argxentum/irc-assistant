@@ -125,7 +125,12 @@ func handleDashboardUserAction(ircs irc.IRC, data models.DashboardRequestTaskDat
 		actions.Ban(ircs, data.Channel, mask, data.Duration, data.Reason)
 
 	case models.DashboardActionMute:
-		actions.Mute(ircs, data.Channel, data.Nick, user.Mask.Host, data.Duration, data.Reason)
+		if data.Reason == "" && data.Duration == "" {
+			ircs.Mute(data.Channel, data.Nick)
+			logger.Infof(nil, "dashboard: quietly muted %s in %s", data.Nick, data.Channel)
+		} else {
+			actions.Mute(ircs, data.Channel, data.Nick, user.Mask.Host, data.Duration, data.Reason)
+		}
 
 	case models.DashboardActionUnban:
 		mask := fmt.Sprintf("*!*@%s", user.Mask.Host)

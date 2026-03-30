@@ -106,6 +106,7 @@
                 </button>
             </div>
             <p id="confirm-desc" class="text-sm text-gray-400 mb-4 hidden"></p>
+            <div id="confirm-extra" class="mb-4 hidden"></div>
             <div class="flex gap-2">
                 <button onclick="closeConfirmPanel()" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer bg-gray-700 hover:bg-gray-600">Cancel</button>
                 <button id="confirm-submit" class="flex-1 py-2 rounded text-sm font-medium cursor-pointer"></button>
@@ -621,6 +622,7 @@
         const statusColors = {'@': 'text-red-400', '%': 'text-yellow-400', '+': 'text-green-400', '': 'text-gray-500', 'offline': 'text-gray-600'};
         const protectedStatuses = new Set(['@', '%']);
         let currentUserNick = '';
+        let currentUserHost = '';
         let hostUsersData = [];
         let hostSortField = 'updated_at';
         let hostSortAsc = false;
@@ -656,7 +658,7 @@
             setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
-        function showConfirm(title, btnLabel, btnClass, onConfirm, description) {
+        function showConfirm(title, btnLabel, btnClass, onConfirm, description, extraHtml) {
             document.getElementById('confirm-title').textContent = title;
             const desc = document.getElementById('confirm-desc');
             if (description) {
@@ -664,6 +666,14 @@
                 desc.classList.remove('hidden');
             } else {
                 desc.classList.add('hidden');
+            }
+            const extra = document.getElementById('confirm-extra');
+            if (extraHtml) {
+                extra.innerHTML = extraHtml;
+                extra.classList.remove('hidden');
+            } else {
+                extra.innerHTML = '';
+                extra.classList.add('hidden');
             }
             const btn = document.getElementById('confirm-submit');
             btn.textContent = btnLabel;
@@ -703,6 +713,31 @@
             }, description);
         }
 
+        function doAutoVoice(nick, host) {
+            const checkboxHtml = host
+                ? `<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 rounded bg-gray-700 border-gray-600" /> Also auto-voice all users with host <span class="font-mono text-gray-400">${escapeHtml(host)}</span></label>`
+                : '';
+            showConfirm(`Auto-voice ${nick}?`, 'Auto-voice', 'bg-blue-700 hover:bg-blue-600', async () => {
+                const includeHost = document.getElementById('confirm-av-host')?.checked || false;
+                try {
+                    const resp = await fetch(`/dashboard/api/action/autovoice`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({nick, include_host: includeHost})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showToast(`Auto-voiced: ${nick}${includeHost ? ' (+ host)' : ''}`, true);
+                        setTimeout(loadUsers, 1000);
+                    } else {
+                        showToast(data.error || 'Action failed', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
+                }
+            }, 'The user will automatically be voiced each time they join the channel.', checkboxHtml);
+        }
+
         function actionButton(label, cls, onclick) {
             return `<button onclick="${onclick}" class="text-xs px-2 py-1 rounded cursor-pointer ${cls}">${label}</button>`;
         }
@@ -710,13 +745,15 @@
         function userActions(user) {
             if (user.status === 'offline') {
                 const nick = escapeAttr(user.nick);
-                return actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAction('autovoice','${nick}',{label:'Auto-voice',toast:'Auto-voiced: ${nick}',description:'The user will automatically be voiced each time they join the channel.'})`);
+                const host = escapeAttr(user.host || '');
+                return actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}','${host}')`);
             }
             if (protectedStatuses.has(user.status)) return '';
             const nick = escapeAttr(user.nick);
+            const host = escapeAttr(user.host || '');
             return [
                 user.status === ''
-                    ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAction('autovoice','${nick}',{label:'Auto-voice',toast:'Auto-voiced: ${nick}',description:'The user will automatically be voiced each time they join the channel.'})`)
+                    ? actionButton('Auto-voice', 'bg-blue-800 hover:bg-blue-700', `doAutoVoice('${nick}','${host}')`)
                     : '',
                 user.status === '+'
                     ? actionButton('Mute', 'bg-yellow-800 hover:bg-yellow-700', `showActionPanel('mute','${nick}')`)
@@ -885,26 +922,42 @@
             return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
         }
 
-        async function toggleAutoVoice() {
-            const enabled = document.getElementById('user-autovoiced-toggle').checked;
+        function toggleAutoVoice() {
+            const toggle = document.getElementById('user-autovoiced-toggle');
+            const enabled = toggle.checked;
+            // revert toggle until confirmed
+            toggle.checked = !enabled;
+
             const action = enabled ? 'autovoice' : 'removeautovoice';
-            try {
-                const resp = await fetch(`/dashboard/api/action/${action}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nick: currentUserNick})
-                });
-                const data = await resp.json();
-                if (data.success) {
-                    showToast(`${enabled ? 'Auto-voiced' : 'Removed auto-voice'}: ${currentUserNick}`, true);
-                } else {
-                    showToast(data.error || 'Action failed', false);
-                    document.getElementById('user-autovoiced-toggle').checked = !enabled;
+            const title = enabled ? `Auto-voice ${currentUserNick}?` : `Remove auto-voice for ${currentUserNick}?`;
+            const btnLabel = enabled ? 'Auto-voice' : 'Remove';
+            const btnClass = enabled ? 'bg-blue-700 hover:bg-blue-600' : 'bg-red-700 hover:bg-red-600';
+            const description = enabled
+                ? 'The user will automatically be voiced each time they join the channel.'
+                : 'The user will no longer be automatically voiced when they join.';
+            const checkboxHtml = currentUserHost
+                ? `<label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none"><input type="checkbox" id="confirm-av-host" class="w-4 h-4 rounded bg-gray-700 border-gray-600" /> Also ${enabled ? 'auto-voice' : 'remove auto-voice for'} all users with host <span class="font-mono text-gray-400">${escapeHtml(currentUserHost)}</span></label>`
+                : '';
+
+            showConfirm(title, btnLabel, btnClass, async () => {
+                const includeHost = document.getElementById('confirm-av-host')?.checked || false;
+                try {
+                    const resp = await fetch(`/dashboard/api/action/${action}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({nick: currentUserNick, include_host: includeHost})
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        toggle.checked = enabled;
+                        showToast(`${enabled ? 'Auto-voiced' : 'Removed auto-voice'}: ${currentUserNick}${includeHost ? ' (+ host)' : ''}`, true);
+                    } else {
+                        showToast(data.error || 'Action failed', false);
+                    }
+                } catch (e) {
+                    showToast(e.message, false);
                 }
-            } catch (e) {
-                showToast(e.message, false);
-                document.getElementById('user-autovoiced-toggle').checked = !enabled;
-            }
+            }, description, checkboxHtml);
         }
 
         function closeModal() {
@@ -962,6 +1015,7 @@
                     document.getElementById('user-credibility').textContent = '-';
                     document.getElementById('user-credibility').className = '';
                 }
+                currentUserHost = user.host || '';
                 document.getElementById('user-autovoiced-toggle').checked = user.is_auto_voiced;
                 document.getElementById('user-created').textContent = formatDate(user.created_at);
                 document.getElementById('user-updated').textContent = formatDate(user.updated_at);
