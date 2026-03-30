@@ -112,7 +112,15 @@ func (t *TriviaMode) OnStart() {
 	})
 
 	select {
-	case <-time.After(announcementDelay):
+	case <-time.After(3 * time.Second):
+	case <-t.cancel:
+		return
+	}
+
+	t.ircs.SendMessages(t.channel, []string{"Ready? Here we go..."})
+
+	select {
+	case <-time.After(2 * time.Second):
 		t.askQuestion()
 	case <-t.cancel:
 		return
