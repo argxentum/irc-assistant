@@ -867,6 +867,7 @@
                 const isMobile = window.innerWidth < 768;
                 table.classList.toggle('hidden', isMobile);
                 cards.classList.toggle('hidden', !isMobile);
+                filterUsers();
             } catch (e) {
                 loading.classList.add('hidden');
                 error.textContent = e.message;
