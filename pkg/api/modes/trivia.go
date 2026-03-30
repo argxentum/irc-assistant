@@ -147,7 +147,7 @@ func (t *TriviaMode) OnEnd() {
 	cooldown := t.cooldownDuration()
 	msg := "🎯 Trivia has ended! Normal commands are now active."
 	if cooldown > 0 {
-		msg += fmt.Sprintf(" Next trivia available %s.", elapse.FutureTimeDescription(time.Now().Add(cooldown)))
+		msg += fmt.Sprintf(" Next trivia available in %s.", elapse.FutureTimeDescriptionConcise(time.Now().Add(cooldown)))
 	}
 
 	// send the ending message after results with a short delay

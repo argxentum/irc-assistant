@@ -5,6 +5,7 @@ import (
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
 	"assistant/pkg/api/modes"
+	"assistant/pkg/api/style"
 	"assistant/pkg/api/trivia"
 	"assistant/pkg/config"
 	"assistant/pkg/log"
@@ -29,7 +30,9 @@ func NewTriviaCommand(ctx context.Context, cfg *config.Config, ircs irc.IRC) Com
 func (c *TriviaCommand) Name() string        { return TriviaCommandName }
 func (c *TriviaCommand) Description() string { return "Start a trivia game" }
 func (c *TriviaCommand) Triggers() []string  { return []string{"trivia"} }
-func (c *TriviaCommand) Usages() []string    { return []string{"%s", "%s random", "%s <category>", "%s cancel"} }
+func (c *TriviaCommand) Usages() []string {
+	return []string{"%s", "%s random", "%s <category>", "%s cancel"}
+}
 
 func (c *TriviaCommand) AllowedInPrivateMessages() bool { return false }
 
@@ -60,7 +63,7 @@ func (c *TriviaCommand) Execute(e *irc.Event) {
 
 	cooldown := c.triviaCooldown()
 	if remaining := mgr.CooldownRemaining(e.ReplyTarget(), "trivia", cooldown); remaining > 0 {
-		c.Replyf(e, "Trivia is on cooldown. Try again %s.", elapse.FutureTimeDescription(time.Now().Add(remaining)))
+		c.Replyf(e, "Trivia is on cooldown. Try again in %s.", elapse.FutureTimeDescriptionConcise(time.Now().Add(remaining)))
 		return
 	}
 
@@ -86,7 +89,7 @@ func (c *TriviaCommand) Execute(e *irc.Event) {
 			go c.startWithCategory(e, categoryID, categoryName)
 			return
 		}
-		c.Replyf(e, "Unknown category \"%s\". Try: !trivia random, or !trivia for the setup page.", term)
+		c.Replyf(e, "Unknown category \"%s\". Try: %s, or just %s to set up a game.", term, style.Italics("!trivia random"), style.Italics("!trivia"))
 		return
 	}
 
