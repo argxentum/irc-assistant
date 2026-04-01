@@ -91,19 +91,20 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 		return nil
 	}
 
+	lnick := strings.ToLower(eh.cfg.IRC.Nick)
 	mentionFormats := []string{
-		"@" + eh.cfg.IRC.Nick,
-		"%" + eh.cfg.IRC.Nick,
-		eh.cfg.IRC.Nick + " ",
-		eh.cfg.IRC.Nick + ":",
-		eh.cfg.IRC.Nick + ",",
-		eh.cfg.IRC.Nick + "!",
-		eh.cfg.IRC.Nick + ".",
-		eh.cfg.IRC.Nick + "?",
+		"@" + lnick,
+		"%" + lnick,
+		lnick + " ",
+		lnick + ":",
+		lnick + ",",
+		lnick + "!",
+		lnick + ".",
+		lnick + "?",
 	}
 
 	for _, format := range mentionFormats {
-		if strings.HasPrefix(e.Message(), format) {
+		if strings.HasPrefix(strings.ToLower(e.Message()), format) {
 			return llm
 		}
 	}
