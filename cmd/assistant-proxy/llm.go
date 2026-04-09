@@ -21,7 +21,7 @@ import (
 )
 
 const defaultSessionTimeout = 10 * time.Minute
-const streamTimeout = 30 * time.Second
+const streamTimeout = 15 * time.Second
 const streamContentThreshold = 300
 const maxHistoryAssistantLength = 200
 const maxHistoryMessages = 40
