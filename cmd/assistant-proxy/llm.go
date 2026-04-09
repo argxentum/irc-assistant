@@ -227,7 +227,7 @@ func (p *proxy) handleLLM(requestID string, data models.ProxyLLMRequestTaskData)
 		logger.Debugf(nil, "  [%d] %s: %s", i, msg.Role, preview)
 	}
 
-	options := map[string]any{"num_predict": 1024, "num_think": 0, "temperature": 0.2, "num_ctx": 8192}
+	options := map[string]any{"num_predict": 1024, "temperature": 0.2, "num_ctx": 8192}
 	start := time.Now()
 
 	// Streaming request
