@@ -88,7 +88,10 @@ func (c *BanCommand) Execute(e *irc.Event) {
 
 		logger.Infof(e, "⚡ %s [%s/%s] %s %s %s", c.Name(), e.From, e.ReplyTarget(), channel, mask, duration)
 
-		c.ban(e, channel, mask, duration, reason)
+		// run on a fresh goroutine — c.ban does synchronous WHOIS/WHO waits, and
+		// this callback is invoked from inside go-ircevent's RunCallbacks, which
+		// blocks the read loop until the callback returns
+		go c.ban(e, channel, mask, duration, reason)
 	})
 }
 
