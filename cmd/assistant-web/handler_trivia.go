@@ -33,7 +33,7 @@ func (s *server) triviaSetupHandler(w http.ResponseWriter, r *http.Request) {
 	args := map[string]any{
 		"channel":      channel,
 		"categories":   trivia.Categories,
-		"maxQuestions":  s.cfg.Trivia.MaxQuestions,
+		"maxQuestions": s.cfg.Trivia.MaxQuestions,
 		"defaultCount": s.cfg.Trivia.DefaultCount,
 	}
 
