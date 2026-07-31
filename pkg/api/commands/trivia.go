@@ -118,7 +118,12 @@ func (c *TriviaCommand) startWithCategory(e *irc.Event, categoryID, categoryName
 		return
 	}
 
-	mode := modes.NewTriviaMode(e.ReplyTarget(), c.irc, c.cfg, questions)
+	mode, err := modes.NewTriviaMode(e.ReplyTarget(), c.irc, c.cfg, questions)
+	if err != nil {
+		logger.Errorf(e, "invalid trivia questions: %s", err)
+		c.Replyf(e, "Failed to prepare trivia questions. Try again later.")
+		return
+	}
 	cooldown := c.triviaCooldown()
 	if err := modes.GetManager().Activate(mode, cooldown); err != nil {
 		c.Replyf(e, "%s", err)

@@ -37,6 +37,10 @@ func (m *Mask) NickWildcardString() string {
 }
 
 func ParseMask(mask string) *Mask {
+	mask = strings.TrimSpace(mask)
+	if mask == "" {
+		return nil
+	}
 	if !strings.Contains(mask, "!") && !strings.Contains(mask, "@") {
 		return &Mask{
 			Nick:   mask,
@@ -63,6 +67,10 @@ func ParseMask(mask string) *Mask {
 }
 
 func (m *Mask) Matches(other *Mask) bool {
+	if m == nil || other == nil {
+		return false
+	}
+
 	logger := log.Logger()
 
 	pattern := "^" + strings.ReplaceAll(m.String(), "*", ".*?") + "$"

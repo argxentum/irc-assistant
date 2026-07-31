@@ -158,17 +158,29 @@ func (eh *handler) Handle(e *irc.Event) {
 
 	switch e.Code {
 	case irc.CodeQuit:
+		if len(e.Arguments) == 0 {
+			logger.Warningf(e, "ignoring malformed QUIT event with no arguments")
+			return
+		}
 		if strings.ToLower(e.Arguments[0]) == irc.MessageNetSplit {
 			logger.Errorf(e, "net split detected, user leaving: %s (%s)", e.From, e.Source)
 		} else if strings.ToLower(e.Arguments[0]) == irc.MessageServerShuttingDown {
 			logger.Criticalf(e, "server shutting down, user leaving: %s (%s)", e.From, e.Source)
 		}
 	case irc.CodeError:
+		if len(e.Arguments) == 0 {
+			logger.Warningf(e, "ignoring malformed ERROR event with no arguments")
+			return
+		}
 		if strings.HasPrefix(strings.ToLower(e.Arguments[0]), irc.MessageClosingLink) && strings.Contains(strings.ToLower(e.Arguments[0]), irc.MessageServerShuttingDown) {
 			logger.Alertf(e, "server shutting down, attempting reconnect in %d seconds", eh.cfg.IRC.ReconnectDelay)
 			// todo
 		}
 	case irc.CodeInvite:
+		if len(e.Arguments) < 2 {
+			logger.Warningf(e, "ignoring malformed INVITE event with %d arguments", len(e.Arguments))
+			return
+		}
 		// if the sender of invite is the owner or an admin, join the channel
 		sender, _ := e.Sender()
 		if sender == eh.cfg.IRC.Owner || slices.Contains(eh.cfg.IRC.Admins, sender) {

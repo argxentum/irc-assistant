@@ -123,7 +123,7 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 
 	if cfg.IRC.TLS {
 		s.conn.UseTLS = cfg.IRC.TLS
-		s.conn.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+		s.conn.TLSConfig = newTLSConfig(cfg.IRC.Server)
 	}
 
 	if len(cfg.IRC.NickServ.Password) > 0 {
@@ -172,6 +172,10 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 	if joinChannelCallback != nil {
 		s.conn.AddCallback(CodeJoin, func(e *irce.Event) {
 			m := ParseMask(e.Source)
+			if m == nil {
+				log.Logger().Warningf(nil, "ignoring JOIN event with malformed source mask %q", e.Source)
+				return
+			}
 			joinChannelCallback(e.Message(), m)
 		})
 	}
@@ -182,6 +186,13 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 	}
 
 	return nil
+}
+
+func newTLSConfig(serverName string) *tls.Config {
+	return &tls.Config{
+		ServerName: serverName,
+		MinVersion: tls.VersionTLS12,
+	}
 }
 
 func (s *service) respondOnce(code string, callback func(event *irce.Event) bool) {
@@ -288,6 +299,11 @@ func (s *service) ListUsers(channel string, callback func(users []*User)) {
 func (s *service) ListUsersByMask(channel, mask string, callback func(users []*User)) {
 	matchingUsers := make([]*User, 0)
 	m := ParseMask(mask)
+	if m == nil {
+		log.Logger().Warningf(nil, "cannot list users with invalid mask %q", mask)
+		callback(matchingUsers)
+		return
+	}
 
 	s.requests.run(requestKey("WHO", channel), fmt.Sprintf("WHO %s", channel), map[string]func(*irce.Event) bool{
 		CodeWhoReply: func(e *irce.Event) bool {

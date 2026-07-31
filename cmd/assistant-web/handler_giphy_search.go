@@ -26,6 +26,7 @@ func (s *server) giphySearchHandler(w http.ResponseWriter, r *http.Request) {
 	if len(gif.Data) == 0 {
 		logger.Rawf(log.Error, "no data returned for giphy gif search")
 		http.Error(w, "no data", http.StatusNotFound)
+		return
 	}
 
 	url := gif.Data[0].Images["original"].URL

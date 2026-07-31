@@ -115,6 +115,10 @@ func (c *BanCommand) ban(e *irc.Event, channel, mask, duration, reason string) {
 		mask = fmt.Sprintf("*!*@%s", user.Mask.Host)
 		logger.Debugf(e, "resolved %s to %s", nick, mask)
 	}
+	if irc.ParseMask(mask) == nil {
+		c.Replyf(e, "%s is not a valid user mask", style.Bold(mask))
+		return
+	}
 
 	actions.Ban(c.irc, channel, mask, duration, reason)
 }

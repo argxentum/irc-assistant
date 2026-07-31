@@ -49,6 +49,10 @@ func Ban(ircs irc.IRC, channel, mask, duration, reason string) {
 		}
 
 		m := irc.ParseMask(mask)
+		if m == nil {
+			logger.Errorf(nil, "ban: cannot schedule removal for invalid mask %q", mask)
+			return
+		}
 		task := models.NewBanRemovalTask(time.Now().Add(dur), m.String(), channel)
 		if err := firestore.Get().AddTask(task); err != nil {
 			logger.Errorf(nil, "ban: error scheduling ban removal: %s", err)

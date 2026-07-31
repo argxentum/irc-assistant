@@ -70,7 +70,7 @@ func (c *WeatherCommand) Execute(e *irc.Event) {
 
 	var user *models.User
 	if !e.IsPrivateMessage() {
-		user, _ = repository.GetUserByMask(e, e.ReplyTarget(), irc.ParseMask(e.Source), false)
+		user, _ = repository.GetUserByMask(e, e.ReplyTarget(), e.Mask(), false)
 	}
 
 	if len(location) == 0 {

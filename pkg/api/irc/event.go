@@ -46,7 +46,10 @@ func (e *Event) Sender() (string, EntityType) {
 }
 
 func (e *Event) Recipient() (string, EntityType) {
-	if len(e.Arguments) > 0 && IsChannel(e.Arguments[0]) {
+	if len(e.Arguments) == 0 {
+		return "", EntityTypeUser
+	}
+	if IsChannel(e.Arguments[0]) {
 		return e.Arguments[0], EntityTypeChannel
 	}
 	return e.Arguments[0], EntityTypeUser

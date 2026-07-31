@@ -173,6 +173,10 @@ func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, cha
 func initializeChannelUser(cfg *config.Config, irc irc.IRC, channel string, mask *irc.Mask) {
 	logger := log.Logger()
 	fs := firestore.Get()
+	if mask == nil {
+		logger.Warningf(nil, "ignoring channel user initialization with an invalid mask in %s", channel)
+		return
+	}
 
 	ch, err := fs.Channel(channel)
 	if err != nil {

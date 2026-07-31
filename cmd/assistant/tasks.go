@@ -801,7 +801,10 @@ func processTriviaStart(cfg *config.Config, ircs irc.IRC, task *models.Task) err
 		})
 	}
 
-	mode := modes.NewTriviaMode(data.Channel, ircs, cfg, questions)
+	mode, err := modes.NewTriviaMode(data.Channel, ircs, cfg, questions)
+	if err != nil {
+		return fmt.Errorf("invalid trivia start task: %w", err)
+	}
 	mode.SetFirstAnswerOnly(data.FirstAnswerOnly)
 
 	var cooldown time.Duration

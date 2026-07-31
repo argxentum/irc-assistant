@@ -50,7 +50,19 @@ type TriviaMode struct {
 	ended           bool
 }
 
-func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions []trivia.Question) *TriviaMode {
+func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions []trivia.Question) (*TriviaMode, error) {
+	if len(questions) == 0 {
+		return nil, fmt.Errorf("trivia requires at least one question")
+	}
+	for i, question := range questions {
+		if len(question.Answers) == 0 {
+			return nil, fmt.Errorf("trivia question %d has no answers", i+1)
+		}
+		if question.CorrectIndex < 1 || question.CorrectIndex > len(question.Answers) {
+			return nil, fmt.Errorf("trivia question %d has invalid correct answer index %d", i+1, question.CorrectIndex)
+		}
+	}
+
 	return &TriviaMode{
 		channel:         channel,
 		ircs:            ircs,
@@ -61,7 +73,7 @@ func NewTriviaMode(channel string, ircs irc.IRC, cfg *config.Config, questions [
 		firstAnswerOnly: true,
 		state:           triviaStateAnnouncing,
 		cancel:          make(chan struct{}),
-	}
+	}, nil
 }
 
 func (t *TriviaMode) SetFirstAnswerOnly(v bool) { t.firstAnswerOnly = v }
