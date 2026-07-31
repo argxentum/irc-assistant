@@ -31,18 +31,24 @@ type Handler interface {
 
 type handler struct {
 	sync.RWMutex
-	ctx      context.Context
-	cfg      *config.Config
-	irc      irc.IRC
-	registry commands.CommandRegistry
+	ctx                         context.Context
+	cfg                         *config.Config
+	irc                         irc.IRC
+	registry                    commands.CommandRegistry
+	messageHistory              map[string]time.Time
+	rateLimitCounter            map[string]int
+	temporarilyIgnoredUserMasks map[string]int64
 }
 
 func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
 	eh := &handler{
-		ctx:      ctx,
-		cfg:      cfg,
-		irc:      irc,
-		registry: commands.LoadCommandRegistry(ctx, cfg, irc),
+		ctx:                         ctx,
+		cfg:                         cfg,
+		irc:                         irc,
+		registry:                    commands.LoadCommandRegistry(ctx, cfg, irc),
+		messageHistory:              make(map[string]time.Time),
+		rateLimitCounter:            make(map[string]int),
+		temporarilyIgnoredUserMasks: make(map[string]int64),
 	}
 
 	return eh
@@ -59,9 +65,9 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 		if isUserMask(e.Source) {
 			mask := irc.ParseMask(e.Source)
 			eh.Lock()
-			if _, ok := rateLimitCounter[mask.Host]; ok {
+			if _, ok := eh.rateLimitCounter[mask.Host]; ok {
 				logger.Debugf(e, "resetting rate limit counter for %s", mask.Host)
-				rateLimitCounter[mask.Host] = 0
+				eh.rateLimitCounter[mask.Host] = 0
 			}
 			eh.Unlock()
 		}
@@ -256,36 +262,30 @@ func (eh *handler) findModeBypassCommand(e *irc.Event, mode modes.ChannelMode) c
 	return nil
 }
 
-var messageHistory = make(map[string]time.Time)
-var rateLimitCounter = make(map[string]int)
-var temporarilyIgnoredUserMasks = make(map[string]int64)
-
 func (eh *handler) updateUserCommandHistory(e *irc.Event) {
 	if isUserMask(e.Source) {
 		mask := irc.ParseMask(e.Source)
 		eh.Lock()
-		messageHistory[mask.Host] = time.Now()
+		eh.messageHistory[mask.Host] = time.Now()
 		eh.Unlock()
 	}
 }
 
 func (eh *handler) isUserCommandRateLimited(e *irc.Event) bool {
-	if isUserMask(e.Source) {
-		mask := irc.ParseMask(e.Source)
-		eh.RLock()
-		c, ok := messageHistory[mask.Host]
-		eh.RUnlock()
-		if ok {
-			if time.Since(c) < userCommandRateLimitDuration {
-				eh.Lock()
-				messageHistory[mask.Host] = time.Now()
-				eh.Unlock()
-				return true
-			}
-		}
+	if !isUserMask(e.Source) {
+		return false
 	}
 
-	return false
+	mask := irc.ParseMask(e.Source)
+	eh.Lock()
+	defer eh.Unlock()
+
+	last, ok := eh.messageHistory[mask.Host]
+	limited := ok && time.Since(last) < userCommandRateLimitDuration
+	if limited {
+		eh.messageHistory[mask.Host] = time.Now()
+	}
+	return limited
 }
 
 const maxRateLimitedMessageCount = 5
@@ -297,16 +297,16 @@ func (eh *handler) incrementUserRateLimitCounter(e *irc.Event) {
 	if isUserMask(e.Source) {
 		mask := irc.ParseMask(e.Source)
 		eh.Lock()
-		if _, ok := rateLimitCounter[mask.Host]; !ok {
-			rateLimitCounter[mask.Host] = 0
+		if _, ok := eh.rateLimitCounter[mask.Host]; !ok {
+			eh.rateLimitCounter[mask.Host] = 0
 		}
-		rateLimitCounter[mask.Host]++
+		eh.rateLimitCounter[mask.Host]++
 
-		logger.Debugf(e, "rate limit counter for %s: %d", mask.Host, rateLimitCounter[mask.Host])
+		logger.Debugf(e, "rate limit counter for %s: %d", mask.Host, eh.rateLimitCounter[mask.Host])
 
-		if rateLimitCounter[mask.Host] >= maxRateLimitedMessageCount {
+		if eh.rateLimitCounter[mask.Host] >= maxRateLimitedMessageCount {
 			logger.Debugf(e, "adding temporarily ignored user: %s", mask.Host)
-			temporarilyIgnoredUserMasks[mask.Host] = time.Now().Add(temporarilyIgnoredUserDuration).Unix()
+			eh.temporarilyIgnoredUserMasks[mask.Host] = time.Now().Add(temporarilyIgnoredUserDuration).Unix()
 		}
 
 		eh.Unlock()
@@ -323,7 +323,7 @@ func (eh *handler) isTemporarilyIgnoredUser(e *irc.Event) bool {
 	mask := irc.ParseMask(e.Source)
 
 	eh.RLock()
-	t, ok := temporarilyIgnoredUserMasks[mask.Host]
+	t, ok := eh.temporarilyIgnoredUserMasks[mask.Host]
 	eh.RUnlock()
 	if ok {
 		if time.Now().Unix() < t {
@@ -332,8 +332,8 @@ func (eh *handler) isTemporarilyIgnoredUser(e *irc.Event) bool {
 		} else {
 			logger.Debugf(e, "user is no longer temporarily ignored: %s", mask.Host)
 			eh.Lock()
-			delete(temporarilyIgnoredUserMasks, mask.Host)
-			delete(rateLimitCounter, mask.Host)
+			delete(eh.temporarilyIgnoredUserMasks, mask.Host)
+			delete(eh.rateLimitCounter, mask.Host)
 			eh.Unlock()
 		}
 	}

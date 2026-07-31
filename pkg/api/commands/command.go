@@ -81,7 +81,7 @@ func (cs *commandStub) isCommandEventValid(c Command, e *irc.Event, minBodyToken
 	attempted := cs.isTriggerValid(c, e, tokens[0])
 
 	// if sleeping, ignore all triggers except wake
-	if !cs.ctx.Session().IsAwake {
+	if !cs.ctx.Session().IsAwake() {
 		isWakeTrigger := c.Name() == WakeCommandName && slices.Contains(registry.Command(WakeCommandName).Triggers(), strings.TrimPrefix(tokens[0], cs.cfg.Commands.Prefix))
 		if isWakeTrigger {
 			if !cs.authorizer.IsUserAuthorizedByRole(nick, cs.authorizer.RequiredRole()) {

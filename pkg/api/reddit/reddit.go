@@ -101,7 +101,7 @@ func Login(ctx context.Context, cfg *config.Config) error {
 	/*
 		logger := log.Logger()
 
-		if ctx.Session().Reddit.IsExpired() {
+		if ctx.Session().Reddit().IsExpired() {
 			logger.Debug(nil, "reddit session nil or expired, logging in")
 
 			session, err := login(cfg.Reddit.Username, cfg.Reddit.Password, cfg.Reddit.ClientID, cfg.Reddit.ClientSecret)
@@ -113,7 +113,7 @@ func Login(ctx context.Context, cfg *config.Config) error {
 				return errors.New("unable to login to reddit")
 			}
 
-			ctx.Session().Reddit = *session
+			ctx.Session().SetReddit(*session)
 		}
 	*/
 

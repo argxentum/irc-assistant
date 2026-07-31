@@ -1,13 +1,15 @@
 package context
 
 import (
+	"sync"
 	"time"
 )
 
 type Session struct {
-	StartedAt   time.Time
-	IsAwake     bool
-	Reddit      RedditSession
+	mu          sync.RWMutex
+	startedAt   time.Time
+	isAwake     bool
+	reddit      RedditSession
 	bannedWords map[string]map[string]bool // channel -> word/phrase -> true
 }
 
@@ -16,7 +18,7 @@ type RedditSession struct {
 	ExpiresIn   float64 `json:"expires_in"`
 }
 
-func (rs *RedditSession) IsExpired() bool {
+func (rs RedditSession) IsExpired() bool {
 	if len(rs.AccessToken) == 0 || rs.ExpiresIn <= 0 {
 		return true
 	}
@@ -27,11 +29,43 @@ func (rs *RedditSession) IsExpired() bool {
 
 func NewSession() *Session {
 	return &Session{
-		StartedAt:   time.Now(),
-		IsAwake:     true,
-		Reddit:      RedditSession{},
+		startedAt:   time.Now(),
+		isAwake:     true,
+		reddit:      RedditSession{},
 		bannedWords: make(map[string]map[string]bool),
 	}
+}
+
+func (s *Session) StartedAt() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.startedAt
+}
+
+func (s *Session) IsAwake() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.isAwake
+}
+
+func (s *Session) SetAwake(awake bool) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	changed := s.isAwake != awake
+	s.isAwake = awake
+	return changed
+}
+
+func (s *Session) Reddit() RedditSession {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.reddit
+}
+
+func (s *Session) SetReddit(reddit RedditSession) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.reddit = reddit
 }
 
 type Cache struct {
@@ -47,10 +81,21 @@ func (c *Cache) Set(k string, v any) {
 }
 
 func (s *Session) BannedWords(channel string) map[string]bool {
-	return s.bannedWords[channel]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	words := s.bannedWords[channel]
+	result := make(map[string]bool, len(words))
+	for word, banned := range words {
+		result[word] = banned
+	}
+	return result
 }
 
 func (s *Session) AddBannedWord(channel, word string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.bannedWords[channel] == nil {
 		s.bannedWords[channel] = make(map[string]bool)
 	}
@@ -58,6 +103,9 @@ func (s *Session) AddBannedWord(channel, word string) {
 }
 
 func (s *Session) RemoveBannedWord(channel, word string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if words, ok := s.bannedWords[channel]; ok {
 		delete(words, word)
 		if len(words) == 0 {

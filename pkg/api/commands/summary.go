@@ -88,7 +88,7 @@ type SummaryCommand struct {
 	bodyRetriever retriever.BodyRetriever
 	docRetriever  retriever.DocumentRetriever
 	userPausesMu  sync.RWMutex
-	userPauses    map[string]*UserPause
+	userPauses    map[string]UserPause
 }
 
 func NewSummaryCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Command {
@@ -96,20 +96,57 @@ func NewSummaryCommand(ctx context.Context, cfg *config.Config, irc irc.IRC) Com
 		commandStub:   defaultCommandStub(ctx, cfg, irc),
 		bodyRetriever: retriever.NewBodyRetriever(),
 		docRetriever:  retriever.NewDocumentRetriever(retriever.NewBodyRetriever()),
-		userPauses:    make(map[string]*UserPause),
+		userPauses:    make(map[string]UserPause),
 	}
 }
 
-func (c *SummaryCommand) getUserPause(key string) *UserPause {
+func (c *SummaryCommand) getUserPause(key string) (UserPause, bool) {
 	c.userPausesMu.RLock()
 	defer c.userPausesMu.RUnlock()
-	return c.userPauses[key]
+	pause, ok := c.userPauses[key]
+	return pause, ok
 }
 
-func (c *SummaryCommand) setUserPause(key string, p *UserPause) {
+func (c *SummaryCommand) recordIgnoredSummaryIfPaused(key string, now time.Time) (UserPause, bool, bool) {
 	c.userPausesMu.Lock()
 	defer c.userPausesMu.Unlock()
-	c.userPauses[key] = p
+
+	pause, ok := c.userPauses[key]
+	if !ok {
+		return UserPause{}, false, false
+	}
+
+	if !pause.timeoutAt.After(now) {
+		pause.timeoutAt = time.Time{}
+		pause.summaryCount = 0
+		pause.ignoreCount = 0
+		c.userPauses[key] = pause
+		return pause, false, true
+	}
+
+	pause.ignoreCount++
+	pause.summaryCount++
+	advancePause(&pause, now)
+	c.userPauses[key] = pause
+	return pause, true, true
+}
+
+func (c *SummaryCommand) recordCompletedSummary(key, channel, nick string, now time.Time) UserPause {
+	c.userPausesMu.Lock()
+	defer c.userPausesMu.Unlock()
+
+	if c.userPauses == nil {
+		c.userPauses = make(map[string]UserPause)
+	}
+
+	pause, ok := c.userPauses[key]
+	if !ok {
+		pause = UserPause{channel: channel, nick: nick}
+	}
+	pause.summaryCount++
+	advancePause(&pause, now)
+	c.userPauses[key] = pause
+	return pause
 }
 
 func (c *SummaryCommand) Name() string {
@@ -150,7 +187,7 @@ type urlBundle struct {
 func (c *SummaryCommand) Execute(e *irc.Event) {
 	logger := log.Logger()
 	fs := firestore.Get()
-	p := c.getUserPause(e.From + "@" + e.ReplyTarget())
+	pauseKey := e.From + "@" + e.ReplyTarget()
 
 	channel, err := fs.Channel(e.ReplyTarget())
 	if err != nil {
@@ -239,7 +276,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 			}
 		} else if ds != nil {
 			logger.Debugf(e, "performed domain specific handling: %s", ub.url)
-			c.completeSummary(e, source, ub, e.ReplyTarget(), ds.messages, dis, p)
+			c.completeSummary(e, source, ub, e.ReplyTarget(), ds.messages, dis)
 		} else {
 			logger.Debugf(e, "domain specific summarization returned nil for %s, falling back to proxy", ub.url)
 			task := models.NewProxySummaryRequestTask(e.ReplyTarget(), e.From, ub.actual)
@@ -278,8 +315,9 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	if !e.IsPrivateMessage() && p != nil {
-		if p.timeoutAt.After(time.Now()) {
+	if !e.IsPrivateMessage() {
+		pause, paused, existed := c.recordIgnoredSummaryIfPaused(pauseKey, time.Now())
+		if paused {
 			logger.Debugf(e, "ignoring paused summary request from %s in %s", e.From, e.ReplyTarget())
 			if dis {
 				c.addDisinformationPenalty(e, 1)
@@ -291,16 +329,11 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				c.SendMessages(e, e.ReplyTarget(), cn)
 			}
 
-			p.ignoreCount++
-			p.summaryCount++
-			updatePause(e, p)
-			c.setUserPause(e.From+"@"+e.ReplyTarget(), p)
+			logPause(e, pause)
 			return
-		} else {
+		}
+		if existed {
 			logger.Debugf(e, "pause expired for %s in %s", e.From, e.ReplyTarget())
-			p.timeoutAt = time.Time{}
-			p.summaryCount = 0
-			p.ignoreCount = 0
 		}
 	}
 
@@ -326,7 +359,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 				messages = append(messages, repository.ShortSourceSummary(source))
 			}
 
-			c.completeSummary(e, source, ub, e.ReplyTarget(), messages, dis, p)
+			c.completeSummary(e, source, ub, e.ReplyTarget(), messages, dis)
 			return
 		}
 	}
@@ -339,7 +372,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	if s == nil {
 		logger.Debugf(e, "unable to summarize %s", ub.url)
 	} else {
-		c.completeSummary(e, source, ub, e.ReplyTarget(), s.messages, dis, p)
+		c.completeSummary(e, source, ub, e.ReplyTarget(), s.messages, dis)
 	}
 }
 
@@ -349,19 +382,12 @@ func isValidCanonicalLink(original, canonical string) bool {
 
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
-func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub urlBundle, target string, messages []string, dis bool, p *UserPause) {
+func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub urlBundle, target string, messages []string, dis bool) {
 	logger := log.Logger()
 
 	if !e.IsPrivateMessage() {
-		if p == nil {
-			p = &UserPause{
-				channel: target,
-				nick:    e.From,
-			}
-		}
-		p.summaryCount++
-		updatePause(e, p)
-		c.setUserPause(e.From+"@"+target, p)
+		pause := c.recordCompletedSummary(e.From+"@"+target, target, e.From, time.Now())
+		logPause(e, pause)
 	}
 
 	unescapedMessages := make([]string, 0)
@@ -518,8 +544,7 @@ func (c *SummaryCommand) combinedSourceSummary(e *irc.Event, ub urlBundle, sourc
 	return sourceSummary
 }
 
-func updatePause(e *irc.Event, p *UserPause) {
-	logger := log.Logger()
+func advancePause(p *UserPause, now time.Time) {
 	sp := 0.0
 	if p.summaryCount > 0 {
 		sp = math.Pow(pauseSummaryMultiplier, float64(p.summaryCount))
@@ -528,16 +553,19 @@ func updatePause(e *irc.Event, p *UserPause) {
 	dp := 0.0
 
 	if p.timeoutAt.IsZero() {
-		p.timeoutAt = time.Now()
+		p.timeoutAt = now
 	}
 
 	tp := startPauseTimeoutSeconds * (sp + dp)
 	p.timeoutAt = p.timeoutAt.Add(time.Duration(tp) * time.Second)
-	maxTimeoutAt := time.Now().Add(time.Duration(maxPauseTimeoutSeconds) * time.Second)
+	maxTimeoutAt := now.Add(time.Duration(maxPauseTimeoutSeconds) * time.Second)
 	if p.timeoutAt.After(maxTimeoutAt) {
 		p.timeoutAt = maxTimeoutAt
 	}
+}
 
+func logPause(e *irc.Event, p UserPause) {
+	logger := log.Logger()
 	logger.Debugf(e, "pausing %s in %s until %s (summary: %d)", e.From, e.ReplyTarget(), elapse.TimeDescription(p.timeoutAt), p.summaryCount)
 }
 

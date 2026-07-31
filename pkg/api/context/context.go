@@ -2,7 +2,6 @@ package context
 
 import (
 	"context"
-	"sync"
 	"time"
 )
 
@@ -20,7 +19,6 @@ func NewContext() Context {
 
 type assistantContext struct {
 	context.Context
-	sync.Mutex
 	ctx     context.Context
 	session *Session
 }
@@ -42,7 +40,5 @@ func (c *assistantContext) Value(k any) any {
 }
 
 func (c *assistantContext) Session() *Session {
-	c.Lock()
-	defer c.Unlock()
 	return c.session
 }

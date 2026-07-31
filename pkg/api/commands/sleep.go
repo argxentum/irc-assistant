@@ -58,7 +58,7 @@ func (c *SleepCommand) Execute(e *irc.Event) {
 		}
 	}
 
-	c.ctx.Session().IsAwake = false
+	c.ctx.Session().SetAwake(false)
 	logger.Debug(e, "sleeping")
 	c.SendMessage(e, e.ReplyTarget(), fmt.Sprintf("Sleeping until awoken with %s.", style.Italics(wakeTrigger)))
 }
