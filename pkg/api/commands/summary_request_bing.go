@@ -15,11 +15,23 @@ import (
 )
 
 func (c *SummaryCommand) bingRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.bingSearchRequest(e, doc, false)
+}
+
+func (c *SummaryCommand) bingSlugSearchRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.bingSearchRequest(e, doc, true)
+}
+
+func (c *SummaryCommand) bingSearchRequest(e *irc.Event, doc *retriever.Document, slugSearch bool) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(bingSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, bingSearchURL, false); isSlugified {
+	if slugSearch {
+		u, isSlugified := getSearchURLFromSlug(url, bingSearchURL, false)
+		if !isSlugified {
+			return nil, noContentError
+		}
 		searchURL = u
 	}
 

@@ -12,11 +12,23 @@ import (
 )
 
 func (c *SummaryCommand) braveSearchRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.braveRequest(e, doc, false)
+}
+
+func (c *SummaryCommand) braveSlugSearchRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.braveRequest(e, doc, true)
+}
+
+func (c *SummaryCommand) braveRequest(e *irc.Event, doc *retriever.Document, slugSearch bool) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(braveSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, braveSearchURL, true); isSlugified {
+	if slugSearch {
+		u, isSlugified := getSearchURLFromSlug(url, braveSearchURL, true)
+		if !isSlugified {
+			return nil, noContentError
+		}
 		searchURL = u
 	}
 

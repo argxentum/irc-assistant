@@ -13,11 +13,23 @@ import (
 )
 
 func (c *SummaryCommand) startPageRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.startPageSearchRequest(e, doc, false)
+}
+
+func (c *SummaryCommand) startPageSlugSearchRequest(e *irc.Event, doc *retriever.Document) (*summaryResult, error) {
+	return c.startPageSearchRequest(e, doc, true)
+}
+
+func (c *SummaryCommand) startPageSearchRequest(e *irc.Event, doc *retriever.Document, slugSearch bool) (*summaryResult, error) {
 	url := doc.URL
 	logger := log.Logger()
 
 	searchURL := fmt.Sprintf(startPageSearchURL, url)
-	if u, isSlugified := getSearchURLFromSlug(url, startPageSearchURL, false); isSlugified {
+	if slugSearch {
+		u, isSlugified := getSearchURLFromSlug(url, startPageSearchURL, false)
+		if !isSlugified {
+			return nil, noContentError
+		}
 		searchURL = u
 	}
 
