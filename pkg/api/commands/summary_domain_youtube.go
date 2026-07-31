@@ -6,46 +6,82 @@ import (
 	"assistant/pkg/api/repository"
 	"assistant/pkg/api/retriever"
 	"assistant/pkg/api/style"
+	"assistant/pkg/api/summary"
 	"assistant/pkg/log"
 	"assistant/pkg/models"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 const youTubeMaxRetries = 3
 const youTubeRetryDelay = 2 * time.Second
 
-var ytInitialDataRegexp = regexp.MustCompile(`ytInitialData = (.*?);\s*</script>`)
+var ytInitialDataAssignmentRegexp = regexp.MustCompile(`(?:(?:var\s+)?ytInitialData|window(?:\s*\[\s*["']ytInitialData["']\s*\]|\s*\.ytInitialData))\s*=\s*`)
 var numberRegexp = regexp.MustCompile(`(\d+(?:,\d{3})*)`)
+var errYouTubeInitialDataNotFound = errors.New("ytInitialData assignment not found")
 
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
+	logger := log.Logger()
+	logger.Debugf(e, "YouTube summary path: trying oEmbed for %s", url)
+	if result, author, err := c.oEmbedSummary(e, youTubeOEmbedURL, url); err == nil && result != nil {
+		logger.Debugf(e, "YouTube summary path: oEmbed succeeded for %s", url)
+		var src *models.Source
+		if author != "" {
+			src, err = repository.FindSource(author)
+			if err != nil {
+				logger.Debugf(e, "YouTube error finding optional source for author %s: %v", author, err)
+			}
+		}
+		return result, src, nil
+	} else if err != nil {
+		logger.Debugf(e, "YouTube summary path: oEmbed failed for %s: %s; falling back to page parsing", url, err)
+	} else {
+		logger.Debugf(e, "YouTube summary path: oEmbed returned no usable summary for %s; falling back to page parsing", url)
+	}
+
+	logger.Debugf(e, "YouTube summary path: trying page parsing for %s", url)
 	var data ytData
+	var pageData []byte
 
 	for attempt := 1; attempt <= youTubeMaxRetries; attempt++ {
+		logger.Debugf(e, "YouTube summary path: fetching page for %s (attempt %d/%d)", url, attempt, youTubeMaxRetries)
 		body, err := c.bodyRetriever.RetrieveBody(e, retriever.DefaultParams(url))
 		if err != nil {
-			log.Logger().Debugf(e, "attempt %d: unable to retrieve YouTube page for %s: %s", attempt, url, err)
+			logger.Debugf(e, "YouTube summary path: page retrieval failed for %s (attempt %d/%d): %s", url, attempt, youTubeMaxRetries, err)
 		} else if body == nil {
-			log.Logger().Debugf(e, "attempt %d: nil body for YouTube page %s", attempt, url)
+			logger.Debugf(e, "YouTube summary path: page retrieval returned no body for %s (attempt %d/%d)", url, attempt, youTubeMaxRetries)
 		} else {
-			matches := ytInitialDataRegexp.FindStringSubmatch(string(body.Data))
-			if len(matches) < 2 {
-				log.Logger().Debugf(e, "attempt %d: unable to find ytInitialData for %s", attempt, url)
-			} else if err = json.Unmarshal([]byte(matches[1]), &data); err != nil {
-				log.Logger().Debugf(e, "attempt %d: unable to unmarshal ytInitialData for %s: %s", attempt, url, err)
+			pageData = body.Data
+			if err = decodeYouTubeInitialData(body.Data, &data); errors.Is(err, errYouTubeInitialDataNotFound) {
+				logger.Debugf(e, "YouTube summary path: ytInitialData not found for %s (attempt %d/%d)", url, attempt, youTubeMaxRetries)
+			} else if err != nil {
+				logger.Debugf(e, "YouTube summary path: ytInitialData decoding failed for %s (attempt %d/%d): %s", url, attempt, youTubeMaxRetries, err)
 			} else {
+				logger.Debugf(e, "YouTube summary path: ytInitialData parsed for %s (attempt %d/%d)", url, attempt, youTubeMaxRetries)
 				break
+			}
+
+			if fallback, fallbackErr := c.parseYouTubeMetadata(body.Data); fallbackErr == nil && fallback != nil {
+				logger.Debugf(e, "YouTube summary path: page metadata fallback succeeded for %s (attempt %d/%d)", url, attempt, youTubeMaxRetries)
+				return fallback, nil, nil
+			} else if fallbackErr != nil {
+				logger.Debugf(e, "YouTube summary path: page metadata fallback failed for %s (attempt %d/%d): %s", url, attempt, youTubeMaxRetries, fallbackErr)
 			}
 		}
 
 		if attempt < youTubeMaxRetries {
-			log.Logger().Debugf(e, "attempt %d: unable to retrieve YouTube page for %s", attempt, url)
+			logger.Debugf(e, "YouTube summary path: retrying page parsing for %s after attempt %d/%d", url, attempt, youTubeMaxRetries)
 			time.Sleep(youTubeRetryDelay)
 		} else {
+			logger.Debugf(e, "YouTube summary path: all page parsing attempts failed for %s", url)
 			return nil, nil, fmt.Errorf("unable to retrieve YouTube summary for %s after %d attempts", url, youTubeMaxRetries)
 		}
 	}
@@ -53,13 +89,59 @@ func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summaryResult,
 	if strings.Contains(url, "/post/") {
 		s, src, err := c.parseYouTubePost(e, data)
 		if s == nil || err != nil {
-			log.Logger().Debugf(e, "error parsing JSON as YouTube post: %v", err)
+			logger.Debugf(e, "YouTube summary path: ytInitialData post parser failed for %s: %v", url, err)
 		} else {
+			logger.Debugf(e, "YouTube summary path: ytInitialData post parser succeeded for %s", url)
 			return s, src, nil
 		}
 	}
 
-	return c.parseYouTubeVideo(e, data)
+	s, src, err := c.parseYouTubeVideo(e, data)
+	if err == nil && s != nil && len(s.messages) > 0 {
+		logger.Debugf(e, "YouTube summary path: ytInitialData video parser succeeded for %s", url)
+		return s, src, nil
+	}
+	logger.Debugf(e, "YouTube summary path: ytInitialData video parser produced no usable summary for %s: %v", url, err)
+	if fallback, fallbackErr := c.parseYouTubeMetadata(pageData); fallbackErr == nil && fallback != nil {
+		logger.Debugf(e, "YouTube summary path: page metadata fallback succeeded for %s", url)
+		return fallback, src, nil
+	} else if fallbackErr != nil {
+		logger.Debugf(e, "YouTube summary path: page metadata fallback failed for %s: %s", url, fallbackErr)
+	}
+	logger.Debugf(e, "YouTube summary path: no approach produced a summary for %s", url)
+	return s, src, err
+}
+
+func decodeYouTubeInitialData(body []byte, data *ytData) error {
+	assignments := ytInitialDataAssignmentRegexp.FindAllIndex(body, -1)
+	if len(assignments) == 0 {
+		return errYouTubeInitialDataNotFound
+	}
+
+	var lastErr error
+	for _, assignment := range assignments {
+		var candidate ytData
+		decoder := json.NewDecoder(bytes.NewReader(body[assignment[1]:]))
+		if err := decoder.Decode(&candidate); err != nil {
+			lastErr = err
+			continue
+		}
+		*data = candidate
+		return nil
+	}
+	return lastErr
+}
+
+func (c *SummaryCommand) parseYouTubeMetadata(body []byte) (*summaryResult, error) {
+	if len(body) == 0 {
+		return nil, noContentError
+	}
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	metadata := summary.ExtractMetadata(doc)
+	return c.createSummaryFromTitleAndDescription(metadata.Title, metadata.Description)
 }
 
 func (c *SummaryCommand) parseYouTubeVideo(e *irc.Event, data ytData) (*summaryResult, *models.Source, error) {
