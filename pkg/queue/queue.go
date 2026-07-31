@@ -16,13 +16,14 @@ const defaultQueue = "default"
 const proxyQueue = "proxy"
 const dashboardRequestQueue = "dashboard-request"
 const dashboardResponseQueue = "dashboard-response"
+const publishTimeout = 10 * time.Second
 
 var instances = map[string]Queue{}
 
 type Queue interface {
 	Publish(task *models.Task) error
-	Receive(callback func(*models.Task)) error
-	Clear() error
+	Receive(callback func(*models.Task) error) error
+	StartedAt() time.Time
 	Close() error
 }
 
@@ -95,6 +96,7 @@ func initializeNamed(ctx context.Context, cfg *config.Config, name, topic, subsc
 		client:       client,
 		topic:        t,
 		subscription: s,
+		startedAt:    time.Now(),
 	}
 
 	instances[name] = q
@@ -107,6 +109,11 @@ type queue struct {
 	client       *pubsub.Client
 	topic        *pubsub.Topic
 	subscription *pubsub.Subscription
+	startedAt    time.Time
+}
+
+func (q *queue) StartedAt() time.Time {
+	return q.startedAt
 }
 
 func (q *queue) Close() error {
@@ -122,16 +129,23 @@ func (q *queue) Publish(task *models.Task) error {
 		return fmt.Errorf("error serializing task, %s", err)
 	}
 
-	_ = q.topic.Publish(q.ctx, &pubsub.Message{
+	ctx, cancel := context.WithTimeout(q.ctx, publishTimeout)
+	defer cancel()
+
+	result := q.topic.Publish(ctx, &pubsub.Message{
 		Data: data,
 	})
+	messageID, err := result.Get(ctx)
+	if err != nil {
+		return fmt.Errorf("error publishing task %s: %w", task.ID, err)
+	}
 
-	logger.Debugf(nil, "published: %s", string(data))
+	logger.Debugf(nil, "published %s: %s", messageID, string(data))
 
 	return nil
 }
 
-func (q *queue) Receive(callback func(*models.Task)) error {
+func (q *queue) Receive(callback func(*models.Task) error) error {
 	if q.subscription == nil {
 		return fmt.Errorf("queue has no subscription configured")
 	}
@@ -139,22 +153,27 @@ func (q *queue) Receive(callback func(*models.Task)) error {
 	logger := log.Logger()
 
 	return q.subscription.Receive(q.ctx, func(ctx context.Context, msg *pubsub.Message) {
-		msg.Ack()
 		logger.Debugf(nil, "received: %s", string(msg.Data))
 
-		task, err := models.DeserializeTask(msg.Data)
-		if err != nil {
-			logger.Errorf(nil, "error deserializing task, %s", err)
+		if err := processMessage(msg.Data, callback); err != nil {
+			logger.Errorf(nil, "%s", err)
+			msg.Nack()
 			return
 		}
 
-		callback(task)
+		msg.Ack()
 	})
 }
 
-func (q *queue) Clear() error {
-	if q.subscription == nil {
-		return nil
+func processMessage(data []byte, callback func(*models.Task) error) error {
+	task, err := models.DeserializeTask(data)
+	if err != nil {
+		return fmt.Errorf("error deserializing task: %w", err)
 	}
-	return q.subscription.SeekToTime(q.ctx, time.Now())
+
+	if err := callback(task); err != nil {
+		return fmt.Errorf("error processing task %s: %w", task.ID, err)
+	}
+
+	return nil
 }

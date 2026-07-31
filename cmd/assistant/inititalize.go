@@ -38,34 +38,19 @@ func initializeCloudTasks(ctx context.Context, cfg *config.Config) {
 }
 
 func initializeQueues(ctx context.Context, cfg *config.Config) {
-	dq, err := queue.InitializeDefault(ctx, cfg, cfg.Queue.Topic, cfg.Queue.Subscription)
+	_, err := queue.InitializeDefault(ctx, cfg, cfg.Queue.Topic, cfg.Queue.Subscription)
 	if err != nil {
 		panic(fmt.Errorf("error initializing default queue, %s", err))
 	}
 
-	err = dq.Clear()
-	if err != nil {
-		panic(fmt.Errorf("error clearing default queue, %s", err))
-	}
-
-	pq, err := queue.InitializeProxy(ctx, cfg, cfg.Proxy.Queue.Topic, cfg.Proxy.Queue.Subscription)
+	_, err = queue.InitializeProxy(ctx, cfg, cfg.Proxy.Queue.Topic, cfg.Proxy.Queue.Subscription)
 	if err != nil {
 		panic(fmt.Errorf("error initializing proxy queue, %s", err))
 	}
 
-	err = pq.Clear()
-	if err != nil {
-		panic(fmt.Errorf("error clearing proxy queue, %s", err))
-	}
-
-	daqReq, err := queue.InitializeDashboardRequest(ctx, cfg, cfg.Web.Dashboard.RequestQueue.Topic, cfg.Web.Dashboard.RequestQueue.Subscription)
+	_, err = queue.InitializeDashboardRequest(ctx, cfg, cfg.Web.Dashboard.RequestQueue.Topic, cfg.Web.Dashboard.RequestQueue.Subscription)
 	if err != nil {
 		panic(fmt.Errorf("error initializing dashboard request queue, %s", err))
-	}
-
-	err = daqReq.Clear()
-	if err != nil {
-		panic(fmt.Errorf("error clearing dashboard request queue, %s", err))
 	}
 
 	_, err = queue.InitializeDashboardResponse(ctx, cfg, cfg.Web.Dashboard.ResponseQueue.Topic, "")

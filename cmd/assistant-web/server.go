@@ -94,10 +94,16 @@ func (s *server) start() {
 func (s *server) receiveDashboardResponses() {
 	logger := log.Logger()
 	logger.Debug(nil, "listening for dashboard responses")
+	dashboardQueue := queue.GetDashboardResponse()
+	startedAt := dashboardQueue.StartedAt()
 
-	err := queue.GetDashboardResponse().Receive(func(task *models.Task) {
+	err := dashboardQueue.Receive(func(task *models.Task) error {
 		if task.Type != models.TaskTypeDashboardResponse {
-			return
+			return nil
+		}
+		if task.IsStaleAtStartup(startedAt) {
+			logger.Infof(nil, "discarding pre-start dashboard response %s", task.ID)
+			return nil
 		}
 
 		data := task.Data.(models.DashboardResponseTaskData)
@@ -112,6 +118,8 @@ func (s *server) receiveDashboardResponses() {
 		if ok {
 			ch <- &data
 		}
+
+		return nil
 	})
 
 	if err != nil {

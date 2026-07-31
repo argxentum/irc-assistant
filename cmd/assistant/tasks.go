@@ -31,65 +31,95 @@ import (
 func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 	fs := firestore.Get()
 	logger := log.Logger()
+	defaultQueue := queue.GetDefault()
+	startedAt := defaultQueue.StartedAt()
 
 	go func() {
-		err := queue.GetDefault().Receive(func(task *models.Task) {
+		err := defaultQueue.Receive(func(task *models.Task) error {
 			logger.Debugf(nil, "received task %s: %s [%d runs]", task.ID, task.Type, task.Runs)
 
-			isScheduledTask := true
-			var err error
+			isScheduledTask := isTrackedScheduledTask(task.Type)
 
-			// check if this task has been cancelled in Firestore since it was enqueued
-			if task.Status == models.TaskStatusPending {
+			// Refresh tracked task state because a redelivered Pub/Sub message still
+			// contains the state from its original serialized payload.
+			if isScheduledTask {
 				path := fs.TaskPath(task)
-				if current, err := fs.Task(path); err == nil && current != nil && current.Status == models.TaskStatusCancelled {
-					logger.Debugf(nil, "skipping cancelled task %s: %s", task.ID, task.Type)
-					return
+				current, err := fs.Task(path)
+				if err != nil {
+					return fmt.Errorf("error checking task %s state: %w", task.ID, err)
+				}
+				if current != nil && current.Status != models.TaskStatusPending {
+					logger.Debugf(nil, "skipping %s task %s: %s", current.Status, task.ID, task.Type)
+					return nil
+				}
+				if current != nil {
+					task.Runs = current.Runs
+					task.Status = current.Status
+					task.CloudTaskName = current.CloudTaskName
 				}
 			}
 
+			staleAtStartup := task.IsStaleAtStartup(startedAt)
+			if staleAtStartup {
+				logger.Infof(nil, "discarding pre-start task %s: %s", task.ID, task.Type)
+
+				if isScheduledTask {
+					task.Runs++
+					task.Status = models.TaskStatusComplete
+					if err := fs.CompleteTask(task); err != nil {
+						return fmt.Errorf("error recording discarded task %s: %w", task.ID, err)
+					}
+					return nil
+				}
+
+				// Persistent channel and stats tasks still pass through their
+				// rescheduling paths below so clearing a stale occurrence does not
+				// stop the recurring task entirely.
+				if task.Type != models.TaskTypePersistentChannel && task.Type != models.TaskTypePersistentChannelStats {
+					return nil
+				}
+			}
+
+			var processingErr error
 			switch task.Type {
 			case models.TaskTypeReconnect:
-				err = connect(ctx, irc, cfg)
+				processingErr = connect(ctx, irc, cfg)
 			case models.TaskTypeReminder:
-				err = processReminder(irc, task)
+				processingErr = processReminder(irc, task)
 			case models.TaskTypeBanRemoval:
-				err = processBanRemoval(irc, task)
+				processingErr = processBanRemoval(irc, task)
 			case models.TaskTypeMuteRemoval:
-				err = processMuteRemoval(irc, task)
+				processingErr = processMuteRemoval(irc, task)
 			case models.TaskTypeNotifyVoiceRequests:
-				err = processNotifyVoiceRequests(irc, task)
+				processingErr = processNotifyVoiceRequests(irc, task)
 			case models.TaskTypePersistentChannel:
-				isScheduledTask = false
-				err = processPersistentChannel(ctx, cfg, irc, task)
+				processingErr = processPersistentChannel(ctx, cfg, irc, task, !staleAtStartup)
 			case models.TaskTypePersistentChannelStats:
-				isScheduledTask = false
-				err = processChannelStats(irc, task)
+				if !staleAtStartup {
+					processingErr = processChannelStats(irc, task)
+				}
 			case models.TaskTypeDisinformationMutePenaltyRemoval:
-				err = processDisinformationMutePenaltyRemoval(ctx, cfg, irc, task)
+				processingErr = processDisinformationMutePenaltyRemoval(ctx, cfg, irc, task)
 			case models.TaskTypeDisinformationBanPenaltyRemoval:
-				err = processDisinformationBanPenaltyRemoval(ctx, cfg, irc, task)
+				processingErr = processDisinformationBanPenaltyRemoval(ctx, cfg, irc, task)
 			case models.TaskTypeProxyLLMResponse:
-				isScheduledTask = false
-				err = processProxyLLMResponse(cfg, irc, task)
+				processingErr = processProxyLLMResponse(cfg, irc, task)
 			case models.TaskTypeProxySummaryResponse:
-				isScheduledTask = false
-				err = processProxySummaryResponse(cfg, irc, task)
+				processingErr = processProxySummaryResponse(cfg, irc, task)
 			case models.TaskTypeProxyInactivityResponse:
-				isScheduledTask = false
-				err = processProxyInactivityResponse(cfg, irc, task)
+				processingErr = processProxyInactivityResponse(cfg, irc, task)
 			case models.TaskTypeProxyRedditSearchResponse:
-				isScheduledTask = false
-				err = processProxyRedditSearchResponse(cfg, irc, task)
+				processingErr = processProxyRedditSearchResponse(cfg, irc, task)
 			case models.TaskTypeTriviaStart:
-				isScheduledTask = false
-				err = processTriviaStart(cfg, irc, task)
+				processingErr = processTriviaStart(cfg, irc, task)
+			default:
+				return fmt.Errorf("unknown task type %s", task.Type)
 			}
 
 			task.Runs++
 
 			if isScheduledTask {
-				if err != nil {
+				if processingErr != nil {
 					if task.Runs >= models.ScheduledTaskMaxRuns {
 						task.Status = models.TaskStatusCancelled
 					} else {
@@ -99,53 +129,91 @@ func processTasks(ctx context.Context, cfg *config.Config, irc irc.IRC) {
 					task.Status = models.TaskStatusComplete
 				}
 
-				err = fs.CompleteTask(task)
-				if err != nil {
-					logger.Errorf(nil, "error completing %s, %s", task.ID, err)
+				if err := fs.CompleteTask(task); err != nil {
+					return fmt.Errorf("error recording task %s result: %w", task.ID, err)
 				}
-			} else if task.Type == models.TaskTypePersistentChannel && err != errStaleTask {
+
+				if processingErr != nil && task.Status == models.TaskStatusPending {
+					return processingErr
+				}
+				if processingErr != nil {
+					logger.Errorf(nil, "cancelling task %s after %d failed runs: %s", task.ID, task.Runs, processingErr)
+				}
+				return nil
+			}
+
+			if task.Type == models.TaskTypePersistentChannel {
+				if processingErr == errStaleTask {
+					return nil
+				}
+
 				channel, err := fs.Channel(task.Data.(models.PersistentTaskData).Channel)
 				if err != nil {
-					logger.Errorf(nil, "error getting channel for %s, %s", task.ID, err)
-					return
+					return fmt.Errorf("error getting channel for %s: %w", task.ID, err)
 				}
 
 				if channel == nil {
-					logger.Errorf(nil, "channel %s not found for %s", task.Data.(models.PersistentTaskData).Channel, task.ID)
-					return
+					return fmt.Errorf("channel %s not found for %s", task.Data.(models.PersistentTaskData).Channel, task.ID)
 				}
 
 				duration, err := elapse.ParseDuration(channel.InactivityDuration)
 				if err != nil {
-					logger.Errorf(nil, "error parsing duration %s, %s", channel.InactivityDuration, err)
-					return
+					return fmt.Errorf("error parsing duration %s: %w", channel.InactivityDuration, err)
 				}
 
 				task.DueAt = time.Now().Add(duration)
-				err = fs.SetTask(task)
-				if err != nil {
-					logger.Errorf(nil, "error updating %s, %s", task.ID, err)
+				if err := fs.SetTask(task); err != nil {
+					return fmt.Errorf("error updating %s: %w", task.ID, err)
 				}
 
 				if _, err := cloudtasks.Get().CreateTask(task); err != nil {
-					logger.Errorf(nil, "error rescheduling cloud task %s: %s", task.ID, err)
+					return fmt.Errorf("error rescheduling cloud task %s: %w", task.ID, err)
 				}
-			} else if task.Type == models.TaskTypePersistentChannelStats {
+
+				if processingErr != nil {
+					logger.Errorf(nil, "persistent task %s failed but was rescheduled: %s", task.ID, processingErr)
+				}
+				return nil
+			}
+
+			if task.Type == models.TaskTypePersistentChannelStats {
 				task.DueAt = time.Now().Add(models.ChannelStatsInterval)
 				if err := fs.SetTask(task); err != nil {
-					logger.Errorf(nil, "error updating %s, %s", task.ID, err)
+					return fmt.Errorf("error updating %s: %w", task.ID, err)
 				}
 
 				if _, err := cloudtasks.Get().CreateTask(task); err != nil {
-					logger.Errorf(nil, "error rescheduling cloud task %s: %s", task.ID, err)
+					return fmt.Errorf("error rescheduling cloud task %s: %w", task.ID, err)
 				}
+
+				if processingErr != nil {
+					logger.Errorf(nil, "channel stats task %s failed but was rescheduled: %s", task.ID, processingErr)
+				}
+				return nil
 			}
+
+			return processingErr
 		})
 
 		if err != nil {
 			logger.Errorf(nil, "error processing due tasks, %s", err)
 		}
 	}()
+}
+
+func isTrackedScheduledTask(taskType string) bool {
+	switch taskType {
+	case models.TaskTypeReconnect,
+		models.TaskTypeReminder,
+		models.TaskTypeBanRemoval,
+		models.TaskTypeMuteRemoval,
+		models.TaskTypeNotifyVoiceRequests,
+		models.TaskTypeDisinformationMutePenaltyRemoval,
+		models.TaskTypeDisinformationBanPenaltyRemoval:
+		return true
+	default:
+		return false
+	}
 }
 
 func processReminder(ircs irc.IRC, task *models.Task) error {
@@ -268,7 +336,7 @@ const shortcutURLPattern = "%s/s/"
 
 var previousInactivityPostURLs = make([]string, 0)
 
-func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task) error {
+func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, task *models.Task, announce bool) error {
 	logger := log.Logger()
 
 	// stale guard: reload from Firestore to check if activity has pushed due_at forward
@@ -286,6 +354,10 @@ func processPersistentChannel(ctx context.Context, cfg *config.Config, irc irc.I
 			logger.Errorf(nil, "error rescheduling stale cloud task %s: %s", task.ID, err)
 		}
 		return errStaleTask
+	}
+
+	if !announce {
+		return nil
 	}
 
 	logger.Debugf(nil, "processing persistent channel task for %s using model %s", task.ID, cfg.IRC.Inactivity.Model)

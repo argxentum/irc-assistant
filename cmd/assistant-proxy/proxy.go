@@ -23,9 +23,15 @@ type proxy struct {
 func (p *proxy) start() {
 	logger := log.Logger()
 	logger.Debug(nil, "starting proxy")
+	proxyQueue := queue.GetProxy()
+	startedAt := proxyQueue.StartedAt()
 
-	err := queue.GetProxy().Receive(func(task *models.Task) {
+	err := proxyQueue.Receive(func(task *models.Task) error {
 		logger.Debugf(nil, "received task %s: %s", task.ID, task.Type)
+		if task.IsStaleAtStartup(startedAt) {
+			logger.Infof(nil, "discarding pre-start task %s: %s", task.ID, task.Type)
+			return nil
+		}
 
 		var err error
 		switch task.Type {
@@ -39,11 +45,14 @@ func (p *proxy) start() {
 			err = p.handleRedditSearchProxyRequest(task)
 		default:
 			logger.Warningf(nil, "unknown task type: %s", task.Type)
+			return nil
 		}
 
 		if err != nil {
 			logger.Errorf(nil, "error handling task %s: %s", task.ID, err)
 		}
+
+		return err
 	})
 
 	if err != nil {

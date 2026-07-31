@@ -17,11 +17,17 @@ import (
 
 func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.IRC) {
 	logger := log.Logger()
+	dashboardQueue := queue.GetDashboardRequest()
+	startedAt := dashboardQueue.StartedAt()
 
 	go func() {
-		err := queue.GetDashboardRequest().Receive(func(task *models.Task) {
+		err := dashboardQueue.Receive(func(task *models.Task) error {
 			if task.Type != models.TaskTypeDashboardRequest {
-				return
+				return nil
+			}
+			if task.IsStaleAtStartup(startedAt) {
+				logger.Infof(nil, "discarding pre-start dashboard request %s", task.ID)
+				return nil
 			}
 
 			data := task.Data.(models.DashboardRequestTaskData)
@@ -65,8 +71,10 @@ func processDashboardRequests(ctx context.Context, cfg *config.Config, ircs irc.
 			}
 
 			if err := queue.GetDashboardResponse().Publish(resp); err != nil {
-				logger.Errorf(nil, "error publishing dashboard response: %s", err)
+				return fmt.Errorf("error publishing dashboard response: %w", err)
 			}
+
+			return nil
 		})
 
 		if err != nil {

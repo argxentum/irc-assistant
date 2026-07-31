@@ -38,7 +38,9 @@ func (p *proxy) handleSummaryProxyRequest(task *models.Task) error {
 		// Still publish an empty response so the waiter can unblock
 		if data.RequestID != "" {
 			responseTask := models.NewProxySummaryResponseTaskWithWaiter(data.RequestID, data.Channel, data.Nick, data.URL, "", nil)
-			_ = queue.GetDefault().Publish(responseTask)
+			if publishErr := queue.GetDefault().Publish(responseTask); publishErr != nil {
+				return fmt.Errorf("summary failed: %v; publishing empty response failed: %w", err, publishErr)
+			}
 		}
 		return err
 	}

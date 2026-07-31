@@ -170,3 +170,51 @@ func (t *Task) Serialize() ([]byte, error) {
 func (t *Task) IsDue() bool {
 	return time.Now().After(t.DueAt)
 }
+
+// IsDurable reports whether a queued task must survive a service restart.
+// Dashboard requests normally expire with the process that initiated them, but
+// moderation reversals and voice changes are state-changing operations that
+// must not be silently discarded.
+func (t *Task) IsDurable() bool {
+	switch t.Type {
+	case TaskTypeReminder,
+		TaskTypeBanRemoval,
+		TaskTypeMuteRemoval,
+		TaskTypeDisinformationMutePenaltyRemoval,
+		TaskTypeDisinformationBanPenaltyRemoval:
+		return true
+	case TaskTypeDashboardRequest:
+		data, ok := t.Data.(DashboardRequestTaskData)
+		if !ok {
+			return false
+		}
+
+		switch data.Action {
+		case DashboardActionMute,
+			DashboardActionUnban,
+			DashboardActionUnmute,
+			DashboardActionExpireBan,
+			DashboardActionExpireMute,
+			DashboardActionApproveVR:
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsStaleAtStartup reports whether an ephemeral task was already available
+// before this consumer started. Scheduled tasks use DueAt so work created
+// before a restart but not due until afterward is not incorrectly discarded.
+func (t *Task) IsStaleAtStartup(startedAt time.Time) bool {
+	if t.IsDurable() {
+		return false
+	}
+
+	availableAt := t.CreatedAt
+	if t.DueAt.After(availableAt) {
+		availableAt = t.DueAt
+	}
+
+	return availableAt.Before(startedAt)
+}
