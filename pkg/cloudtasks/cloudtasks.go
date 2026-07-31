@@ -115,20 +115,27 @@ func (ct *CloudTasks) CreateTask(task *models.Task) (string, error) {
 	return created.Name, nil
 }
 
-func (ct *CloudTasks) DeleteTask(taskID string) error {
+func (ct *CloudTasks) DeleteTask(taskNameOrID string) error {
 	logger := log.Logger()
+	taskName := ct.taskName(taskNameOrID)
 
 	err := ct.client.DeleteTask(ct.ctx, &taskspb.DeleteTaskRequest{
-		Name: ct.taskName(taskID),
+		Name: taskName,
 	})
 	if err != nil {
-		return fmt.Errorf("error deleting cloud task %s: %w", taskID, err)
+		return fmt.Errorf("error deleting cloud task %s: %w", taskName, err)
 	}
 
-	logger.Debugf(nil, "deleted cloud task: %s", taskID)
+	logger.Debugf(nil, "deleted cloud task: %s", taskName)
 	return nil
 }
 
-func (ct *CloudTasks) taskName(taskID string) string {
-	return fmt.Sprintf("%s/tasks/%s", ct.queue, taskID)
+func (ct *CloudTasks) taskName(taskNameOrID string) string {
+	// CreateTask returns and persists the full resource name. Accept a bare ID
+	// as well for compatibility with tasks stored before that field was added.
+	if strings.HasPrefix(taskNameOrID, "projects/") && strings.Contains(taskNameOrID, "/tasks/") {
+		return taskNameOrID
+	}
+
+	return fmt.Sprintf("%s/tasks/%s", ct.queue, taskNameOrID)
 }
