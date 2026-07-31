@@ -26,6 +26,26 @@ func TestCreateOEmbedSummaryAllowsShortTitle(t *testing.T) {
 	}
 }
 
+func TestCreateOEmbedSummarySupportsRedditMetadata(t *testing.T) {
+	result, err := createOEmbedSummary(oEmbedData{
+		Title:        "How to get API access",
+		AuthorName:   "example-user",
+		ProviderName: "reddit",
+	})
+	if err != nil {
+		t.Fatalf("create Reddit oEmbed summary: %v", err)
+	}
+	if result == nil || len(result.messages) != 1 {
+		t.Fatalf("Reddit oEmbed result = %#v", result)
+	}
+	message := result.messages[0]
+	for _, expected := range []string{"How to get API access", "example-user"} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("Reddit oEmbed message %q does not contain %q", message, expected)
+		}
+	}
+}
+
 func TestOEmbedSummaryRequestsAndDecodesMetadata(t *testing.T) {
 	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if got := request.URL.Query().Get("url"); got != "https://example.com/video/1" {

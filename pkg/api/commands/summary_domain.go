@@ -54,3 +54,11 @@ func (c *SummaryCommand) isProxiedDomain(url string) bool {
 	domain := domainutil.Domain(url)
 	return slices.Contains(c.cfg.Summary.ProxiedDomains, domain)
 }
+
+func (c *SummaryCommand) shouldProxyDomainBeforeLocalSummary(url string) bool {
+	if !c.isProxiedDomain(url) {
+		return false
+	}
+
+	return domainutil.Domain(url) != "reddit.com"
+}

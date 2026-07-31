@@ -21,6 +21,7 @@ const oEmbedRequestTimeout = 5 * time.Second
 const youTubeOEmbedURL = "https://www.youtube.com/oembed?url=%s&format=json"
 const tikTokOEmbedURL = "https://www.tiktok.com/oembed?url=%s"
 const instagramOEmbedURL = "https://www.instagram.com/api/v1/oembed/?url=%s"
+const redditOEmbedURL = "https://www.reddit.com/oembed?url=%s"
 
 type oEmbedData struct {
 	Title          string `json:"title"`

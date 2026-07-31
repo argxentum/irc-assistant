@@ -255,7 +255,7 @@ func (c *SummaryCommand) Execute(e *irc.Event) {
 	}
 
 	if c.requiresDomainSummary(ub.url) {
-		if c.isProxiedDomain(ub.url) {
+		if c.shouldProxyDomainBeforeLocalSummary(ub.url) {
 			logger.Debugf(e, "proxying domain summarization for %s", ub.url)
 			task := models.NewProxySummaryRequestTask(e.ReplyTarget(), e.From, ub.url)
 			if err := queue.GetProxy().Publish(task); err != nil {
