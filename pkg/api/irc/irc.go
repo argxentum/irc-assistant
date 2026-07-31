@@ -107,6 +107,7 @@ type service struct {
 	ctx           context.Context
 	cfg           *config.Config
 	conn          *irce.Connection
+	requests      *ircRequestManager
 	ech           chan *Event
 	recoverNeeded bool
 }
@@ -118,6 +119,7 @@ func (s *service) Connect(cfg *config.Config, connectCallback func(ctx context.C
 	s.conn.RealName = cfg.IRC.RealName
 	s.conn.Debug = false
 	s.conn.VerboseCallbackHandler = false
+	s.requests = newIRCRequestManager(s.conn, s.conn.SendRaw, ircRequestTimeout)
 
 	if cfg.IRC.TLS {
 		s.conn.UseTLS = cfg.IRC.TLS
@@ -191,20 +193,6 @@ func (s *service) respondOnce(code string, callback func(event *irce.Event) bool
 	})
 }
 
-func (s *service) respondUntil(eventCode, completionCode string, eventCallback, completionCallback func(event *irce.Event)) {
-	var codeID int
-	codeID = s.conn.AddCallback(eventCode, func(event *irce.Event) {
-		eventCallback(event)
-	})
-
-	var completionID int
-	completionID = s.conn.AddCallback(completionCode, func(event *irce.Event) {
-		s.conn.RemoveCallback(eventCode, codeID)
-		s.conn.RemoveCallback(completionCode, completionID)
-		completionCallback(event)
-	})
-}
-
 func (s *service) Listen(ech chan *Event) {
 	s.ech = ech
 
@@ -273,81 +261,103 @@ func (s *service) SendMessages(target string, messages []string) {
 }
 
 func (s *service) ListUsers(channel string, callback func(users []*User)) {
-	s.conn.SendRawf("NAMES %s", channel)
-
 	allUsers := make([]*User, 0)
-
-	s.respondUntil(CodeNamesReply, CodeEndOfNames, func(e *irce.Event) {
-		users := make([]*User, 0)
-		results := strings.Split(e.Message(), " ")
-		for _, u := range results {
-			users = append(users, UserByTrimmingStatusPrefix(u))
+	s.requests.run(requestKey("NAMES", channel), fmt.Sprintf("NAMES %s", channel), map[string]func(*irce.Event) bool{
+		CodeNamesReply: func(e *irce.Event) bool {
+			if !eventArgumentEquals(e, 2, channel) {
+				return false
+			}
+			for _, name := range strings.Fields(e.Message()) {
+				allUsers = append(allUsers, UserByTrimmingStatusPrefix(name))
+			}
+			return false
+		},
+		CodeEndOfNames: func(e *irce.Event) bool {
+			return eventArgumentEquals(e, 1, channel)
+		},
+	}, func(timedOut bool) {
+		if timedOut {
+			log.Logger().Warningf(nil, "timed out listing users in %s", channel)
+			callback([]*User{})
+			return
 		}
-		allUsers = append(allUsers, users...)
-	}, func(e *irce.Event) {
 		callback(allUsers)
 	})
 }
 
 func (s *service) ListUsersByMask(channel, mask string, callback func(users []*User)) {
-	s.conn.SendRawf("WHO %s", channel)
-
 	matchingUsers := make([]*User, 0)
 	m := ParseMask(mask)
 
-	s.respondUntil(CodeWhoReply, CodeEndOfWho, func(e *irce.Event) {
-		tokens := strings.Split(e.Raw, " ")
-		if len(tokens) < 9 {
+	s.requests.run(requestKey("WHO", channel), fmt.Sprintf("WHO %s", channel), map[string]func(*irce.Event) bool{
+		CodeWhoReply: func(e *irce.Event) bool {
+			if !eventArgumentEquals(e, 1, channel) || len(e.Arguments) < 7 {
+				return false
+			}
+
+			um := &Mask{
+				Nick:   e.Arguments[5],
+				UserID: e.Arguments[2],
+				Host:   e.Arguments[3],
+			}
+
+			if m.Matches(um) {
+				flags := e.Arguments[6]
+				var status ChannelStatus
+				if strings.Contains(flags, string(ChannelStatusOperator)) {
+					status = ChannelStatusOperator
+				} else if strings.Contains(flags, string(ChannelStatusHalfOperator)) {
+					status = ChannelStatusHalfOperator
+				} else if strings.Contains(flags, string(ChannelStatusVoice)) {
+					status = ChannelStatusVoice
+				} else {
+					status = ChannelStatusNone
+				}
+
+				matchingUsers = append(matchingUsers, &User{Mask: um, Status: status})
+			}
+			return false
+		},
+		CodeEndOfWho: func(e *irce.Event) bool {
+			return eventArgumentEquals(e, 1, channel)
+		},
+	}, func(timedOut bool) {
+		if timedOut {
+			log.Logger().Warningf(nil, "timed out listing users by mask in %s", channel)
+			callback([]*User{})
 			return
 		}
-
-		um := &Mask{
-			Nick:   tokens[7],
-			UserID: tokens[4],
-			Host:   tokens[5],
-		}
-
-		if m.Matches(um) {
-			var status ChannelStatus
-			if strings.Contains(tokens[8], string(ChannelStatusOperator)) {
-				status = ChannelStatusOperator
-			} else if strings.Contains(tokens[8], string(ChannelStatusHalfOperator)) {
-				status = ChannelStatusHalfOperator
-			} else if strings.Contains(tokens[8], string(ChannelStatusVoice)) {
-				status = ChannelStatusVoice
-			} else {
-				status = ChannelStatusNone
-			}
-
-			user := &User{
-				Mask:   um,
-				Status: status,
-			}
-
-			matchingUsers = append(matchingUsers, user)
-		}
-	}, func(e *irce.Event) {
 		callback(matchingUsers)
 	})
 }
 
 func (s *service) GetUser(channel, nick string, callback func(user *User)) {
 	logger := log.Logger()
-	s.conn.SendRawf("WHOIS %s", nick)
-
 	var user *User
 
-	s.respondUntil(CodeWhoIsReply, CodeEndOfWhoIs, func(e *irce.Event) {
-		if len(e.Arguments) < 4 {
-			logger.Errorf(nil, "invalid WHOIS reply: %s", e.Raw)
+	s.requests.run(requestKey("WHOIS", nick), fmt.Sprintf("WHOIS %s", nick), map[string]func(*irce.Event) bool{
+		CodeWhoIsReply: func(e *irce.Event) bool {
+			if !eventArgumentEquals(e, 1, nick) {
+				return false
+			}
+			if len(e.Arguments) < 4 {
+				logger.Errorf(nil, "invalid WHOIS reply: %s", e.Raw)
+				return false
+			}
+
+			user = &User{Mask: &Mask{Nick: nick, UserID: e.Arguments[2], Host: e.Arguments[3]}}
+			logger.Debugf(nil, "WHOIS(%s,%s): %s", channel, nick, user.Mask.String())
+			return false
+		},
+		CodeEndOfWhoIs: func(e *irce.Event) bool {
+			return eventArgumentEquals(e, 1, nick)
+		},
+	}, func(timedOut bool) {
+		if timedOut {
+			logger.Warningf(nil, "timed out getting user %s in %s", nick, channel)
+			callback(nil)
 			return
 		}
-
-		id := e.Arguments[2]
-		host := e.Arguments[3]
-		user = &User{Mask: &Mask{Nick: nick, UserID: id, Host: host}}
-		logger.Debugf(nil, "WHOIS(%s,%s): %s", channel, nick, user.Mask.String())
-	}, func(e *irce.Event) {
 		if user == nil {
 			callback(nil)
 			return
@@ -395,55 +405,59 @@ func (s *service) Unban(channel, mask string) {
 }
 
 func (s *service) ListBans(channel string, callback func(bans []*BanEntry)) {
-	s.conn.SendRawf("MODE %s +b", channel)
-
 	bans := make([]*BanEntry, 0)
 
-	s.respondUntil(CodeBanListReply, CodeEndOfBanList, func(e *irce.Event) {
-		tokens := strings.Split(e.Raw, " ")
-		if len(tokens) < 5 {
+	s.requests.run(requestKey("MODE+B", channel), fmt.Sprintf("MODE %s +b", channel), map[string]func(*irce.Event) bool{
+		CodeBanListReply: func(e *irce.Event) bool {
+			if !eventArgumentEquals(e, 1, channel) || len(e.Arguments) < 3 {
+				return false
+			}
+
+			entry := &BanEntry{Mask: e.Arguments[2]}
+			if len(e.Arguments) >= 4 {
+				entry.SetBy = e.Arguments[3]
+			}
+			if len(e.Arguments) >= 5 {
+				ts, err := strconv.ParseInt(strings.TrimPrefix(e.Arguments[4], ":"), 10, 64)
+				if err == nil {
+					t := time.Unix(ts, 0)
+					entry.SetAt = &t
+				}
+			}
+			bans = append(bans, entry)
+			return false
+		},
+		CodeEndOfBanList: func(e *irce.Event) bool {
+			return eventArgumentEquals(e, 1, channel)
+		},
+	}, func(timedOut bool) {
+		if timedOut {
+			log.Logger().Warningf(nil, "timed out listing bans in %s", channel)
+			callback([]*BanEntry{})
 			return
 		}
-
-		entry := &BanEntry{
-			Mask: tokens[4],
-		}
-
-		if len(tokens) >= 6 {
-			entry.SetBy = tokens[5]
-		}
-
-		if len(tokens) >= 7 {
-			tsStr := strings.TrimSpace(strings.TrimPrefix(tokens[6], ":"))
-			ts, err := strconv.ParseInt(tsStr, 10, 64)
-			if err == nil {
-				t := time.Unix(ts, 0)
-				entry.SetAt = &t
-			}
-		}
-
-		bans = append(bans, entry)
-	}, func(e *irce.Event) {
 		callback(bans)
 	})
 }
 
 func (s *service) GetTopic(channel string, callback func(topic string)) {
-	s.conn.SendRawf("TOPIC %s", channel)
-
-	var topicID int
-	var noTopicID int
-
-	topicID = s.conn.AddCallback(CodeTopicReply, func(e *irce.Event) {
-		s.conn.RemoveCallback(CodeTopicReply, topicID)
-		s.conn.RemoveCallback(CodeNoTopic, noTopicID)
-		callback(e.Message())
-	})
-
-	noTopicID = s.conn.AddCallback(CodeNoTopic, func(e *irce.Event) {
-		s.conn.RemoveCallback(CodeTopicReply, topicID)
-		s.conn.RemoveCallback(CodeNoTopic, noTopicID)
-		callback("")
+	topic := ""
+	s.requests.run(requestKey("TOPIC", channel), fmt.Sprintf("TOPIC %s", channel), map[string]func(*irce.Event) bool{
+		CodeTopicReply: func(e *irce.Event) bool {
+			if !eventArgumentEquals(e, 1, channel) {
+				return false
+			}
+			topic = e.Message()
+			return true
+		},
+		CodeNoTopic: func(e *irce.Event) bool {
+			return eventArgumentEquals(e, 1, channel)
+		},
+	}, func(timedOut bool) {
+		if timedOut {
+			log.Logger().Warningf(nil, "timed out getting topic in %s", channel)
+		}
+		callback(topic)
 	})
 }
 
