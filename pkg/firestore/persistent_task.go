@@ -24,3 +24,8 @@ func (fs *Firestore) SetPersistentChannelTaskDue(channel, id string, duration ti
 
 	return update(fs.ctx, fs.client, path, map[string]any{"due_at": time.Now().Add(duration), "updated_at": time.Now()})
 }
+
+func (fs *Firestore) UpdatePersistentChannelTaskDue(channel, id string, dueAt time.Time) error {
+	path := fs.PersistentChannelTaskPath(channel, id)
+	return update(fs.ctx, fs.client, path, map[string]any{"due_at": dueAt, "updated_at": time.Now()})
+}

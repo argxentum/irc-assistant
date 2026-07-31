@@ -38,6 +38,8 @@ type handler struct {
 	messageHistory              map[string]time.Time
 	rateLimitCounter            map[string]int
 	temporarilyIgnoredUserMasks map[string]int64
+	inactivityDurations         map[string]cachedInactivityDuration
+	inactivity                  *inactivityTracker
 }
 
 func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
@@ -49,7 +51,16 @@ func NewHandler(ctx context.Context, cfg *config.Config, irc irc.IRC) Handler {
 		messageHistory:              make(map[string]time.Time),
 		rateLimitCounter:            make(map[string]int),
 		temporarilyIgnoredUserMasks: make(map[string]int64),
+		inactivityDurations:         make(map[string]cachedInactivityDuration),
 	}
+	eh.inactivity = newInactivityTracker(
+		func(channel string, dueAt time.Time) error {
+			return firestore.Get().UpdatePersistentChannelTaskDue(channel, models.ChannelInactivityTaskID, dueAt)
+		},
+		func(channel string, err error) {
+			log.Logger().Errorf(nil, "error updating persistent channel task for %s: %s", channel, err)
+		},
+	)
 
 	return eh
 }
@@ -74,14 +85,22 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 	}
 
 	channelDisabled := make([]string, 0)
-	if !e.IsPrivateMessage() {
-		if ch, _ := repository.GetChannel(e, e.ReplyTarget()); ch != nil {
-			channelDisabled = ch.DisabledCommands
+	channelSettingsLoaded := false
+	isCommandDisabled := func(name string) bool {
+		if e.IsPrivateMessage() {
+			return false
 		}
+		if !channelSettingsLoaded {
+			if ch, _ := repository.GetChannel(e, e.ReplyTarget()); ch != nil {
+				channelDisabled = ch.DisabledCommands
+			}
+			channelSettingsLoaded = true
+		}
+		return slices.Contains(channelDisabled, name)
 	}
 
 	for _, f := range eh.registry.CommandsSortedForProcessing() {
-		if !slices.Contains(channelDisabled, f.Name()) && f.CanExecute(e) {
+		if f.CanExecute(e) && !isCommandDisabled(f.Name()) {
 			eh.updateUserCommandHistory(e)
 			return f
 		}
@@ -91,10 +110,6 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 
 	if e.IsPrivateMessage() {
 		return llm
-	}
-
-	if slices.Contains(channelDisabled, commands.LLMCommandName) {
-		return nil
 	}
 
 	lnick := strings.ToLower(eh.cfg.IRC.Nick)
@@ -111,6 +126,9 @@ func (eh *handler) FindMatchingCommand(e *irc.Event) commands.Command {
 
 	for _, format := range mentionFormats {
 		if strings.HasPrefix(strings.ToLower(e.Message()), format) {
+			if isCommandDisabled(commands.LLMCommandName) {
+				return nil
+			}
 			return llm
 		}
 	}
@@ -348,29 +366,53 @@ func isUserMask(source string) bool {
 }
 
 func (eh *handler) resetChannelInactivityTimeout(e *irc.Event) {
-	fs := firestore.Get()
 	logger := log.Logger()
+	channel := e.ReplyTarget()
 
-	channel, err := fs.Channel(e.ReplyTarget())
+	duration, err := eh.channelInactivityDuration(channel)
 	if err != nil {
-		logger.Errorf(e, "error retrieving channel, %s", err)
+		logger.Errorf(e, "error getting inactivity duration for %s: %s", channel, err)
 		return
 	}
 
-	if channel == nil {
-		logger.Errorf(e, "channel %s does not exist", e.ReplyTarget())
-		return
-	}
-
-	duration, err := elapse.ParseDuration(channel.InactivityDuration)
-	if err != nil {
-		logger.Errorf(e, "error parsing default inactivity duration, %s", err)
-	}
-
-	err = fs.SetPersistentChannelTaskDue(e.ReplyTarget(), models.ChannelInactivityTaskID, duration)
-	if err != nil {
+	if err := eh.inactivity.RecordActivity(channel, duration); err != nil {
 		logger.Errorf(e, "error updating persistent channel task, %s", err)
 	}
+}
+
+const inactivityDurationCacheTTL = 5 * time.Minute
+
+type cachedInactivityDuration struct {
+	duration time.Duration
+	loadedAt time.Time
+}
+
+func (eh *handler) channelInactivityDuration(channel string) (time.Duration, error) {
+	now := time.Now()
+	eh.RLock()
+	cached, ok := eh.inactivityDurations[channel]
+	eh.RUnlock()
+	if ok && now.Sub(cached.loadedAt) < inactivityDurationCacheTTL {
+		return cached.duration, nil
+	}
+
+	channelConfig, err := firestore.Get().Channel(channel)
+	if err != nil {
+		return 0, fmt.Errorf("error retrieving channel: %w", err)
+	}
+	if channelConfig == nil {
+		return 0, fmt.Errorf("channel does not exist")
+	}
+
+	duration, err := elapse.ParseDuration(channelConfig.InactivityDuration)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing inactivity duration %q: %w", channelConfig.InactivityDuration, err)
+	}
+
+	eh.Lock()
+	eh.inactivityDurations[channel] = cachedInactivityDuration{duration: duration, loadedAt: now}
+	eh.Unlock()
+	return duration, nil
 }
 
 // normalizeToken strips all non-alphanumeric characters and lowercases the result.
