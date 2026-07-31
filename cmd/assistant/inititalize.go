@@ -1,7 +1,6 @@
 package main
 
 import (
-	"assistant/pkg/api/commands"
 	"assistant/pkg/api/context"
 	"assistant/pkg/api/elapse"
 	"assistant/pkg/api/irc"
@@ -186,12 +185,7 @@ func initializeChannel(ctx context.Context, cfg *config.Config, irc irc.IRC, cha
 	}
 }
 
-func initializeChannelUser(ctx context.Context, cfg *config.Config, irc irc.IRC, channel string, mask *irc.Mask) {
-	reg := commands.LoadCommandRegistry(ctx, cfg, irc)
-	if cmd := reg.Command(commands.SummaryCommandName).(*commands.SummaryCommand); cmd != nil {
-		cmd.InitializeUserPause(channel, mask.Nick, 15*time.Second)
-	}
-
+func initializeChannelUser(cfg *config.Config, irc irc.IRC, channel string, mask *irc.Mask) {
 	logger := log.Logger()
 	fs := firestore.Get()
 

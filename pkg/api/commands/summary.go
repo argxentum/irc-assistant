@@ -347,26 +347,6 @@ func isValidCanonicalLink(original, canonical string) bool {
 	return len(canonical) > 0 && canonical != original && strings.HasPrefix(strings.ToLower(canonical), "https://")
 }
 
-func (c *SummaryCommand) InitializeUserPause(channel, nick string, duration time.Duration) *UserPause {
-	logger := log.Logger()
-
-	p := c.getUserPause(nick + "@" + channel)
-	if p == nil || p.timeoutAt.Before(time.Now()) {
-		p = &UserPause{
-			channel:     channel,
-			nick:        nick,
-			timeoutAt:   time.Now().Add(duration),
-			ignoreCount: 0,
-		}
-		c.setUserPause(nick+"@"+channel, p)
-		logger.Debugf(nil, "join, pausing %s in %s until %s", nick, channel, elapse.TimeDescription(p.timeoutAt))
-	} else {
-		logger.Debugf(nil, "join, pause already in effect for %s in %s until %s", nick, channel, elapse.TimeDescription(p.timeoutAt))
-	}
-
-	return p
-}
-
 var escapedHtmlEntityRegex = regexp.MustCompile(`&[a-zA-Z0-9]+;`)
 
 func (c *SummaryCommand) completeSummary(e *irc.Event, source *models.Source, ub urlBundle, target string, messages []string, dis bool, p *UserPause) {

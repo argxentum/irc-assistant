@@ -66,7 +66,7 @@ func connect(ctx context.Context, svc irc.IRC, cfg *config.Config) error {
 		if mask.Nick == cfg.IRC.Nick {
 			initializeChannel(ctx, cfg, svc, channel)
 		} else {
-			initializeChannelUser(ctx, cfg, svc, channel, mask)
+			initializeChannelUser(cfg, svc, channel, mask)
 		}
 	})
 }
