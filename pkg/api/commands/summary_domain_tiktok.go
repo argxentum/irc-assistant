@@ -27,18 +27,11 @@ var jsonDataRegex = regexp.MustCompile(`<script id="__UNIVERSAL_DATA_FOR_REHYDRA
 func (c *SummaryCommand) parseTikTok(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
 	logger.Debugf(e, "TikTok summary path: trying oEmbed for %s", url)
-	if result, _, err := c.oEmbedSummary(e, tikTokOEmbedURL, url); err == nil && result != nil {
+	if result, metadata, err := c.oEmbedSummary(e, tikTokOEmbedURL, url); err == nil && result != nil {
 		logger.Debugf(e, "TikTok summary path: oEmbed succeeded for %s", url)
-		author := ""
-		if match := tikTokVideoURLRegex.FindStringSubmatch(url); len(match) >= 2 {
-			author = strings.TrimPrefix(match[1], "@")
-		}
-		var src *models.Source
-		if author != "" {
-			src, err = repository.FindSource(author)
-			if err != nil {
-				logger.Debugf(e, "TikTok error finding optional source for author %s: %v", author, err)
-			}
+		src, sourceErr := findOEmbedSource(e, metadata)
+		if sourceErr != nil {
+			logger.Errorf(e, "TikTok oEmbed source check failed for %s: %v", url, sourceErr)
 		}
 		return result, src, nil
 	} else if err != nil {

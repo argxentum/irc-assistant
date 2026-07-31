@@ -31,14 +31,11 @@ var errYouTubeInitialDataNotFound = errors.New("ytInitialData assignment not fou
 func (c *SummaryCommand) parseYouTube(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
 	logger.Debugf(e, "YouTube summary path: trying oEmbed for %s", url)
-	if result, author, err := c.oEmbedSummary(e, youTubeOEmbedURL, url); err == nil && result != nil {
+	if result, metadata, err := c.oEmbedSummary(e, youTubeOEmbedURL, url); err == nil && result != nil {
 		logger.Debugf(e, "YouTube summary path: oEmbed succeeded for %s", url)
-		var src *models.Source
-		if author != "" {
-			src, err = repository.FindSource(author)
-			if err != nil {
-				logger.Debugf(e, "YouTube error finding optional source for author %s: %v", author, err)
-			}
+		src, sourceErr := findOEmbedSource(e, metadata)
+		if sourceErr != nil {
+			logger.Errorf(e, "YouTube oEmbed source check failed for %s: %v", url, sourceErr)
 		}
 		return result, src, nil
 	} else if err != nil {

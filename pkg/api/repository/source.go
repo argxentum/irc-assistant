@@ -34,6 +34,46 @@ func FindSource(input string) (*models.Source, error) {
 	return nil, nil
 }
 
+// FindSourceByIdentities checks multiple exact source identities in one query
+// and returns the first match according to the input order.
+func FindSourceByIdentities(inputs []string) (*models.Source, string, error) {
+	identities := make([]string, 0, len(inputs))
+	seen := make(map[string]struct{})
+	for _, input := range inputs {
+		identity := strings.TrimSpace(strings.ToLower(input))
+		if identity == "" {
+			continue
+		}
+		if _, ok := seen[identity]; ok {
+			continue
+		}
+		seen[identity] = struct{}{}
+		identities = append(identities, identity)
+	}
+	if len(identities) == 0 {
+		return nil, "", nil
+	}
+
+	sources, err := firestore.Get().FindSourcesByIdentities(identities)
+	if err != nil {
+		return nil, "", err
+	}
+	return firstSourceMatchingIdentity(identities, sources)
+}
+
+func firstSourceMatchingIdentity(identities []string, sources []*models.Source) (*models.Source, string, error) {
+	for _, identity := range identities {
+		for _, source := range sources {
+			for _, sourceIdentity := range source.URLs {
+				if strings.EqualFold(strings.TrimSpace(sourceIdentity), identity) {
+					return source, identity, nil
+				}
+			}
+		}
+	}
+	return nil, "", nil
+}
+
 func FindSourceIncludingKeywords(input string) (*models.Source, error) {
 	src, err := FindSource(input)
 	if err != nil {

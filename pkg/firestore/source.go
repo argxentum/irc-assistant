@@ -166,6 +166,19 @@ func (fs *Firestore) FindSourcesByDomain(input string) ([]*models.Source, error)
 	return query[models.Source](fs.ctx, fs.client, criteria)
 }
 
+func (fs *Firestore) FindSourcesByIdentities(input []string) ([]*models.Source, error) {
+	criteria := QueryCriteria{
+		Path: fs.pathToSources(),
+		Filter: firestore.PropertyFilter{
+			Path:     "urls",
+			Operator: ArrayContainsAny,
+			Value:    input,
+		},
+	}
+
+	return query[models.Source](fs.ctx, fs.client, criteria)
+}
+
 func (fs *Firestore) FindSourcesByKeywords(input []string) ([]*models.Source, error) {
 	criteria := QueryCriteria{
 		Path: fs.pathToSources(),

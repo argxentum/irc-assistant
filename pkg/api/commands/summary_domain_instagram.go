@@ -15,6 +15,26 @@ const discordBotUserAgent = "Mozilla/5.0 (compatible; Discordbot/2.0; +https://d
 
 func (c *SummaryCommand) parseInstagram(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
 	logger := log.Logger()
+	logger.Debugf(e, "Instagram summary path: trying oEmbed for %s", url)
+	if result, metadata, err := c.oEmbedSummary(e, instagramOEmbedURL, url); err == nil && result != nil {
+		logger.Debugf(e, "Instagram summary path: oEmbed succeeded for %s", url)
+		source, sourceErr := findOEmbedSource(e, metadata)
+		if sourceErr != nil {
+			logger.Errorf(e, "Instagram oEmbed source check failed for %s: %v", url, sourceErr)
+		}
+		return result, source, nil
+	} else if err != nil {
+		logger.Debugf(e, "Instagram summary path: oEmbed failed for %s: %s; falling back to %s", url, err, instagramEmbedDomain)
+	} else {
+		logger.Debugf(e, "Instagram summary path: oEmbed returned no usable summary for %s; falling back to %s", url, instagramEmbedDomain)
+	}
+
+	logger.Debugf(e, "Instagram summary path: trying %s metadata for %s", instagramEmbedDomain, url)
+	return c.parseInstagramEmbed(e, url)
+}
+
+func (c *SummaryCommand) parseInstagramEmbed(e *irc.Event, url string) (*summaryResult, *models.Source, error) {
+	logger := log.Logger()
 
 	embedURL := strings.Replace(url, "instagram.com", instagramEmbedDomain, 1)
 	logger.Debugf(e, "instagram embed request for %s", embedURL)
@@ -53,5 +73,6 @@ func (c *SummaryCommand) parseInstagram(e *irc.Event, url string) (*summaryResul
 		content = author
 	}
 
+	logger.Debugf(e, "Instagram summary path: %s metadata succeeded for %s", instagramEmbedDomain, url)
 	return createSummaryResult(content), nil, nil
 }
